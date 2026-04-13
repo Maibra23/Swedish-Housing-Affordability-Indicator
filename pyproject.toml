@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shai"
+version = "0.1.0"
+description = "Swedish Housing Affordability Indicator (SHAI) — Streamlit dashboard"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "streamlit",
+    "pandas",
+    "numpy",
+    "requests",
+    "prophet",
+    "pmdarima",
+    "statsmodels",
+    "plotly",
+    "streamlit-echarts",
+    "pyarrow",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
