@@ -13,7 +13,8 @@
       "Bash(python3 /tmp/scb_explore4.py)",
       "Bash(python3 /tmp/scb_tables.py)",
       "Bash(python3 /tmp/scb_explore5.py)",
-      "WebFetch(domain:api.kolada.se)"
+      "WebFetch(domain:api.kolada.se)",
+      "Bash(pip install:*)"
     ]
   }
 }
