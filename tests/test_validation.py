@@ -1,7 +1,7 @@
 """Validation suite per METHODOLOGY.md section 9 (Task 2.4).
 
 These tests validate the built data and computed affordability indices.
-All 6 checks must pass before proceeding to Day 3.
+All checks must pass before proceeding to Day 3.
 """
 
 import pandas as pd
@@ -26,6 +26,16 @@ def ranked():
     return pd.read_parquet(DATA_DIR / "affordability_ranked.parquet")
 
 
+@pytest.fixture
+def county_panel():
+    return pd.read_parquet(DATA_DIR / "panel_county.parquet")
+
+
+@pytest.fixture
+def affordability_county():
+    return pd.read_parquet(DATA_DIR / "affordability_county.parquet")
+
+
 # -----------------------------------------------------------------------
 # Check 1: Median income increases nominally year over year
 # -----------------------------------------------------------------------
@@ -41,7 +51,7 @@ def test_income_monotonic_nominal(municipal_panel):
     diffs = national_income.diff().dropna()
     decreases = (diffs < 0).sum()
     assert decreases <= 3, (
-        f"Median income decreased in {decreases} years (expected <= 2): "
+        f"Median income decreased in {decreases} years (expected <= 3): "
         f"{diffs[diffs < 0].to_dict()}"
     )
 
@@ -67,14 +77,26 @@ def test_real_income_stable(municipal_panel):
 
 
 # -----------------------------------------------------------------------
-# Check 3: Skane worst & Stockholm best under Version C
+# Check 3: Stockholm worst under Version C (transaction price fix)
 # -----------------------------------------------------------------------
-def test_skane_worst_v_c(ranked):
-    """Skane county (lan_code '12') should be in top 5 worst under V.C.
+def test_stockholm_worst_v_c(ranked):
+    """Stockholm county (lan_code '01') should be in top 5 worst under V.C.
 
-    Originally expected Stockholm to be worst, but Stockholm's high incomes
-    outweigh high prices. Skane has the worst affordability at county level.
+    After using transaction_price_sek (absolute price level in SEK),
+    Stockholm's high housing costs correctly place it among the least
+    affordable counties.
     """
+    county_vc = ranked.groupby("lan_code")["version_c"].median()
+    worst_5 = county_vc.nsmallest(5).index.tolist()
+    assert "01" in worst_5, (
+        f"Stockholm county (01) not in top 5 worst Version C. "
+        f"Worst 5 counties: {worst_5}. "
+        f"Check that transaction_price_sek is populated correctly."
+    )
+
+
+def test_skane_worst_v_c(ranked):
+    """Skane county (lan_code '12') should be in top 5 worst under V.C."""
     county_vc = ranked.groupby("lan_code")["version_c"].median()
     worst_5 = county_vc.nsmallest(5).index.tolist()
     assert "12" in worst_5, (
@@ -83,28 +105,12 @@ def test_skane_worst_v_c(ranked):
     )
 
 
-def test_stockholm_best_v_c(ranked):
-    """Stockholm county (lan_code '01') should be in top 5 best under V.C.
-
-    High incomes in Stockholm outweigh high prices, placing it among the
-    most affordable counties when measured by real affordability ratio.
-    """
-    county_vc = ranked.groupby("lan_code")["version_c"].median()
-    best_5 = county_vc.nlargest(5).index.tolist()
-    assert "01" in best_5, (
-        f"Stockholm county (01) not in top 5 best Version C. "
-        f"Best 5 counties: {best_5}"
-    )
-
-
 # -----------------------------------------------------------------------
 # Check 4: Norrbotten in top 5 best under Version A
 # -----------------------------------------------------------------------
 def test_norrbotten_best_v_a(ranked):
     """Norrbotten county (lan_code '25') should be in top 5 best under V.A."""
-    # Get county-level median of Version A
     county_va = ranked.groupby("lan_code")["version_a"].median()
-    # Best = highest Version A value
     best_5 = county_va.nlargest(5).index.tolist()
     assert "25" in best_5, (
         f"Norrbotten county (25) not in top 5 best Version A. "
@@ -123,10 +129,28 @@ def test_kt_range(municipal_panel):
 
 
 # -----------------------------------------------------------------------
-# Check 6: Forecast intervals widen (placeholder — run after Day 3)
+# Check 6: Transaction price ordering sanity
+# -----------------------------------------------------------------------
+def test_transaction_price_ordering(county_panel):
+    """Stockholm median transaction price should be at least 2.5x Norrbotten.
+
+    This is the direct sanity check that feeds the affordability formulas.
+    """
+    latest_year = county_panel[county_panel["transaction_price_sek"].notna()]["year"].max()
+    latest = county_panel[county_panel["year"] == latest_year]
+    stockholm = latest[latest["lan_code"] == "01"]["transaction_price_sek"].iloc[0]
+    norrbotten = latest[latest["lan_code"] == "25"]["transaction_price_sek"].iloc[0]
+    ratio = stockholm / norrbotten
+    assert ratio >= 2.5, (
+        f"Stockholm ({stockholm/1e6:.2f} MSEK) / Norrbotten ({norrbotten/1e6:.2f} MSEK) "
+        f"ratio is {ratio:.2f}x, expected >= 2.5x. Check transaction_price_sek data."
+    )
+
+
+# -----------------------------------------------------------------------
+# Check 7: Forecast intervals widen (placeholder — run after Day 3)
 # -----------------------------------------------------------------------
 @pytest.mark.skip(reason="Run after Day 3 when forecast data exists")
 def test_forecast_intervals_widen():
     """Confidence bands should widen monotonically with horizon."""
-    # Will be implemented after Tasks 3.1/3.2
     pass

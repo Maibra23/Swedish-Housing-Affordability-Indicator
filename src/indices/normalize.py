@@ -70,7 +70,7 @@ def normalize_and_rank(affordability: pd.DataFrame, rank_year: int | None = None
     # Reorder columns
     keep = [
         "region_code", "region_name", "lan_code", "year",
-        "median_income", "price_index", "policy_rate", "unemployment_rate", "cpi_yoy_pct",
+        "median_income", "transaction_price_sek", "price_index", "policy_rate", "unemployment_rate", "cpi_yoy_pct",
         "version_a", "version_b", "version_c",
         "z_a", "z_b", "z_c",
         "rank_a", "rank_b", "rank_c",
