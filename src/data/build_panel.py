@@ -149,6 +149,42 @@ def _clean_construction() -> pd.DataFrame:
     return constr
 
 
+def _clean_transaction_price() -> pd.DataFrame:
+    """Median transaction price in SEK per region x year.
+
+    Source: SCB BO0501 content code BO0501C2 (kopsekilling, 1000 SEK).
+    Fastighetstyp 220 (permanent small house).
+
+    The combined 08+09 code (Kalmar+Gotland) is split so both counties
+    get the same price.
+    """
+    df = _read("BO0501_transaction_price")
+    # Filter to permanent housing only
+    ft_col = "Fastighetstyp_code" if "Fastighetstyp_code" in df.columns else "Fastighetstyp"
+    df = df[df[ft_col] == "220"].copy()
+
+    region_col = "Region_code" if "Region_code" in df.columns else "Region"
+    time_col = "Tid_code" if "Tid_code" in df.columns else "Tid"
+
+    df = df[[region_col, time_col, "value"]].copy()
+    df.rename(columns={region_col: "region_code", time_col: "year",
+                        "value": "transaction_price_ksek"}, inplace=True)
+    df["year"] = df["year"].astype(int)
+    df["transaction_price_sek"] = df["transaction_price_ksek"] * 1000
+    df.drop(columns=["transaction_price_ksek"], inplace=True)
+
+    # Split combined 08+09 into separate rows
+    combined = df[df["region_code"] == "08+09"].copy()
+    if not combined.empty:
+        row_08 = combined.copy()
+        row_08["region_code"] = "08"
+        row_09 = combined.copy()
+        row_09["region_code"] = "09"
+        df = pd.concat([df[df["region_code"] != "08+09"], row_08, row_09], ignore_index=True)
+
+    return df
+
+
 def _clean_cpi() -> pd.DataFrame:
     """CPI index (2020=100) and YoY change per year (annual average of monthly)."""
     df = _read("PR0101_cpi")
@@ -203,6 +239,7 @@ def build_municipal_panel() -> pd.DataFrame:
     income = _clean_income()
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
+    txn_price = _clean_transaction_price()
     unemp = _clean_unemployment()
     pop = _clean_population()
     constr = _clean_construction()
@@ -259,6 +296,26 @@ def build_municipal_panel() -> pd.DataFrame:
     panel["kt_ratio"] = panel["kt_ratio"].fillna(panel["kt_ratio_county"])
     panel.drop(columns=["kt_ratio_county"], inplace=True)
 
+    # --- Merge transaction price (BO0501C2, SEK level) ---
+    muni_txn = txn_price[txn_price["region_code"].isin(municipalities)].copy()
+    panel = panel.merge(
+        muni_txn[["region_code", "year", "transaction_price_sek"]],
+        on=["region_code", "year"], how="left",
+    )
+    # County-level fallback for municipalities without native transaction price
+    county_txn = txn_price[txn_price["region_code"].isin(counties)].copy()
+    county_txn = county_txn.rename(columns={
+        "region_code": "lan_code",
+        "transaction_price_sek": "txn_price_county",
+    })
+    panel = panel.merge(county_txn[["lan_code", "year", "txn_price_county"]],
+                        on=["lan_code", "year"], how="left")
+    panel["has_native_price"] = panel["transaction_price_sek"].notna()
+    panel["transaction_price_sek"] = panel["transaction_price_sek"].fillna(
+        panel["txn_price_county"]
+    )
+    panel.drop(columns=["txn_price_county"], inplace=True)
+
     # --- Merge unemployment ---
     unemp_for_join = muni_unemp[["region_code", "year", "unemployment_rate"]]
     panel = panel.merge(unemp_for_join, on=["region_code", "year"], how="left")
@@ -281,6 +338,7 @@ def build_municipal_panel() -> pd.DataFrame:
         "region_code", "region_name", "lan_code", "year",
         "median_income", "median_income_tkr", "is_imputed_income",
         "price_index", "kt_ratio", "has_native_kt",
+        "transaction_price_sek", "has_native_price",
         "unemployment_rate", "population", "completions",
         "cpi_index", "cpi_yoy_pct", "policy_rate",
     ]
@@ -294,6 +352,7 @@ def build_county_panel() -> pd.DataFrame:
     income = _clean_income()
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
+    txn_price = _clean_transaction_price()
     unemp = _clean_unemployment()
     pop = _clean_population()
     constr = _clean_construction()
@@ -327,6 +386,12 @@ def build_county_panel() -> pd.DataFrame:
     county_kt = kt[kt["region_code"].isin(counties)][["region_code", "year", "kt_ratio"]].copy()
     county_kt.rename(columns={"region_code": "lan_code"}, inplace=True)
     panel = panel.merge(county_kt, on=["lan_code", "year"], how="left")
+
+    # Transaction price at county level
+    county_txn = txn_price[txn_price["region_code"].isin(counties)].copy()
+    county_txn = county_txn.rename(columns={"region_code": "lan_code"})
+    panel = panel.merge(county_txn[["lan_code", "year", "transaction_price_sek"]],
+                        on=["lan_code", "year"], how="left")
 
     # Unemployment at county level (Kolada uses 4-digit codes: "0001" for county "01")
     # Read full Kolada dataset including county aggregates
@@ -362,6 +427,7 @@ def build_national_panel() -> pd.DataFrame:
     income = _clean_income()
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
+    txn_price = _clean_transaction_price()
     unemp_all = _read("kolada_unemployment_all")
     pop = _clean_population()
     constr = _clean_construction()
@@ -392,6 +458,10 @@ def build_national_panel() -> pd.DataFrame:
     # National K/T
     nat_kt = kt[kt["region_code"] == "00"][["year", "kt_ratio"]]
     panel = panel.merge(nat_kt, on="year", how="left")
+
+    # National transaction price
+    nat_txn = txn_price[txn_price["region_code"] == "00"][["year", "transaction_price_sek"]]
+    panel = panel.merge(nat_txn, on="year", how="left")
 
     # National unemployment (Kolada code "0000")
     nat_unemp = unemp_all[unemp_all["municipality_code"] == "0000"][["year", "unemployment_rate"]].copy()

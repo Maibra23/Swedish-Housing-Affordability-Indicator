@@ -114,14 +114,14 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 
 ---
 
-## D9 — Stockholm is top-5 BEST, not worst, under Version C ⚠️
+## D9 — Stockholm is top-5 BEST, not worst, under Version C ✅
 
 | | |
 |--|--|
 | **Planned** | METHODOLOGY.md Check 3: "Stockholm in top 5 worst under Version C" |
-| **Actual** | Stockholm county (01) ranks 19/21 — **top 3 best**. Skåne (12) is worst. |
-| **Why** | Stockholm's high median incomes outweigh high property prices in the affordability ratio. The original hypothesis assumed price dominance, but the formula `Income / (Price * RealRate)` rewards high-income regions. |
-| **Resolved** | Validation test updated: Check 3 now tests Skåne (12) worst + Stockholm (01) best under V.C. METHODOLOGY.md section 9 should be updated accordingly. |
+| **Actual (attempt 1)** | Using price_index: Stockholm ranked top 3 best. Wrong — price_index is a growth measure, not a level. |
+| **Actual (attempt 2)** | Using kt_ratio: Stockholm ranked #1 best. Wrong — K/T measures markup over assessed value, not absolute price. |
+| **Resolution** | Using transaction_price_sek (BO0501C2): Stockholm ranks **worst county** under V.C. See D14. |
 
 ---
 
@@ -135,6 +135,19 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 
 ---
 
+## D14 — Price variable: transaction_price_sek (BO0501C2) instead of price_index or K/T ✅
+
+| | |
+|--|--|
+| **Attempt 1** | price_index (BO0501R5, growth measure 1990=100). Stockholm ranked most affordable. Wrong direction. |
+| **Attempt 2** | kt_ratio (BO0501C4, markup = transaction price / assessed value). Stockholm ranked most affordable (even more so). Wrong direction. |
+| **Resolution** | transaction_price_sek (BO0501C2, median purchase price in SEK). Stockholm ranks least affordable as expected. |
+| **Root cause** | Neither price_index nor K/T is a price level suitable for cross-regional comparison. Only BO0501C2 is a level in absolute SEK. |
+| **Tasks affected** | 2.2 (affordability.py uses transaction_price_sek), 2.4 (validation test updated), 5.5 (Metodologi page explains the three-way choice) |
+| **Prevention rule** | Any future variable substitution requires a sanity check printing raw values for Stockholm and Norrbotten before running full pipeline. See `scripts/diagnose_price_variable.py`. |
+
+---
+
 ## Summary — Tasks requiring prompt changes
 
 Only **D2/D8** (annual vs quarterly) affects future prompts. D3 was the biggest risk but is now fully resolved.
@@ -144,7 +157,7 @@ Only **D2/D8** (annual vs quarterly) affects future prompts. D3 was the biggest 
 | **2.1** | "quarterly" → "annual" | D2/D8 |
 | **2.2** | "(municipality, quarter)" → "(municipality, year)"; all 3 formulas valid 2014–2024 | D2/D8, D3 resolved |
 | **2.3** | Rankings are annual | D2/D8 |
-| **2.4** | Check 3 updated: Skane worst + Stockholm best under V.C; thresholds relaxed | D9, D10 |
+| **2.4** | Check 3 updated: Stockholm worst under V.C (transaction_price_sek fix); thresholds relaxed | D9, D10, D14 |
 | **3.1** | "8 quarter horizon" → annual forecast steps | D2/D8 |
 | **3.2** | Same as 3.1 | D2/D8 |
 | **3.3** | No change | — |

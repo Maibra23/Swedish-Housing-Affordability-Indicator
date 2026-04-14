@@ -359,6 +359,32 @@ def fetch_construction(force: bool = False) -> pd.DataFrame:
     return _save_and_return(df, "BO0101_construction")
 
 
+def fetch_transaction_price(force: bool = False) -> pd.DataFrame:
+    """Median transaction price in SEK for småhus, municipal + county level, annual.
+
+    Source: SCB BO0501 — FastprisSHRegionAr
+    Content code: BO0501C2 (Purchase price, average in 1 000 SEK)
+    Property type: 220 (permanent small house / permanentbostad ej tomträtt)
+    Coverage: All 312 regions (290 muni + 21 county + 1 national), annual, 1981–2024
+    """
+    cache = _cache_path("BO0501_transaction_price")
+    if not force and _cache_is_fresh(cache):
+        logger.info("Using cached %s", cache)
+        return pd.read_parquet(cache)
+
+    table_path = "BO/BO0501/BO0501B/FastprisSHRegionAr"
+    meta = _get_table_metadata(table_path)
+    variables = meta["variables"]
+
+    overrides: dict[str, list[str]] = {
+        "Fastighetstyp": ["220"],      # permanentbostad (ej tomträtt)
+        "ContentsCode": ["BO0501C2"],  # Purchase price, average in 1 000 SEK
+    }
+
+    df = _chunked_fetch(table_path, variables, overrides, chunk_var="Region")
+    return _save_and_return(df, "BO0501_transaction_price")
+
+
 def fetch_cpi(force: bool = False) -> pd.DataFrame:
     """Consumer Price Index (KPI), national, monthly. Base year 2020=100.
 
@@ -392,6 +418,7 @@ def fetch_all(force: bool = False) -> dict[str, pd.DataFrame]:
         ("income", fetch_income),
         ("price_index", fetch_price_index),
         ("kt_ratio", fetch_kt_ratio),
+        ("transaction_price", fetch_transaction_price),
         ("unemployment", fetch_unemployment),
         ("population", fetch_population),
         ("construction", fetch_construction),
