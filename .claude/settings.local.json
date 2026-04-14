@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.scb.se)",
+      "WebFetch(domain:api.riksbank.se)",
+      "WebFetch(domain:www.scb.se)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Read(//c/Users/Mustafa Ibrahim/OneDrive - student.lnu.se/Desktop/Swedish Housing Affordability Indicator/**)",
+      "Bash(python3 /tmp/scb_explore.py)",
+      "Bash(python3 /tmp/scb_explore2.py)",
+      "Bash(python3 /tmp/scb_explore3.py)",
+      "Bash(python3 /tmp/scb_explore4.py)",
+      "Bash(python3 /tmp/scb_tables.py)",
+      "Bash(python3 /tmp/scb_explore5.py)",
+      "WebFetch(domain:api.kolada.se)"
+    ]
+  }
+}
