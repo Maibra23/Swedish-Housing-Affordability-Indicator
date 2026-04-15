@@ -42,7 +42,7 @@ Always read DESIGN_SYSTEM.md before implementing any UI component.
 
 Create a Python 3.11 project structure:
 
-- pyproject.toml with dependencies: streamlit, pandas, numpy, requests, prophet, pmdarima, statsmodels, plotly, streamlit-echarts, pyarrow, pytest
+- pyproject.toml with dependencies: streamlit, pandas, numpy, requests, prophet, pmdarima, statsmodels, plotly, pyarrow, pytest (do not add streamlit-echarts unless you standardize on ECharts)
 - src/ with subdirs: data, indices, forecast, kontantinsats, scenario, ui
 - data/ with subdirs: raw, processed, cache
 - pages/ (Streamlit multi page)
@@ -395,7 +395,7 @@ Use Streamlit st.sidebar with custom HTML. Match dark navy background from mocku
 
 Implement src/ui/choropleth.py.
 
-Use streamlit-echarts. Implement the scatter on geo pattern from DESIGN_SYSTEM.md section 5.
+Use Plotly `go.Scattergeo` (see DESIGN_SYSTEM.md section 5 and `src/ui/choropleth.py`). Implement scatter-on-map: one trace per risk class, Swedish tooltips.
 
 Function signature:
 render_choropleth(data: pd.DataFrame, value_col: str, name_col: str,
@@ -403,7 +403,7 @@ render_choropleth(data: pd.DataFrame, value_col: str, name_col: str,
 
 Data should have one row per municipality with lat lon coordinates.
 
-Use the visualMap config from DESIGN_SYSTEM.md exactly.
+Color by risk class (lag/medel/hog); size markers by absolute z-score as in the implementation.
 
 Tooltips in Swedish:
 - Show: kommun name, SHAI poäng, riskklass

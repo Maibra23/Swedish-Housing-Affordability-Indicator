@@ -91,9 +91,9 @@
 **Acceptance:** Visual diff against mockup is minimal
 
 ### Task 4.3 [CR] Choropleth component
-**Context:** Use streamlit-echarts. Implement the scatter on geo pattern from DESIGN_SYSTEM.md section 5. Plot all 290 municipalities.
+**Context:** Use Plotly Scattergeo (`src/ui/choropleth.py`). Implement scatter-on-map per DESIGN_SYSTEM.md section 5. Plot all 290 municipalities with coordinates.
 **Deliverable:** `src/ui/choropleth.py` with `render_choropleth(data: pd.DataFrame)` function
-**Acceptance:** Map renders, hover tooltips work in Swedish, color scale matches mockup
+**Acceptance:** Map renders, hover tooltips work in Swedish, risk-class colors match design tokens
 
 ### Task 4.4 [CR] Riksöversikt page
 **Context:** Top section: 4 KPI cards (genomsnittligt SHAI, högrisk kommuner, medianskuld per capita, befolkningsförändring). Middle: choropleth + distribution histogram. Bottom: top 15 worst + top 15 best tables.

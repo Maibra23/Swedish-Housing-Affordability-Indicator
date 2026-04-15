@@ -18,4 +18,6 @@ pip install -e .
 streamlit run app.py
 ```
 
+If you ever installed `streamlit-echarts` in this environment and see frontend errors about ECharts/BidiComponent on the map page, remove the unused package: `pip uninstall streamlit-echarts` (the app uses Plotly for charts and the map).
+
 Product and methodology details live in the `docs/` folder (PRD, METHODOLOGY, DESIGN_SYSTEM, PLAYBOOK).

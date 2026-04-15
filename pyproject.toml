@@ -17,7 +17,9 @@ dependencies = [
     "pmdarima",
     "statsmodels",
     "plotly",
-    "streamlit-echarts",
+    "folium",
+    "streamlit-folium",
+    "branca",
     "pyarrow",
     "pytest",
 ]

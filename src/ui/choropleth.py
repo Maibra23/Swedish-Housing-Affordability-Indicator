@@ -1,179 +1,169 @@
-"""Choropleth map component using streamlit-echarts.
+"""Choropleth map component using Folium + GeoJSON.
 
-Scatter-on-geo pattern matching the KRI design system.
-Each municipality is a scatter point colored by SHAI value, sized by absolute deviation.
-Enhanced interactivity: zoom, hover effects, tooltips with full data.
+Each municipality polygon is filled by SHAI z-score using a diverging
+green-yellow-red scale.  Mirrors the KRI design system approach.
+Requires folium, branca, and streamlit-folium.
 """
 
 from __future__ import annotations
 
-import pandas as pd
-from streamlit_echarts import st_echarts, JsCode
+import json
+from pathlib import Path
 
-from src.ui.css import COLORS
+import branca.colormap as cm
+import folium
+import pandas as pd
+import streamlit as st
+from streamlit_folium import folium_static
+
+from src.ui.css import COLORS, DIVERGING_SCALE
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+GEOJSON_PATH = PROJECT_ROOT / "data" / "geo" / "kommuner.geojson"
+
+
+@st.cache_data(show_spinner=False)
+def _load_geojson() -> dict | None:
+    if not GEOJSON_PATH.exists():
+        return None
+    try:
+        with open(GEOJSON_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        st.error(f"Kunde inte läsa kartdata: {exc}")
+        return None
 
 
 def render_choropleth(
     data: pd.DataFrame,
     value_col: str = "z_c",
     name_col: str = "region_name",
-    lat_col: str = "lat",
-    lon_col: str = "lon",
     risk_col: str = "risk_c",
-    height: int = 500,
+    height: int = 480,
     key: str = "shai_choropleth",
 ) -> None:
-    """Render a scatter-on-geo choropleth of Swedish municipalities.
+    """Render a full polygon choropleth of Swedish municipalities.
 
     Args:
-        data: One row per municipality with coordinates and SHAI values.
-        value_col: Column with the numeric value to visualize.
+        data: One row per municipality with region_code and SHAI values.
+        value_col: Column with the numeric z-score to visualize.
         name_col: Column with the municipality name.
-        lat_col: Latitude column.
-        lon_col: Longitude column.
         risk_col: Risk class column (lag/medel/hog).
-        height: Chart height in pixels.
-        key: Unique key for the echarts component.
+        height: Map height in pixels.
+        key: Unique key for the component.
     """
     risk_labels = {"lag": "Låg", "medel": "Medel", "hog": "Hög"}
 
-    # Build data array: [lon, lat, value, name, risk_label, version_c, rank]
-    scatter_data = []
-    for _, row in data.iterrows():
-        vc = row.get("version_c", 0)
+    # Build per-code lookup with pre-formatted display strings
+    sub = data.copy()
+    sub["_code"] = sub["region_code"].astype(str).str.zfill(4)
+
+    data_dict: dict[str, dict] = {}
+    for _, row in sub.iterrows():
+        code = str(row["_code"])
+        z_val = float(row.get(value_col, 0))
+        vc = float(row.get("version_c", 0))
         rank = row.get("rank_c", "—")
-        scatter_data.append([
-            round(float(row[lon_col]), 4),
-            round(float(row[lat_col]), 4),
-            round(float(row[value_col]), 3),
-            str(row[name_col]),
-            risk_labels.get(str(row.get(risk_col, "")), ""),
-            round(float(vc), 1) if pd.notna(vc) else 0,
-            int(rank) if pd.notna(rank) and rank != "—" else "—",
-        ])
+        risk = str(row.get(risk_col, "medel"))
+        price = float(row.get("transaction_price_sek", 0))
+        income = float(row.get("median_income", 0))
+        unemp = float(row.get("unemployment_rate", 0))
 
-    option = {
-        "backgroundColor": "#FFFFFF",
-        "title": {
-            "text": "Geografisk fördelning",
-            "subtext": "SHAI poäng per kommun (Version C)",
-            "left": 16,
-            "top": 10,
-            "textStyle": {
-                "fontFamily": "Source Sans 3, Source Sans Pro, sans-serif",
-                "fontWeight": "bold",
-                "fontSize": 15,
-                "color": COLORS["text_primary"],
-            },
-            "subtextStyle": {
-                "fontFamily": "Source Sans 3, Source Sans Pro, sans-serif",
-                "fontSize": 12,
-                "color": COLORS["text_secondary"],
-            },
-        },
-        "tooltip": {
-            "trigger": "item",
-            "backgroundColor": COLORS["primary"],
-            "borderColor": COLORS["primary"],
-            "borderWidth": 1,
-            "padding": [12, 16],
-            "textStyle": {
-                "color": "#FFFFFF",
-                "fontFamily": "Source Sans 3, Source Sans Pro, sans-serif",
-                "fontSize": 12,
-            },
-            "formatter": JsCode(
-                "function(params) {"
-                "  var d = params.data;"
-                "  var name = d[3];"
-                "  var z = d[2].toFixed(2);"
-                "  var risk = d[4];"
-                "  var vc = d[5];"
-                "  var rank = d[6];"
-                "  var riskColor = risk === 'Låg' ? '#6EE7A0' : risk === 'Medel' ? '#FCD34D' : '#FCA5A5';"
-                "  return '<div style=\"font-weight:700;font-size:14px;margin-bottom:6px;\">' + name + '</div>'"
-                "       + '<div style=\"display:flex;gap:12px;margin-bottom:4px;\">'"
-                "       + '<span style=\"color:rgba(255,255,255,0.7);\">Z-poäng:</span> '"
-                "       + '<span style=\"font-family:IBM Plex Mono,monospace;\">' + z + '</span></div>'"
-                "       + '<div style=\"display:flex;gap:12px;margin-bottom:4px;\">'"
-                "       + '<span style=\"color:rgba(255,255,255,0.7);\">SHAI:</span> '"
-                "       + '<span style=\"font-family:IBM Plex Mono,monospace;\">' + vc + '</span></div>'"
-                "       + '<div style=\"display:flex;gap:12px;margin-bottom:4px;\">'"
-                "       + '<span style=\"color:rgba(255,255,255,0.7);\">Rank:</span> '"
-                "       + '<span style=\"font-family:IBM Plex Mono,monospace;\">' + rank + '</span></div>'"
-                "       + '<div style=\"margin-top:6px;\">'"
-                "       + '<span style=\"background:' + riskColor + ';color:#0B1F3F;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;\">' + risk + ' risk</span>'"
-                "       + '</div>';"
-                "}"
-            ),
-        },
-        "geo": {
-            "map": "world",
-            "roam": True,
-            "center": [16, 62.5],
-            "zoom": 4.5,
-            "silent": True,
-            "itemStyle": {
-                "areaColor": "#F7F8FA",
-                "borderColor": "#D1D5DB",
-                "borderWidth": 0.5,
-            },
-            "emphasis": {
-                "disabled": True,
-            },
-        },
-        "visualMap": {
-            "min": -4.0,
-            "max": 2.0,
-            "left": 20,
-            "bottom": 20,
-            "orient": "horizontal",
-            "text": ["Hög risk", "Låg risk"],
-            "textStyle": {
-                "fontFamily": "Source Sans 3, Source Sans Pro, sans-serif",
-                "fontSize": 10,
-                "color": COLORS["text_secondary"],
-            },
-            "inRange": {
-                "color": [
-                    "#2E7D5B",
-                    "#5B9E78",
-                    "#A8C4A4",
-                    "#E5E7EB",
-                    "#E8BE7C",
-                    "#D4A03C",
-                    "#B94A48",
-                ],
-            },
-            "dimension": 2,
-        },
-        "series": [
-            {
-                "type": "scatter",
-                "coordinateSystem": "geo",
-                "symbolSize": JsCode(
-                    "function(val) {"
-                    "  return 6 + Math.min(Math.abs(val[2]) * 4, 14);"
-                    "}"
-                ),
-                "data": scatter_data,
-                "itemStyle": {
-                    "borderColor": "rgba(255,255,255,0.7)",
-                    "borderWidth": 0.5,
-                },
-                "emphasis": {
-                    "itemStyle": {
-                        "borderColor": COLORS["text_primary"],
-                        "borderWidth": 2,
-                        "shadowBlur": 8,
-                        "shadowColor": "rgba(0,0,0,0.15)",
-                    },
-                    "scale": 1.4,
-                },
-            }
-        ],
-        "animationDuration": 400,
-        "animationEasing": "cubicOut",
-    }
+        data_dict[code] = {
+            "z_score": z_val,
+            "risk_class": risk_labels.get(risk, risk),
+            "z_fmt": f"{z_val:+.2f}".replace(".", ","),
+            "shai_fmt": f"{vc:.1f}".replace(".", ","),
+            "rank_fmt": f"{rank} / {len(sub)}" if rank != "—" else "—",
+            "price_fmt": f"{int(price):,}".replace(",", "\u202f") + " SEK",
+            "income_fmt": f"{int(income):,}".replace(",", "\u202f") + " SEK",
+            "unemp_fmt": f"{unemp:.1f}".replace(".", ",") + " %",
+        }
 
-    st_echarts(option, height=f"{height}px", key=key)
+    # Load and enrich GeoJSON
+    _raw = _load_geojson()
+    if _raw is None:
+        st.warning("Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.")
+        return
+    geojson = json.loads(json.dumps(_raw))
+
+    for feat in geojson["features"]:
+        code = feat["properties"].get("id", "").zfill(4)
+        d = data_dict.get(code, {})
+        feat["properties"]["Kommun"] = d.get("kommun_name", feat["properties"].get("kom_namn", code))
+        feat["properties"]["Riskklass"] = d.get("risk_class", "Saknas")
+        feat["properties"]["SHAI Poäng"] = d.get("shai_fmt", "Saknas")
+        feat["properties"]["Z-poäng"] = d.get("z_fmt", "Saknas")
+        feat["properties"]["Rang"] = d.get("rank_fmt", "Saknas")
+        feat["properties"]["Medianpris"] = d.get("price_fmt", "Saknas")
+        feat["properties"]["Medianinkomst"] = d.get("income_fmt", "Saknas")
+        feat["properties"]["Arbetslöshet"] = d.get("unemp_fmt", "Saknas")
+        feat["properties"]["_z"] = d.get("z_score", 0.0)
+
+    # Color scale — diverging green→neutral→red, matching KRI design
+    colormap = cm.LinearColormap(
+        colors=list(DIVERGING_SCALE),
+        vmin=-2.5,
+        vmax=2.5,
+        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
+    )
+
+    # Basemap — CartoDB positron, centered on Sweden
+    m = folium.Map(
+        location=[63.0, 17.5],
+        zoom_start=5,
+        tiles="CartoDB positron",
+        prefer_canvas=True,
+        zoom_control=True,
+        scrollWheelZoom=False,
+    )
+
+    def _style(feature: dict) -> dict:
+        z_val = feature["properties"].get("_z", 0.0)
+        return {
+            "fillColor": colormap(z_val),
+            "color": "#CCCCCC",
+            "weight": 0.5,
+            "fillOpacity": 0.82,
+        }
+
+    def _highlight(feature: dict) -> dict:
+        return {
+            "color": "#1A1A2E",
+            "weight": 2.0,
+            "fillOpacity": 0.95,
+        }
+
+    tooltip_css = (
+        "font-family: 'Source Sans Pro', sans-serif;"
+        "font-size: 13px;"
+        "line-height: 1.5;"
+        "background: #ffffff;"
+        "border: 1px solid #E5E7EB;"
+        "border-radius: 6px;"
+        "padding: 12px 14px;"
+        "box-shadow: 0 4px 16px rgba(0,0,0,0.10);"
+        "color: #1A1A2E;"
+    )
+
+    folium.GeoJson(
+        geojson,
+        style_function=_style,
+        highlight_function=_highlight,
+        tooltip=folium.GeoJsonTooltip(
+            fields=[
+                "Kommun", "Riskklass", "SHAI Poäng", "Z-poäng", "Rang",
+                "Medianpris", "Medianinkomst", "Arbetslöshet",
+            ],
+            aliases=[
+                "<b>Kommun</b>", "<b>Riskklass</b>", "SHAI Poäng", "Z-poäng", "Rang",
+                "Medianpris", "Medianinkomst", "Arbetslöshet",
+            ],
+            sticky=True,
+            style=tooltip_css,
+        ),
+    ).add_to(m)
+
+    colormap.add_to(m)
+
+    folium_static(m, width=None, height=height)
