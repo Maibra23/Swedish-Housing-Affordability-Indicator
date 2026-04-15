@@ -5,18 +5,24 @@ Jämförelse av kontantinsatskrav under fyra regelverk (pre-2010, bolånetak, am
 
 import streamlit as st
 
-st.set_page_config(page_title="SHAI · Kontantinsats", layout="wide")
+st.set_page_config(
+    page_title="SHAI · Kontantinsats",
+    page_icon="🏠",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None},
+)
 
 import pandas as pd
 import plotly.graph_objects as go
 
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, kpi_card, render_kpi_row, format_sek
+from src.ui.components import page_title, kpi_card, render_kpi_row, format_sek, card_header, footer_note
+from src.ui.chart_theme import get_chart_layout
 from src.kontantinsats.engine import REGIMES, apply_regime, compare_regimes
 
 inject_css()
-selections = render_sidebar()
+selections = render_sidebar(page_key="ki")
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -35,6 +41,7 @@ page_title(
     eyebrow="Sida 04 · Kontantinsats",
     title="Kontantinsats analys",
     subtitle="Historiska regelverk och insatskrav per kommun",
+    year=selected_year,
 )
 
 # ── Kommun selector + savings slider ─────────────────────────────────
@@ -46,6 +53,7 @@ with col_sel:
         "Välj kommun",
         kommun_list,
         index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
+        key="ki_kommun_select",
     )
 
 with col_slider:
@@ -55,9 +63,9 @@ with col_slider:
         max_value=25,
         value=10,
         step=1,
+        key="ki_savings_slider",
     ) / 100.0
 
-# Get kommun data
 kommun_row = mun_year[mun_year["region_name"] == selected_kommun]
 if len(kommun_row) == 0:
     st.warning("Inga data tillgängliga för den valda kommunen.")
@@ -66,16 +74,19 @@ if len(kommun_row) == 0:
 kommun_row = kommun_row.iloc[0]
 price = kommun_row["transaction_price_sek"]
 income = kommun_row["median_income"]
-rate = kommun_row["policy_rate"] / 100.0  # Convert from % to decimal
+rate = kommun_row["policy_rate"] / 100.0
 
 # ── Compute all regimes ──────────────────────────────────────────────
 results = compare_regimes(price, income, rate, savings_rate)
 
-# ── Summary KPIs ─────────────────────────────────────────────────────
+# ── Context summary ──────────────────────────────────────────────────
 st.markdown(
-    f"<div style='font-size:13px;color:#6B7280;margin-bottom:16px;'>"
-    f"<strong>{selected_kommun}</strong> · Medianpris: {format_sek(price)} SEK · "
-    f"Medianinkomst: {format_sek(income)} SEK · Ränta: {kommun_row['policy_rate']:.2f}%"
+    f"<div style='font-size:13px;color:{COLORS['text_secondary']};margin-bottom:16px;'>"
+    f"<strong>{selected_kommun}</strong> · "
+    f"Medianpris: <strong>{format_sek(price)} SEK</strong> · "
+    f"Medianinkomst: <strong>{format_sek(income)} SEK</strong> · "
+    f"Ränta: <strong>{kommun_row['policy_rate']:.2f}%</strong> · "
+    f"Sparkvot: <strong>{int(savings_rate*100)}%</strong>"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -84,58 +95,67 @@ st.markdown(
 regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2"]
 regime_cols = st.columns(4)
 
-# Find min/max monthly cost for visual indicators
 monthly_costs = {k: results[k]["monthly_total"] for k in regime_keys}
 min_cost_key = min(monthly_costs, key=monthly_costs.get)
 max_cost_key = max(monthly_costs, key=monthly_costs.get)
+
+regime_accent_colors = {
+    "pre_2010": "#9CA3AF",
+    "bolanetak": "#C4A35A",
+    "amort_1": "#D4A03C",
+    "amort_2": "#B94A48",
+}
 
 for col, key in zip(regime_cols, regime_keys):
     with col:
         res = results[key]
         regime = REGIMES[key]
 
-        # Visual indicator
         if key == min_cost_key:
             variant = "success"
             badge = "LÄGST KOSTNAD"
+            badge_color = COLORS["low_risk"]
         elif key == max_cost_key:
             variant = "danger"
             badge = "HÖGST KOSTNAD"
+            badge_color = COLORS["high_risk"]
         else:
             variant = "default"
             badge = ""
+            badge_color = ""
 
         badge_html = (
             f'<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;'
-            f'color:{"#2E7D5B" if variant == "success" else "#B94A48"};'
-            f'font-weight:600;margin-bottom:8px;">{badge}</div>'
+            f'color:{badge_color};font-weight:600;margin-bottom:8px;">{badge}</div>'
             if badge else ""
         )
+
+        accent = regime_accent_colors.get(key, COLORS["primary"])
 
         st.markdown(f"""
         <div class="shai-kpi-card variant-{variant}">
             {badge_html}
             <div class="shai-kpi-label">{regime['label']}</div>
-            <div style="font-size:11px;color:#9CA3AF;margin-bottom:12px;">{regime['period']}</div>
+            <div style="font-size:11px;color:#9CA3AF;margin-bottom:14px;">{regime['period']}</div>
 
-            <div style="margin-bottom:8px;">
+            <div style="margin-bottom:10px;">
                 <div style="font-size:10px;text-transform:uppercase;color:#9CA3AF;letter-spacing:0.5px;">Kontantinsats</div>
-                <div style="font-size:20px;font-weight:700;color:#1A1A2E;">{format_sek(res['required_cash'])} SEK</div>
+                <div style="font-size:20px;font-weight:700;color:#1A1A2E;font-variant-numeric:tabular-nums;">{format_sek(res['required_cash'])} SEK</div>
             </div>
 
-            <div style="margin-bottom:8px;">
+            <div style="margin-bottom:10px;">
                 <div style="font-size:10px;text-transform:uppercase;color:#9CA3AF;letter-spacing:0.5px;">År att spara</div>
-                <div style="font-size:18px;font-weight:700;color:#1A1A2E;">{f"{res['years_to_save']:.1f}".replace(".", ",")} år</div>
+                <div style="font-size:18px;font-weight:700;color:#1A1A2E;font-family:'IBM Plex Mono',monospace;">{f"{res['years_to_save']:.1f}".replace(".", ",")} år</div>
             </div>
 
-            <div style="margin-bottom:8px;">
+            <div style="margin-bottom:10px;">
                 <div style="font-size:10px;text-transform:uppercase;color:#9CA3AF;letter-spacing:0.5px;">Månadskostnad</div>
-                <div style="font-size:18px;font-weight:700;color:#1A1A2E;">{format_sek(res['monthly_total'])} SEK</div>
+                <div style="font-size:18px;font-weight:700;color:#1A1A2E;font-variant-numeric:tabular-nums;">{format_sek(res['monthly_total'])} SEK</div>
             </div>
 
             <div>
                 <div style="font-size:10px;text-transform:uppercase;color:#9CA3AF;letter-spacing:0.5px;">Kvarvarande inkomst</div>
-                <div style="font-size:16px;font-weight:600;color:{'#2E7D5B' if res['residual_income'] > 0 else '#B94A48'};">
+                <div style="font-size:16px;font-weight:600;color:{'#2E7D5B' if res['residual_income'] > 0 else '#B94A48'};font-variant-numeric:tabular-nums;">
                     {format_sek(res['residual_income'])} SEK/år
                 </div>
             </div>
@@ -145,46 +165,42 @@ for col, key in zip(regime_cols, regime_keys):
 # ── Comparison bar chart ─────────────────────────────────────────────
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-fig = go.Figure()
+with st.container(border=True):
+    st.markdown(
+        card_header("Månadskostnad per regelverk", f"{selected_kommun} · {selected_year}", "JÄMFÖRELSE"),
+        unsafe_allow_html=True,
+    )
 
-labels = [REGIMES[k]["label"] for k in regime_keys]
-costs = [results[k]["monthly_total"] for k in regime_keys]
-bar_colors = []
-for k in regime_keys:
-    if k == min_cost_key:
-        bar_colors.append(COLORS["low_risk"])
-    elif k == max_cost_key:
-        bar_colors.append(COLORS["high_risk"])
-    else:
-        bar_colors.append(COLORS["secondary"])
+    fig = go.Figure()
 
-fig.add_trace(go.Bar(
-    x=labels,
-    y=costs,
-    marker_color=bar_colors,
-    text=[f"{c:,.0f} SEK".replace(",", " ") for c in costs],
-    textposition="outside",
-    textfont=dict(family="IBM Plex Mono, monospace", size=12),
-))
+    labels = [REGIMES[k]["label"] for k in regime_keys]
+    costs = [results[k]["monthly_total"] for k in regime_keys]
+    bar_colors = []
+    for k in regime_keys:
+        if k == min_cost_key:
+            bar_colors.append(COLORS["low_risk"])
+        elif k == max_cost_key:
+            bar_colors.append(COLORS["high_risk"])
+        else:
+            bar_colors.append(regime_accent_colors.get(k, COLORS["secondary"]))
 
-fig.update_layout(
-    title=dict(text="Månadskostnad per regelverk", font=dict(size=15)),
-    xaxis_title="Regelverk",
-    yaxis_title="Månadskostnad (SEK)",
-    font=dict(family="Source Sans 3, Source Sans Pro, sans-serif", size=12),
-    plot_bgcolor="#FFFFFF",
-    paper_bgcolor="#FFFFFF",
-    margin=dict(l=50, r=20, t=60, b=50),
-    height=380,
-    showlegend=False,
-    yaxis=dict(gridcolor=COLORS["grid"]),
-)
+    fig.add_trace(go.Bar(
+        x=labels,
+        y=costs,
+        marker_color=bar_colors,
+        marker_line_color=[c.replace(")", ",0.8)").replace("rgb", "rgba") if "rgb" in c else c for c in bar_colors],
+        marker_line_width=0,
+        text=[f"{c:,.0f} SEK".replace(",", "\u00A0") for c in costs],
+        textposition="outside",
+        textfont=dict(family="IBM Plex Mono, monospace", size=12),
+        hovertemplate="<b>%{x}</b><br>Månadskostnad: %{text}<extra></extra>",
+    ))
 
-st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    layout = get_chart_layout(height=380, yaxis_title="Månadskostnad (SEK)", showlegend=False)
+    fig.update_layout(**layout)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 # ── Detail table ─────────────────────────────────────────────────────
-st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
 with st.expander("Detaljerad jämförelse"):
     rows_html = ""
     for key in regime_keys:
@@ -192,7 +208,7 @@ with st.expander("Detaljerad jämförelse"):
         regime = REGIMES[key]
         rows_html += f"""
         <tr>
-            <td>{regime['label']}</td>
+            <td class="kommun-name">{regime['label']}</td>
             <td class="num">{format_sek(res['required_cash'])}</td>
             <td class="num">{f"{res['years_to_save']:.1f}".replace(".", ",")}</td>
             <td class="num">{format_sek(res['loan_amount'])}</td>
@@ -208,7 +224,7 @@ with st.expander("Detaljerad jämförelse"):
             <tr>
                 <th>Regelverk</th>
                 <th class="num">Insats</th>
-                <th class="num">År</th>
+                <th class="num">Sparår</th>
                 <th class="num">Lån</th>
                 <th class="num">LTV</th>
                 <th class="num">LTI</th>
@@ -220,10 +236,4 @@ with st.expander("Detaljerad jämförelse"):
     </table>
     """, unsafe_allow_html=True)
 
-st.markdown(
-    """<div style="font-size:11px;color:#9CA3AF;text-align:center;padding:12px 0;
-    border-top:1px solid #EEF0F3;margin-top:32px;">
-    <strong>KÄLLA:</strong> SCB, Riksbanken, Finansinspektionen &nbsp;·&nbsp; SHAI v1.3
-    </div>""",
-    unsafe_allow_html=True,
-)
+footer_note(source="SCB, Riksbanken, Finansinspektionen")

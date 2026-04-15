@@ -5,18 +5,27 @@ Stresstesta bostadsöverkomlighet (Version C) med ränta-, inkomst- och prisför
 
 import streamlit as st
 
-st.set_page_config(page_title="SHAI · Scenariosimulator", layout="wide")
+st.set_page_config(
+    page_title="SHAI · Scenariosimulator",
+    page_icon="🏠",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None},
+)
 
 import pandas as pd
 import plotly.graph_objects as go
 
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, kpi_card, render_kpi_row, format_sek, format_pct
+from src.ui.components import (
+    page_title, kpi_card, render_kpi_row, format_sek, format_pct,
+    card_header, footer_note,
+)
+from src.ui.chart_theme import get_chart_layout
 from src.scenario.simulator import simulate
 
 inject_css()
-selections = render_sidebar()
+selections = render_sidebar(page_key="sc")
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -35,6 +44,7 @@ page_title(
     eyebrow="Sida 05 · Scenarioanalys",
     title="Scenariosimulator",
     subtitle="Simulera effekten av ränta-, inkomst- och prisförändringar på bostadsöverkomligheten",
+    year=selected_year,
 )
 
 # ── Scope note ───────────────────────────────────────────────────────
@@ -54,6 +64,7 @@ with col_county:
         "Välj län",
         list(county_options.keys()),
         index=0,
+        key="sc_county_select",
     )
 selected_county_code = county_options[selected_county_name]
 
@@ -67,6 +78,7 @@ with col_rate:
         value=0.0,
         step=0.25,
         format="%.2f",
+        key="sc_rate_slider",
     )
 
 with col_income:
@@ -76,6 +88,7 @@ with col_income:
         max_value=10,
         value=0,
         step=1,
+        key="sc_income_slider",
     )
 
 with col_price:
@@ -85,6 +98,7 @@ with col_price:
         max_value=25,
         value=0,
         step=5,
+        key="sc_price_slider",
     )
 
 # ── Run simulation ───────────────────────────────────────────────────
@@ -99,14 +113,14 @@ county_row = county_row.iloc[0]
 baseline_panel = {
     "income": county_row["median_income"],
     "kt_ratio": county_row["kt_ratio"],
-    "policy_rate": county_row["policy_rate"] / 100.0,  # Convert % to decimal
+    "policy_rate": county_row["policy_rate"] / 100.0,
     "cpi_yoy_pct": county_row["cpi_yoy_pct"] / 100.0,
 }
 
 try:
     result = simulate(
         county_kod=selected_county_code,
-        rate_shock=rate_shock / 100.0,  # Convert from pct points to decimal
+        rate_shock=rate_shock / 100.0,
         income_shock=income_shock_pct / 100.0,
         price_shock=price_shock_pct / 100.0,
         baseline_panel=baseline_panel,
@@ -119,95 +133,115 @@ except Exception as e:
 # ── Results ──────────────────────────────────────────────────────────
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-# KPI row
-delta_direction = "down" if result["delta"] > 0 else "up" if result["delta"] < 0 else "flat"
+# Determine change direction (for SHAI, higher = better, so positive delta is good)
+if result["delta"] > 0:
+    change_variant = "success"
+    change_direction = "down"  # green arrow down = improving
+elif result["delta"] < 0:
+    change_variant = "danger"
+    change_direction = "up"  # red arrow up = worsening
+else:
+    change_variant = "default"
+    change_direction = "flat"
+
 render_kpi_row([
     kpi_card(
         label="Basfall SHAI",
         value=f"{result['baseline_v_c']:.1f}".replace(".", ","),
         unit="Version C",
         variant="default",
+        tooltip="Basfall: beräknat från faktiska data för valt län och år.",
     ),
     kpi_card(
         label="Scenario SHAI",
         value=f"{result['scenario_v_c']:.1f}".replace(".", ","),
         unit="Version C",
         variant="accent",
+        tooltip="Scenario: beräknat med justerade parametrar.",
     ),
     kpi_card(
         label="Förändring",
         value=f"{result['delta']:+.1f}".replace(".", ","),
+        unit="poäng",
         delta=f"{result['delta_pct']:+.1f}%".replace(".", ","),
-        delta_direction=delta_direction,
-        variant="success" if result["delta"] > 0 else "danger" if result["delta"] < 0 else "default",
+        delta_direction=change_direction,
+        variant=change_variant,
+        tooltip="Skillnad mellan scenario och basfall. Positivt = bättre överkomlighet.",
     ),
 ])
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-# Side-by-side bar chart
+# ── Side-by-side bar chart + comparison table ────────────────────────
 col_chart, col_table = st.columns([3, 2])
 
 with col_chart:
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=["Basfall", "Scenario"],
-        y=[result["baseline_v_c"], result["scenario_v_c"]],
-        marker_color=[COLORS["primary"], COLORS["accent"]],
-        text=[f"{result['baseline_v_c']:.1f}".replace(".", ","), f"{result['scenario_v_c']:.1f}".replace(".", ",")],
-        textposition="outside",
-        textfont=dict(family="IBM Plex Mono, monospace", size=14, color=COLORS["text_primary"]),
-    ))
+    with st.container(border=True):
+        st.markdown(
+            card_header(
+                f"SHAI Version C — {selected_county_name}",
+                "Basfall vs scenario",
+                "SIMULERING",
+            ),
+            unsafe_allow_html=True,
+        )
 
-    fig.update_layout(
-        title=dict(text=f"SHAI Version C — {selected_county_name}", font=dict(size=15)),
-        yaxis_title="SHAI poäng",
-        font=dict(family="Source Sans 3, Source Sans Pro, sans-serif", size=12),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
-        margin=dict(l=50, r=20, t=60, b=50),
-        height=350,
-        showlegend=False,
-        yaxis=dict(gridcolor=COLORS["grid"]),
-    )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=["Basfall", "Scenario"],
+            y=[result["baseline_v_c"], result["scenario_v_c"]],
+            marker_color=[COLORS["primary"], COLORS["accent"]],
+            marker_line_width=0,
+            text=[
+                f"{result['baseline_v_c']:.1f}".replace(".", ","),
+                f"{result['scenario_v_c']:.1f}".replace(".", ","),
+            ],
+            textposition="outside",
+            textfont=dict(family="IBM Plex Mono, monospace", size=14, color=COLORS["text_primary"]),
+            hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra></extra>",
+            width=0.5,
+        ))
+
+        layout = get_chart_layout(height=350, yaxis_title="SHAI poäng", showlegend=False)
+        fig.update_layout(**layout)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 with col_table:
-    st.markdown("""
-    <div class="shai-card">
-        <div class="shai-card-header">
-            <div>
-                <div class="shai-card-title">Jämförelsetabell</div>
-                <div class="shai-card-subtitle">Basfall vs scenario</div>
-            </div>
-            <span class="shai-card-tag">DETALJER</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(
+            card_header("Jämförelsetabell", "Basfall vs scenario", "DETALJER"),
+            unsafe_allow_html=True,
+        )
 
-    comparison_data = {
-        "Variabel": ["Medianinkomst (SEK)", "K/T-kvot", "Styrränta (%)", "Realränta (%)", "SHAI (Version C)"],
-        "Basfall": [
-            format_sek(result["baseline_income"]),
-            f"{result['baseline_kt']:.3f}".replace(".", ","),
-            f"{result['baseline_rate']*100:.2f}%".replace(".", ","),
-            f"{result['real_rate_base']*100:.2f}%".replace(".", ","),
-            f"{result['baseline_v_c']:.1f}".replace(".", ","),
-        ],
-        "Scenario": [
-            format_sek(result["scenario_income"]),
-            f"{result['scenario_kt']:.3f}".replace(".", ","),
-            f"{result['scenario_rate']*100:.2f}%".replace(".", ","),
-            f"{result['real_rate_scen']*100:.2f}%".replace(".", ","),
-            f"{result['scenario_v_c']:.1f}".replace(".", ","),
-        ],
-    }
-    st.dataframe(
-        pd.DataFrame(comparison_data).set_index("Variabel"),
-        use_container_width=True,
-    )
+        comparison_data = {
+            "Variabel": [
+                "Medianinkomst (SEK)",
+                "K/T-kvot",
+                "Styrränta (%)",
+                "Realränta (%)",
+                "SHAI (Version C)",
+            ],
+            "Basfall": [
+                format_sek(result["baseline_income"]),
+                f"{result['baseline_kt']:.3f}".replace(".", ","),
+                f"{result['baseline_rate']*100:.2f}%".replace(".", ","),
+                f"{result['real_rate_base']*100:.2f}%".replace(".", ","),
+                f"{result['baseline_v_c']:.1f}".replace(".", ","),
+            ],
+            "Scenario": [
+                format_sek(result["scenario_income"]),
+                f"{result['scenario_kt']:.3f}".replace(".", ","),
+                f"{result['scenario_rate']*100:.2f}%".replace(".", ","),
+                f"{result['real_rate_scen']*100:.2f}%".replace(".", ","),
+                f"{result['scenario_v_c']:.1f}".replace(".", ","),
+            ],
+        }
+        st.dataframe(
+            pd.DataFrame(comparison_data).set_index("Variabel"),
+            use_container_width=True,
+        )
 
-# ── Explanation expander ─────────────────────────────────────────────
+# ── Explanation ──────────────────────────────────────────────────────
 with st.expander("Förklaring"):
     st.markdown("""
     **Version C (realversion)** beräknas som:
@@ -229,10 +263,4 @@ with st.expander("Förklaring"):
     - Prischock multipliceras med K/T-kvoten (relativ förändring)
     """)
 
-st.markdown(
-    """<div style="font-size:11px;color:#9CA3AF;text-align:center;padding:12px 0;
-    border-top:1px solid #EEF0F3;margin-top:32px;">
-    <strong>KÄLLA:</strong> SCB, Riksbanken, Kolada &nbsp;·&nbsp; SHAI v1.3
-    </div>""",
-    unsafe_allow_html=True,
-)
+footer_note()
