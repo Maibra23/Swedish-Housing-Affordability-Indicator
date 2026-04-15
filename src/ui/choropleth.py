@@ -70,6 +70,7 @@ def render_choropleth(
         unemp = float(row.get("unemployment_rate", 0))
 
         data_dict[code] = {
+            "kommun_name": str(row.get(name_col, "") or "").strip(),
             "z_score": z_val,
             "risk_class": risk_labels.get(risk, risk),
             "z_fmt": f"{z_val:+.2f}".replace(".", ","),
@@ -90,7 +91,11 @@ def render_choropleth(
     for feat in geojson["features"]:
         code = feat["properties"].get("id", "").zfill(4)
         d = data_dict.get(code, {})
-        feat["properties"]["Kommun"] = d.get("kommun_name", feat["properties"].get("kom_namn", code))
+        feat["properties"]["Kommun"] = (
+            d.get("kommun_name")
+            or feat["properties"].get("kom_namn")
+            or code
+        )
         feat["properties"]["Riskklass"] = d.get("risk_class", "Saknas")
         feat["properties"]["SHAI Poäng"] = d.get("shai_fmt", "Saknas")
         feat["properties"]["Z-poäng"] = d.get("z_fmt", "Saknas")
@@ -108,11 +113,12 @@ def render_choropleth(
         caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
     )
 
-    # Basemap — CartoDB positron, centered on Sweden
+    # Basemap — light polygons only (no OSM placenames: Positron "with labels"
+    # shows cities worldwide and reads as unrelated to SHAI).
     m = folium.Map(
         location=[63.0, 17.5],
         zoom_start=5,
-        tiles="CartoDB positron",
+        tiles="CartoDB.PositronNoLabels",
         prefer_canvas=True,
         zoom_control=True,
         scrollWheelZoom=False,
