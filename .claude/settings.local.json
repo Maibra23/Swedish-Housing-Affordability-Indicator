@@ -14,7 +14,13 @@
       "Bash(python3 /tmp/scb_tables.py)",
       "Bash(python3 /tmp/scb_explore5.py)",
       "WebFetch(domain:api.kolada.se)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(timeout 10 streamlit run:*)",
+      "Bash(pip list:*)",
+      "Bash(pip show:*)",
+      "Bash(timeout 15 streamlit run:*)",
+      "Bash(do echo:*)",
+      "Bash(timeout 12 streamlit run:*)"
     ]
   }
 }
