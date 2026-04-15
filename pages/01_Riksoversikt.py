@@ -175,8 +175,10 @@ with col_map:
                 "Varje kommun visas som ett ifyllt polygon. Färgen baseras på "
                 "z-poängen (Version C). Grön = låg risk, röd = hög risk. "
                 "Håll musen över en kommun för att se detaljer. "
-                "Bakgrundskartan visar inga världsstäder — endast polygoner och "
-                "verktygstips kommer från SHAI-data.",
+                "Små kommunnamn visas först när du zoomat in två steg från "
+                "startläget (zoomkontrollen +). De är förankrade i kartfilens "
+                "centrum. Bakgrundskartan visar inga världsstäder — övrig text "
+                "kommer från SHAI-data.",
             )
 
 with col_hist:
