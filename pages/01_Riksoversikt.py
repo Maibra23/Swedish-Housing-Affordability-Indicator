@@ -5,7 +5,12 @@ Nationell överblick med KPI-kort, karta, histogram och rankingtabeller.
 
 import streamlit as st
 
-st.set_page_config(page_title="SHAI · Riksöversikt", layout="wide")
+st.set_page_config(
+    page_title="SHAI · Riksöversikt",
+    page_icon="🏠",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None},
+)
 
 import numpy as np
 import pandas as pd
@@ -21,11 +26,14 @@ from src.ui.components import (
     format_pct,
     risk_pill,
     card,
+    card_header,
+    footer_note,
 )
 from src.ui.choropleth import render_choropleth
+from src.ui.chart_theme import get_chart_layout
 
 inject_css()
-selections = render_sidebar()
+selections = render_sidebar(page_key="rv")
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -34,7 +42,9 @@ try:
         municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
 
         try:
-            coords = pd.read_csv("data/processed/municipality_coords.csv", dtype={"region_code": str})
+            coords = pd.read_csv(
+                "data/processed/municipality_coords.csv", dtype={"region_code": str}
+            )
         except FileNotFoundError:
             coords = None
 except Exception as e:
@@ -43,18 +53,16 @@ except Exception as e:
     st.stop()
 
 selected_year = selections["selected_year"]
-risk_filter = selections["risk_filter"]
+selected_risks = selections["selected_risks"]
 
 # Filter to selected year from municipal panel
 mun_year = municipal[municipal["year"] == selected_year].copy()
 mun_prev = municipal[municipal["year"] == selected_year - 1].copy()
 
 # Use ranked data (always 2024, latest) for rankings/z-scores
-# If selected year matches ranked year, use it directly; otherwise compute from municipal
 if selected_year == ranked["year"].iloc[0]:
     df_ranked = ranked.copy()
 else:
-    # For other years, compute z-scores from municipal panel
     df_ranked = mun_year.copy()
     if "version_c" in df_ranked.columns and len(df_ranked) > 0:
         mean_c = df_ranked["version_c"].mean()
@@ -70,14 +78,13 @@ else:
             labels=["lag", "medel", "hog"],
         )
 
-# Apply risk filter
-if risk_filter != "Alla":
-    risk_map = {"Låg risk": "lag", "Medel risk": "medel", "Hög risk": "hog"}
-    filter_key = risk_map.get(risk_filter)
-    if filter_key and "risk_c" in df_ranked.columns:
-        df_ranked = df_ranked[df_ranked["risk_c"] == filter_key]
+# Apply risk filter from multi-select pills
+risk_label_map = {"Hög": "hog", "Medel": "medel", "Låg": "lag"}
+if "risk_c" in df_ranked.columns and len(selected_risks) < 3:
+    allowed = [risk_label_map[r] for r in selected_risks if r in risk_label_map]
+    df_ranked = df_ranked[df_ranked["risk_c"].isin(allowed)]
 
-# Empty state check
+# Empty state
 if len(mun_year) == 0:
     st.warning("Inga data tillgängliga för den valda perioden.")
     st.stop()
@@ -87,36 +94,32 @@ page_title(
     eyebrow="Sida 01 · Nationell översikt",
     title="Riksöversikt",
     subtitle=f"Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner · {selected_year}",
+    year=selected_year,
 )
 
 # ── KPI cards ────────────────────────────────────────────────────────
-# 1) Average SHAI (Version C)
 mean_vc = mun_year["version_c"].mean() if len(mun_year) > 0 else 0
 mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
 delta_vc = mean_vc - mean_vc_prev
 delta_vc_pct = (delta_vc / mean_vc_prev * 100) if mean_vc_prev != 0 else 0
 
-# 2) High-risk municipalities
 n_hog = len(df_ranked[df_ranked["risk_c"] == "hog"]) if "risk_c" in df_ranked.columns else 0
-# For delta, compute from previous year
 if len(mun_prev) > 0 and "version_c" in mun_prev.columns:
     mean_prev = mun_prev["version_c"].mean()
     std_prev = mun_prev["version_c"].std()
     if std_prev > 0:
         z_prev = (mun_prev["version_c"] - mean_prev) / std_prev
-        n_hog_prev = (z_prev > 0.67).sum()
+        n_hog_prev = int((z_prev > 0.67).sum())
     else:
         n_hog_prev = 0
 else:
     n_hog_prev = n_hog
 delta_hog = n_hog - n_hog_prev
 
-# 3) Mean K/T ratio
 mean_kt = mun_year["kt_ratio"].mean() if "kt_ratio" in mun_year.columns and len(mun_year) > 0 else 0
 mean_kt_prev = mun_prev["kt_ratio"].mean() if "kt_ratio" in mun_prev.columns and len(mun_prev) > 0 else mean_kt
 delta_kt_pct = ((mean_kt / mean_kt_prev - 1) * 100) if mean_kt_prev != 0 else 0
 
-# 4) Population change
 pop_now = mun_year["population"].sum() if "population" in mun_year.columns else 0
 pop_prev = mun_prev["population"].sum() if "population" in mun_prev.columns else pop_now
 pop_change_pct = ((pop_now / pop_prev - 1) * 100) if pop_prev > 0 else 0
@@ -124,11 +127,12 @@ pop_change_pct = ((pop_now / pop_prev - 1) * 100) if pop_prev > 0 else 0
 render_kpi_row([
     kpi_card(
         label="Genomsnittligt SHAI",
-        value=f"{mean_vc:,.1f}".replace(",", " ").replace(".", ","),
+        value=f"{mean_vc:,.1f}".replace(",", "\u00A0").replace(".", ","),
         unit="poäng",
         delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
         delta_direction="up" if delta_vc > 0 else "down" if delta_vc < 0 else "flat",
         variant="default",
+        tooltip="Genomsnittlig Version C-poäng för alla 290 kommuner. Högre = bättre överkomlighet.",
     ),
     kpi_card(
         label="Högrisk kommuner",
@@ -137,6 +141,7 @@ render_kpi_row([
         delta=f"{delta_hog:+d}" if delta_hog != 0 else "oförändrat",
         delta_direction="up" if delta_hog > 0 else "down" if delta_hog < 0 else "flat",
         variant="danger",
+        tooltip="Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög).",
     ),
     kpi_card(
         label="Medianpris (K/T ratio)",
@@ -145,13 +150,15 @@ render_kpi_row([
         delta=f"{delta_kt_pct:+.1f}%".replace(".", ","),
         delta_direction="up" if delta_kt_pct > 0 else "down" if delta_kt_pct < 0 else "flat",
         variant="accent",
+        tooltip="Genomsnittlig köpeskillingskoefficient. Högre = dyrare bostäder relativt taxeringsvärde.",
     ),
     kpi_card(
         label="Befolkningsförändring",
         value=format_pct(pop_change_pct),
-        delta=f"{(pop_now - pop_prev):+,.0f}".replace(",", " "),
+        delta=f"{(pop_now - pop_prev):+,.0f}".replace(",", "\u00A0"),
         delta_direction="up" if pop_change_pct > 0 else "down" if pop_change_pct < 0 else "flat",
         variant="success",
+        tooltip="Procentuell befolkningsförändring jämfört med föregående år.",
     ),
 ])
 
@@ -161,87 +168,86 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 col_map, col_hist = st.columns([3, 2])
 
 with col_map:
-    if coords is not None and len(df_ranked) > 0:
-        # Merge coordinates
-        map_data = df_ranked.merge(
-            coords, on="region_code", how="left"
-        ).dropna(subset=["lat", "lon"])
-        if len(map_data) > 0:
-            render_choropleth(map_data)
+    with st.container(border=True):
+        st.markdown(
+            card_header("Geografisk fördelning", f"Version C · {selected_year}", "KOROPLETKARTA"),
+            unsafe_allow_html=True,
+        )
+        if coords is not None and len(df_ranked) > 0:
+            map_data = df_ranked.merge(coords, on="region_code", how="left").dropna(
+                subset=["lat", "lon"]
+            )
+            if len(map_data) > 0:
+                render_choropleth(map_data, key="rv_choropleth")
+            else:
+                st.warning("Koordinatdata saknas för kartvisning.")
         else:
-            st.warning("Koordinatdata saknas för kartvisning.")
-    else:
-        st.info("Kartdata laddas — koordinatfil saknas ännu.")
+            st.info("Kartdata laddas — koordinatfil saknas ännu.")
+        with st.expander("Om kartan"):
+            st.markdown(
+                "Varje punkt representerar en kommun. Storlek och färg baseras på "
+                "z-poängen (Version C). Grön = låg risk, röd = hög risk. "
+                "Du kan zooma och panorera med musen.",
+                unsafe_allow_html=True,
+            )
 
 with col_hist:
-    st.markdown(
-        card(
-            title="Fördelning av SHAI poäng",
-            subtitle=f"Version C · {selected_year}",
-            tag="HISTOGRAM",
-            content="",
-        ),
-        unsafe_allow_html=True,
-    )
-    if "z_c" in df_ranked.columns and len(df_ranked) > 0:
-        z_vals = df_ranked["z_c"].dropna()
-
-        fig = go.Figure()
-
-        # Color bins matching risk thresholds
-        bins_low = z_vals[z_vals <= -0.67]
-        bins_mid = z_vals[(z_vals > -0.67) & (z_vals <= 0.67)]
-        bins_high = z_vals[z_vals > 0.67]
-
-        for subset, color, name in [
-            (bins_low, COLORS["low_risk"], "Låg risk"),
-            (bins_mid, COLORS["medium_risk"], "Medel risk"),
-            (bins_high, COLORS["high_risk"], "Hög risk"),
-        ]:
-            if len(subset) > 0:
-                fig.add_trace(go.Histogram(
-                    x=subset,
-                    marker_color=color,
-                    opacity=0.85,
-                    name=name,
-                    nbinsx=20,
-                ))
-
-        # Median line
-        median_z = z_vals.median()
-        fig.add_vline(
-            x=median_z,
-            line_dash="dash",
-            line_color=COLORS["primary"],
-            line_width=1.5,
-            annotation_text="Median",
-            annotation_position="top",
-            annotation_font=dict(size=11, color=COLORS["primary"]),
+    with st.container(border=True):
+        st.markdown(
+            card_header("Fördelning av SHAI poäng", f"Version C · {selected_year}", "HISTOGRAM"),
+            unsafe_allow_html=True,
         )
+        if "z_c" in df_ranked.columns and len(df_ranked) > 0:
+            z_vals = df_ranked["z_c"].dropna()
 
-        fig.update_layout(
-            barmode="stack",
-            xaxis_title="SHAI poäng (z-poäng)",
-            yaxis_title="Antal kommuner",
-            font=dict(family="Source Sans 3, Source Sans Pro, sans-serif", size=12),
-            plot_bgcolor="#FFFFFF",
-            paper_bgcolor="#FFFFFF",
-            margin=dict(l=40, r=20, t=20, b=50),
-            height=400,
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="left",
-                x=0,
-                font=dict(size=11),
-            ),
-            xaxis=dict(gridcolor=COLORS["grid"], zeroline=False),
-            yaxis=dict(gridcolor=COLORS["grid"], zeroline=False),
-        )
+            fig = go.Figure()
 
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            bins_low = z_vals[z_vals <= -0.67]
+            bins_mid = z_vals[(z_vals > -0.67) & (z_vals <= 0.67)]
+            bins_high = z_vals[z_vals > 0.67]
+
+            for subset, color, name in [
+                (bins_low, COLORS["low_risk"], "Låg risk"),
+                (bins_mid, COLORS["medium_risk"], "Medel risk"),
+                (bins_high, COLORS["high_risk"], "Hög risk"),
+            ]:
+                if len(subset) > 0:
+                    fig.add_trace(go.Histogram(
+                        x=subset,
+                        marker_color=color,
+                        opacity=0.85,
+                        name=name,
+                        nbinsx=20,
+                        hovertemplate="<b>%{x:.2f}</b><br>Antal: %{y}<extra></extra>",
+                    ))
+
+            median_z = z_vals.median()
+            fig.add_vline(
+                x=median_z,
+                line_dash="dash",
+                line_color=COLORS["primary"],
+                line_width=1.5,
+                annotation_text=f"Median: {median_z:.2f}",
+                annotation_position="top",
+                annotation_font=dict(size=11, color=COLORS["primary"]),
+            )
+
+            layout = get_chart_layout(
+                height=400,
+                xaxis_title="SHAI poäng (z-poäng)",
+                yaxis_title="Antal kommuner",
+            )
+            layout["barmode"] = "stack"
+            fig.update_layout(**layout)
+
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        with st.expander("Om fördelningsgrafen"):
+            st.markdown(
+                "Histogrammet visar hur SHAI-poängen (z-poäng) fördelar sig bland kommunerna. "
+                "Färgerna speglar riskklasserna: grön (z ≤ −0,67), gul (−0,67 < z ≤ 0,67), "
+                "röd (z > 0,67). Den streckade linjen visar medianen.",
+            )
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
@@ -264,8 +270,8 @@ def _build_ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
         pill = risk_pill(risk)
         rows_html += f"""
         <tr>
-            <td>{i}</td>
-            <td>{name}</td>
+            <td class="rank-cell">{i}</td>
+            <td class="kommun-name">{name}</td>
             <td class="num">{z_val:.2f}</td>
             <td class="num">{vc_val:.1f}</td>
             <td>{pill}</td>
@@ -303,26 +309,26 @@ if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
 
     with col_worst:
         st.markdown(
-            _build_ranking_table(df_ranked, ascending=False, title="Sämst överkomlighet (topp 15)"),
+            _build_ranking_table(
+                df_ranked, ascending=False, title="Sämst överkomlighet (topp 15)"
+            ),
             unsafe_allow_html=True,
         )
 
     with col_best:
         st.markdown(
-            _build_ranking_table(df_ranked, ascending=True, title="Bäst överkomlighet (topp 15)"),
+            _build_ranking_table(
+                df_ranked, ascending=True, title="Bäst överkomlighet (topp 15)"
+            ),
             unsafe_allow_html=True,
         )
 
-# ── Footer ───────────────────────────────────────────────────────────
-st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+    with st.expander("Om rankningstabellerna"):
+        st.markdown(
+            "Tabellerna visar de 15 kommuner med sämst respektive bäst överkomlighet "
+            "enligt Version C (realversion). Z-poängen anger hur långt kommunen avviker "
+            "från riksgenomsnittet i standardavvikelser."
+        )
 
-latest_year = municipal["year"].max() if len(municipal) > 0 else "—"
-st.markdown(
-    f"""<div style="font-size:11px;color:#9CA3AF;text-align:center;padding:12px 0;
-    border-top:1px solid #EEF0F3;">
-    <strong>KÄLLA:</strong> SCB, Riksbanken, Kolada &nbsp;·&nbsp;
-    Senast uppdaterad: {latest_year} &nbsp;·&nbsp;
-    SHAI v1.3
-    </div>""",
-    unsafe_allow_html=True,
-)
+# ── Footer ───────────────────────────────────────────────────────────
+footer_note()

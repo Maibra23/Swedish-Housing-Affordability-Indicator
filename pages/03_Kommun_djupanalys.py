@@ -6,7 +6,12 @@ Historisk SHAI 2014–2024 + prognos 2025–2030.
 
 import streamlit as st
 
-st.set_page_config(page_title="SHAI · Kommun djupanalys", layout="wide")
+st.set_page_config(
+    page_title="SHAI · Kommun djupanalys",
+    page_icon="🏠",
+    layout="wide",
+    menu_items={"Get Help": None, "Report a bug": None},
+)
 
 import numpy as np
 import pandas as pd
@@ -14,10 +19,11 @@ import plotly.graph_objects as go
 
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, card
+from src.ui.components import page_title, card_header, footer_note, kpi_card, render_kpi_row, format_pct
+from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
 
 inject_css()
-selections = render_sidebar()
+selections = render_sidebar(page_key="kd")
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -38,16 +44,24 @@ except Exception as e:
     st.caption(f"Detaljer: {e}")
     st.stop()
 
+selected_year = selections["selected_year"]
+
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
     eyebrow="Sida 03 · Kommunanalys",
     title="Kommun djupanalys",
     subtitle="Historisk analys och prognos per kommun",
+    year=selected_year,
 )
 
 # ── Kommun selector ──────────────────────────────────────────────────
 kommun_list = sorted(municipal["region_name"].unique())
-selected_kommun = st.selectbox("Välj kommun", kommun_list, index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0)
+selected_kommun = st.selectbox(
+    "Välj kommun",
+    kommun_list,
+    index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
+    key="kd_kommun_select",
+)
 
 kommun_data = municipal[municipal["region_name"] == selected_kommun].sort_values("year")
 
@@ -57,9 +71,49 @@ if len(kommun_data) == 0:
 
 lan_code = kommun_data["lan_code"].iloc[0]
 
+# ── KPI summary for selected kommun ─────────────────────────────────
+latest = kommun_data[kommun_data["year"] == selected_year]
+prev = kommun_data[kommun_data["year"] == selected_year - 1]
+
+if len(latest) > 0:
+    lat = latest.iloc[0]
+    prv = prev.iloc[0] if len(prev) > 0 else lat
+
+    vc_delta = lat["version_c"] - prv["version_c"] if len(prev) > 0 else 0
+    vc_delta_pct = (vc_delta / prv["version_c"] * 100) if len(prev) > 0 and prv["version_c"] != 0 else 0
+
+    render_kpi_row([
+        kpi_card(
+            label="SHAI (Version C)",
+            value=f"{lat['version_c']:.1f}".replace(".", ","),
+            unit="poäng",
+            delta=f"{vc_delta_pct:+.1f}%".replace(".", ",") if len(prev) > 0 else "",
+            delta_direction="down" if vc_delta > 0 else "up" if vc_delta < 0 else "flat",
+            variant="accent",
+        ),
+        kpi_card(
+            label="Medianinkomst",
+            value=f"{lat['median_income']:,.0f}".replace(",", "\u00A0"),
+            unit="SEK",
+            variant="default",
+        ),
+        kpi_card(
+            label="K/T-kvot",
+            value=f"{lat['kt_ratio']:.2f}".replace(".", ","),
+            variant="default",
+        ),
+        kpi_card(
+            label="Styrränta",
+            value=f"{lat['policy_rate']:.2f}%".replace(".", ","),
+            variant="default",
+        ),
+    ])
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
 # ── Caveat callout ───────────────────────────────────────────────────
 st.warning(
-    "⚠️ **Prognoser baseras på 11 årliga observationer (2014–2024).** "
+    "**Prognoser baseras på 11 årliga observationer (2014–2024).** "
     "Konfidensintervall vidgas snabbt efter år 3. "
     "Tolka långtidsprognoser med försiktighet."
 )
@@ -80,31 +134,32 @@ def _build_forecast_chart(
         y=hist_data["version_c"],
         mode="lines+markers",
         name="Historisk",
-        line=dict(color=COLORS["primary"], width=2),
-        marker=dict(size=5),
+        line=dict(color=COLORS["primary"], width=2.5),
+        marker=dict(size=6, color=COLORS["primary"]),
+        hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra>Historisk</extra>",
     ))
 
-    # Mark imputed years with different style
-    imputed = hist_data[hist_data["is_imputed_income"] == True]
-    if len(imputed) > 0:
-        fig.add_trace(go.Scatter(
-            x=imputed["year"],
-            y=imputed["version_c"],
-            mode="markers",
-            name="Framskriven inkomst",
-            marker=dict(size=8, color=COLORS["accent"], symbol="diamond"),
-            hovertemplate="<b>%{x}</b><br>Värde framskrivet från 2024<extra></extra>",
-        ))
+    # Mark imputed years
+    if "is_imputed_income" in hist_data.columns:
+        imputed = hist_data[hist_data["is_imputed_income"] == True]
+        if len(imputed) > 0:
+            fig.add_trace(go.Scatter(
+                x=imputed["year"],
+                y=imputed["version_c"],
+                mode="markers",
+                name="Framskriven inkomst",
+                marker=dict(size=10, color=COLORS["accent"], symbol="diamond"),
+                hovertemplate="<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
+            ))
 
     # Forecast
     if len(forecast_df) > 0:
         fc = forecast_df[
-            (forecast_df["county_kod"] == lan_code) &
-            (forecast_df["variable"] == "affordability_c")
+            (forecast_df["county_kod"] == lan_code)
+            & (forecast_df["variable"] == "affordability_c")
         ].sort_values("target_year")
 
         if len(fc) > 0:
-            # Connect historical to forecast
             last_hist_year = hist_data["year"].max()
             last_hist_val = hist_data[hist_data["year"] == last_hist_year]["version_c"].iloc[0]
 
@@ -118,7 +173,7 @@ def _build_forecast_chart(
                 x=fc_years + fc_years[::-1],
                 y=fc_upper + fc_lower[::-1],
                 fill="toself",
-                fillcolor="rgba(75, 111, 165, 0.15)",
+                fillcolor="rgba(74, 111, 165, 0.12)",
                 line=dict(width=0),
                 name="80% konfidensintervall",
                 hoverinfo="skip",
@@ -131,21 +186,17 @@ def _build_forecast_chart(
                 mode="lines+markers",
                 name=f"Prognos ({model_name})",
                 line=dict(color=COLORS["secondary"], width=2, dash="dash"),
-                marker=dict(size=4),
+                marker=dict(size=5, color=COLORS["secondary"]),
+                hovertemplate=f"<b>%{{x}}</b><br>Prognos: %{{y:,.1f}}<extra>{model_name}</extra>",
             ))
 
-    fig.update_layout(
+    layout = get_chart_layout(
+        height=380,
         xaxis_title="År",
         yaxis_title="SHAI (Version C)",
-        font=dict(family="Source Sans 3, Source Sans Pro, sans-serif", size=12),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
-        margin=dict(l=50, r=20, t=30, b=50),
-        height=380,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        xaxis=dict(gridcolor=COLORS["grid"], dtick=1),
-        yaxis=dict(gridcolor=COLORS["grid"]),
     )
+    layout["xaxis"]["dtick"] = 1
+    fig.update_layout(**layout)
     return fig
 
 
@@ -153,92 +204,92 @@ def _build_forecast_chart(
 tab_prophet, tab_arima = st.tabs(["Prophet (standard)", "ARIMA (rekommenderad)"])
 
 with tab_prophet:
-    if len(forecast_prophet) > 0:
-        fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    else:
-        st.info("Prognosdata (Prophet) saknas.")
+    with st.container(border=True):
+        st.markdown(
+            card_header(f"Prognos — {selected_kommun}", "Prophet-modell", "PROPHET"),
+            unsafe_allow_html=True,
+        )
+        if len(forecast_prophet) > 0:
+            fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("Prognosdata (Prophet) saknas.")
 
 with tab_arima:
-    if len(forecast_arima) > 0:
-        fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA")
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    else:
-        st.info("Prognosdata (ARIMA) saknas.")
+    with st.container(border=True):
+        st.markdown(
+            card_header(f"Prognos — {selected_kommun}", "ARIMA-modell (auto-AIC)", "ARIMA"),
+            unsafe_allow_html=True,
+        )
+        if len(forecast_arima) > 0:
+            fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA")
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("Prognosdata (ARIMA) saknas.")
 
 # ── Component breakdown ──────────────────────────────────────────────
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
-st.markdown(
-    card(
-        title="Komponentuppdelning",
-        subtitle=f"{selected_kommun} · 2014–2024",
-        tag="KOMPONENTER",
-    ),
-    unsafe_allow_html=True,
-)
 
-col1, col2, col3 = st.columns(3)
-
-component_configs = [
-    ("Medianinkomst", "median_income", "SEK", col1),
-    ("K/T-kvot", "kt_ratio", "kvot", col2),
-    ("Styrränta", "policy_rate", "%", col3),
-]
-
-# Compute which component has highest coefficient of variation
-cv_scores = {}
-for label, col_name, unit, _ in component_configs:
-    vals = kommun_data[col_name].dropna()
-    if len(vals) > 1 and vals.mean() != 0:
-        cv_scores[label] = vals.std() / abs(vals.mean())
-    else:
-        cv_scores[label] = 0
-
-driver = max(cv_scores, key=cv_scores.get) if cv_scores else ""
-
-for label, col_name, unit, col_container in component_configs:
-    with col_container:
-        is_driver = label == driver
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=kommun_data["year"],
-            y=kommun_data[col_name],
-            mode="lines+markers",
-            line=dict(
-                color=COLORS["accent"] if is_driver else COLORS["secondary"],
-                width=2,
-            ),
-            marker=dict(size=4),
-            hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:,.2f}} {unit}<extra></extra>",
-        ))
-        fig.update_layout(
-            title=dict(
-                text=f"{'⭐ ' if is_driver else ''}{label}",
-                font=dict(size=13),
-            ),
-            xaxis=dict(gridcolor=COLORS["grid"], dtick=2),
-            yaxis=dict(gridcolor=COLORS["grid"], title=unit),
-            font=dict(family="Source Sans 3, Source Sans Pro, sans-serif", size=11),
-            plot_bgcolor="#FFFFFF",
-            paper_bgcolor="#FFFFFF",
-            margin=dict(l=50, r=10, t=40, b=40),
-            height=250,
-            showlegend=False,
-        )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-if driver:
+with st.container(border=True):
     st.markdown(
-        f"<div style='font-size:13px;color:#6B7280;text-align:center;'>"
-        f"⭐ <strong>{driver}</strong> har störst relativ variation och driver mest av SHAI-förändringen "
-        f"för {selected_kommun}.</div>",
+        card_header("Komponentuppdelning", f"{selected_kommun} · 2014–2024", "KOMPONENTER"),
         unsafe_allow_html=True,
     )
 
-st.markdown(
-    """<div style="font-size:11px;color:#9CA3AF;text-align:center;padding:12px 0;
-    border-top:1px solid #EEF0F3;margin-top:32px;">
-    <strong>KÄLLA:</strong> SCB, Riksbanken, Kolada &nbsp;·&nbsp; SHAI v1.3
-    </div>""",
-    unsafe_allow_html=True,
-)
+    col1, col2, col3 = st.columns(3)
+
+    component_configs = [
+        ("Medianinkomst", "median_income", "SEK", col1, "#3D8B6E"),
+        ("K/T-kvot", "kt_ratio", "kvot", col2, "#4A6FA5"),
+        ("Styrränta", "policy_rate", "%", col3, "#D4785A"),
+    ]
+
+    # Compute driver
+    cv_scores = {}
+    for label, col_name, unit, _, _ in component_configs:
+        vals = kommun_data[col_name].dropna()
+        if len(vals) > 1 and vals.mean() != 0:
+            cv_scores[label] = vals.std() / abs(vals.mean())
+        else:
+            cv_scores[label] = 0
+
+    driver = max(cv_scores, key=cv_scores.get) if cv_scores else ""
+
+    for label, col_name, unit, col_container, base_color in component_configs:
+        with col_container:
+            is_driver = label == driver
+            chart_color = COLORS["accent"] if is_driver else base_color
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=kommun_data["year"],
+                y=kommun_data[col_name],
+                mode="lines+markers",
+                line=dict(color=chart_color, width=2.5 if is_driver else 2),
+                marker=dict(size=5, color=chart_color),
+                fill="tozeroy",
+                fillcolor=f"rgba({int(chart_color[1:3],16)},{int(chart_color[3:5],16)},{int(chart_color[5:7],16)},0.06)",
+                hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:,.2f}} {unit}<extra></extra>",
+            ))
+
+            title_prefix = "★ " if is_driver else ""
+            layout = get_chart_layout(
+                title=f"{title_prefix}{label}",
+                height=250,
+                yaxis_title=unit,
+                showlegend=False,
+            )
+            layout["xaxis"]["dtick"] = 2
+            layout["margin"] = {"l": 50, "r": 10, "t": 40, "b": 40}
+            fig.update_layout(**layout)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+    if driver:
+        st.markdown(
+            f"<div style='font-size:13px;color:{COLORS['text_secondary']};text-align:center;padding:8px 0;'>"
+            f"★ <strong>{driver}</strong> har störst relativ variation och driver mest av "
+            f"SHAI-förändringen för {selected_kommun}.</div>",
+            unsafe_allow_html=True,
+        )
+
+footer_note()

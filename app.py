@@ -1,6 +1,7 @@
 """SHAI — Swedish Housing Affordability Indicator.
 
 Entry point for the Streamlit multi-page dashboard.
+Landing page with hero, stat strip, explanation, index visual, steps, nav cards, credibility.
 """
 
 import streamlit as st
@@ -10,39 +11,93 @@ st.set_page_config(
     page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": "SHAI v1.3 — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
+    },
 )
 
 from src.ui.css import inject_css
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, kpi_card, render_kpi_row
-
-inject_css()
-selections = render_sidebar()
-
-# Landing page content
-page_title(
-    eyebrow="Sida 00 · Startsida",
-    title="SHAI Dashboard",
-    subtitle="Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner",
+from src.ui.components import (
+    render_landing_hero,
+    render_landing_stat_strip,
+    render_landing_what_is_block,
+    render_index_visual_block,
+    render_landing_steps,
+    render_landing_nav_card,
+    render_landing_credibility,
+    footer_note,
 )
 
-st.markdown("""
-Välkommen till **SHAI** (Swedish Housing Affordability Indicator).
+inject_css()
+selections = render_sidebar(page_key="main")
 
-Använd sidomenyn för att navigera mellan de sex analysvyerna:
+# ── Hero ──────────────────────────────────────────────────────────────
+render_landing_hero()
 
-1. **Riksöversikt** — nationell överblick med karta och nyckeltal
-2. **Län jämförelse** — jämför 21 län under tre formelversioner
-3. **Kommun djupanalys** — prognos och detaljanalys per kommun
-4. **Kontantinsats analys** — historiska regimer och insatskrav
-5. **Scenariosimulator** — stresstesta ränta, inkomst och prisförändringar
-6. **Metodologi och källor** — formler, datakällor och begränsningar
-""")
-
-# Quick KPI preview
-render_kpi_row([
-    kpi_card("Valt år", str(selections["selected_year"]), variant="accent"),
-    kpi_card("Kommuner", "290", variant="default"),
-    kpi_card("Län", "21", variant="default"),
-    kpi_card("Riskfilter", selections["risk_filter"], variant="default"),
+# ── Stat strip (connected to hero) ───────────────────────────────────
+render_landing_stat_strip([
+    {"label": "Analysperiod", "value": "2014–2024", "unit": "11 år"},
+    {"label": "Kommuner", "value": "290", "unit": "analyserade"},
+    {"label": "Län", "value": "21", "unit": "jämförda"},
+    {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},
 ])
+
+# ── What is SHAI? ────────────────────────────────────────────────────
+render_landing_what_is_block()
+
+# ── Index overview (weights + flow SVG) ──────────────────────────────
+render_index_visual_block()
+
+# ── Pipeline steps ───────────────────────────────────────────────────
+render_landing_steps()
+
+# ── Navigation cards ─────────────────────────────────────────────────
+st.markdown("""
+<div class="lp-section">
+    <div class="lp-section-title">Vad hittar du här?</div>
+</div>
+""", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.markdown(render_landing_nav_card(
+        "🗺️", "Riksöversikt",
+        "Nationell överblick med karta, histogram och rankingtabeller för 290 kommuner.",
+        tag="SIDA 01",
+    ), unsafe_allow_html=True)
+    st.markdown(render_landing_nav_card(
+        "📊", "Län jämförelse",
+        "21 län jämförda under tre ekonometriska formler (A, B, C).",
+        tag="SIDA 02",
+    ), unsafe_allow_html=True)
+with col2:
+    st.markdown(render_landing_nav_card(
+        "🔍", "Kommun djupanalys",
+        "Historisk analys och prognos per kommun med Prophet och ARIMA.",
+        tag="SIDA 03",
+    ), unsafe_allow_html=True)
+    st.markdown(render_landing_nav_card(
+        "💰", "Kontantinsats",
+        "Jämför insatskrav under fyra regulatoriska regimer sedan 2010.",
+        tag="SIDA 04",
+    ), unsafe_allow_html=True)
+with col3:
+    st.markdown(render_landing_nav_card(
+        "⚡", "Scenariosimulator",
+        "Stresstesta med ränta-, inkomst- och prisförändringar per län.",
+        tag="SIDA 05",
+    ), unsafe_allow_html=True)
+    st.markdown(render_landing_nav_card(
+        "📖", "Metodologi",
+        "Formler, datakällor, begränsningar (F1–F10) och validering.",
+        tag="SIDA 06",
+    ), unsafe_allow_html=True)
+
+# ── Credibility block ────────────────────────────────────────────────
+render_landing_credibility()
+
+# ── Footer ───────────────────────────────────────────────────────────
+footer_note()
