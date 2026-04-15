@@ -76,41 +76,15 @@ Load via Google Fonts in Streamlit `st.markdown` with custom CSS injection.
 
 ## 5. Choropleth map (the Geografisk fördelning pattern)
 
-Use ECharts via `streamlit-echarts`:
+**Implementation (SHAI):** Plotly `go.Scattergeo` in `src/ui/choropleth.py`, rendered with `st.plotly_chart`. The app does **not** use `streamlit-echarts` or Apache ECharts.
 
-```python
-{
-    "backgroundColor": "#FFFFFF",
-    "geo": {
-        "map": "world",
-        "roam": False,
-        "center": [16, 62],
-        "zoom": 4.2,
-        "itemStyle": {
-            "areaColor": "#F7F8FA",
-            "borderColor": "#D1D5DB",
-            "borderWidth": 0.5
-        }
-    },
-    "visualMap": {
-        "min": -2.5, "max": 2.5,
-        "left": 20, "bottom": 20,
-        "orient": "horizontal",
-        "inRange": {
-            "color": ["#2E7D5B","#A8C4A4","#E5E7EB","#E8BE7C","#D4A03C","#B94A48"]
-        },
-        "dimension": 2
-    },
-    "series": [{
-        "type": "scatter",
-        "coordinateSystem": "geo",
-        "symbolSize": "function(val) { return 6 + Math.abs(val[2])*4; }",
-        "data": [...]  # [lon, lat, value, name]
-    }]
-}
-```
+- One trace per risk class (`lag` / `medel` / `hog`) so the legend matches the three risk colors (`COLORS` in `src/ui/css.py`).
+- Marker size scales with absolute z-score; marker color is fixed per risk class (not a continuous diverging scale).
+- Basemap: Europe scope, lon/lat axis clamped to Sweden; land/ocean/country styling aligned with the light dashboard background (`#F7F8FA` land, white ocean).
 
-Each municipality plotted as a scatter point colored by SHAI value, sized by absolute deviation. This avoids needing GeoJSON polygons for all 290 municipalities while preserving the visual signature.
+**Reference (KRI / ECharts):** The original design doc described an ECharts scatter-on-geo option dict (visualMap, geo center ~ [16, 62]). That pattern is **conceptually** the same (points on a map, risk-colored); the production stack uses Plotly for serialization and Streamlit compatibility.
+
+Each municipality is a point (not a filled polygon), which avoids shipping GeoJSON for all 290 municipalities while keeping a clear geographic view.
 
 ## 6. Streamlit specific implementation
 

@@ -1270,26 +1270,22 @@ Ensures `st.container(border=True)` looks identical to custom `.shai-card` eleme
 
 ### Current State (SHAI)
 - All charts use **Plotly** (`plotly.graph_objects`).
-- Choropleth uses `streamlit-echarts`.
+- The national map uses **Plotly** `Scattergeo` (`src/ui/choropleth.py`), not ECharts. The `streamlit-echarts` dependency has been removed from the project; do not install it unless you deliberately migrate.
 
 ### KRI Reference
-- All charts use **Apache ECharts** via `streamlit-echarts`.
-- Unified theme via `get_echarts_base_options()`.
-- Plotly is not used.
+- Reference app uses **Apache ECharts** via `streamlit-echarts`.
+- Unified theme via ECharts base options.
+- SHAI chose Plotly instead for maintainability and Streamlit integration.
 
 ### What to Do
 
-This is the **largest single change**. You have two options:
+**Recommended path (current): Keep Plotly and match KRI visual style.**
+- Same color tokens, fonts, and grid colors via `get_chart_layout` / CSS.
+- Add matching tooltip styling, axis formatting, and animation settings where gaps remain.
 
-**Option A (Recommended): Keep Plotly but match the KRI visual style exactly.**
-- Already using same color tokens, fonts, and grid colors.
-- Add matching tooltip styling, axis formatting, and animation settings.
-- This avoids rewriting all chart code.
-
-**Option B (Full parity): Migrate all charts to ECharts.**
-- Rewrite all `go.Figure()` calls as ECharts options dicts.
-- Use `st_echarts()` for rendering.
-- Requires significant refactoring.
+**Optional (full parity with KRI charts): Migrate charts to ECharts.**
+- Rewrite `go.Figure()` calls as ECharts option dicts and render with `streamlit-echarts`.
+- Large refactor; only needed if pixel-perfect ECharts parity is required.
 
 **If choosing Option A**, ensure every Plotly chart has:
 

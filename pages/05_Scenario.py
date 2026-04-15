@@ -112,15 +112,15 @@ county_row = county_row.iloc[0]
 
 baseline_panel = {
     "income": county_row["median_income"],
-    "kt_ratio": county_row["kt_ratio"],
-    "policy_rate": county_row["policy_rate"] / 100.0,
-    "cpi_yoy_pct": county_row["cpi_yoy_pct"] / 100.0,
+    "transaction_price_sek": county_row["transaction_price_sek"],
+    "policy_rate": county_row["policy_rate"],       # percentage points
+    "cpi_yoy_pct": county_row["cpi_yoy_pct"],       # percentage points
 }
 
 try:
     result = simulate(
         county_kod=selected_county_code,
-        rate_shock=rate_shock / 100.0,
+        rate_shock=rate_shock,                       # already in pp from slider
         income_shock=income_shock_pct / 100.0,
         price_shock=price_shock_pct / 100.0,
         baseline_panel=baseline_panel,
@@ -204,7 +204,7 @@ with col_chart:
 
         layout = get_chart_layout(height=350, yaxis_title="SHAI poäng", showlegend=False)
         fig.update_layout(**layout)
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 with col_table:
     with st.container(border=True):
@@ -216,29 +216,29 @@ with col_table:
         comparison_data = {
             "Variabel": [
                 "Medianinkomst (SEK)",
-                "K/T-kvot",
+                "Transaktionspris (SEK)",
                 "Styrränta (%)",
                 "Realränta (%)",
                 "SHAI (Version C)",
             ],
             "Basfall": [
                 format_sek(result["baseline_income"]),
-                f"{result['baseline_kt']:.3f}".replace(".", ","),
-                f"{result['baseline_rate']*100:.2f}%".replace(".", ","),
-                f"{result['real_rate_base']*100:.2f}%".replace(".", ","),
+                format_sek(result["baseline_price"]),
+                f"{result['baseline_rate']:.2f}%".replace(".", ","),
+                f"{result['real_rate_base']:.2f}%".replace(".", ","),
                 f"{result['baseline_v_c']:.1f}".replace(".", ","),
             ],
             "Scenario": [
                 format_sek(result["scenario_income"]),
-                f"{result['scenario_kt']:.3f}".replace(".", ","),
-                f"{result['scenario_rate']*100:.2f}%".replace(".", ","),
-                f"{result['real_rate_scen']*100:.2f}%".replace(".", ","),
+                format_sek(result["scenario_price"]),
+                f"{result['scenario_rate']:.2f}%".replace(".", ","),
+                f"{result['real_rate_scen']:.2f}%".replace(".", ","),
                 f"{result['scenario_v_c']:.1f}".replace(".", ","),
             ],
         }
         st.dataframe(
             pd.DataFrame(comparison_data).set_index("Variabel"),
-            use_container_width=True,
+            width="stretch",
         )
 
 # ── Explanation ──────────────────────────────────────────────────────
@@ -246,21 +246,21 @@ with st.expander("Förklaring"):
     st.markdown("""
     **Version C (realversion)** beräknas som:
 
-    $$\\text{Affordability}_C = \\frac{\\text{Inkomst}}{\\text{K/T} \\times \\max(R - \\pi, 0{,}005)}$$
+    $$\\text{Affordability}_C = \\frac{\\text{Inkomst}}{\\text{Transaktionspris} \\times \\max(R - \\pi,\\; 0{,}5) / 100}$$
 
     Där:
     - **Inkomst** = median disponibel hushållsinkomst (SEK)
-    - **K/T** = köpeskillingskoefficient (förhållande mellan köpeskilling och taxeringsvärde)
-    - **R** = Riksbankens styrränta (årsgenomsnitt)
-    - **π** = KPI-inflation (årsgenomsnitt)
-    - **0,005** = golv för att förhindra division med noll vid negativ realränta
+    - **Transaktionspris** = median transaktionspris för bostäder (SEK, SCB BO0501)
+    - **R** = Riksbankens styrränta i procentenheter (årsgenomsnitt)
+    - **π** = KPI-inflation i procentenheter (årsgenomsnitt)
+    - **0,5** = golv (procentenheter) för att förhindra division med noll vid negativ realränta
 
     **Tolkning:** Högre värde = bättre bostadsöverkomlighet.
 
     **Scenariomekanik:**
     - Räntechock adderas till styrräntan (procentenheter)
     - Inkomsttillväxt multipliceras med inkomsten (relativ förändring)
-    - Prischock multipliceras med K/T-kvoten (relativ förändring)
+    - Prischock multipliceras med transaktionspriset (relativ förändring)
     """)
 
 footer_note()

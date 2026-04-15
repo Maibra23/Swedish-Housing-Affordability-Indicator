@@ -40,13 +40,6 @@ try:
     with st.spinner("Laddar data..."):
         ranked = pd.read_parquet("data/processed/affordability_ranked.parquet")
         municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
-
-        try:
-            coords = pd.read_csv(
-                "data/processed/municipality_coords.csv", dtype={"region_code": str}
-            )
-        except FileNotFoundError:
-            coords = None
 except Exception as e:
     st.error("Kunde inte hämta data. Försök igen senare.")
     st.caption(f"Detaljer: {e}")
@@ -173,22 +166,15 @@ with col_map:
             card_header("Geografisk fördelning", f"Version C · {selected_year}", "KOROPLETKARTA"),
             unsafe_allow_html=True,
         )
-        if coords is not None and len(df_ranked) > 0:
-            map_data = df_ranked.merge(coords, on="region_code", how="left").dropna(
-                subset=["lat", "lon"]
-            )
-            if len(map_data) > 0:
-                render_choropleth(map_data, key="rv_choropleth")
-            else:
-                st.warning("Koordinatdata saknas för kartvisning.")
+        if len(df_ranked) > 0:
+            render_choropleth(df_ranked, key="rv_choropleth")
         else:
-            st.info("Kartdata laddas — koordinatfil saknas ännu.")
+            st.info("Ingen data tillgänglig för kartvisning.")
         with st.expander("Om kartan"):
             st.markdown(
-                "Varje punkt representerar en kommun. Storlek och färg baseras på "
+                "Varje kommun visas som ett ifyllt polygon. Färgen baseras på "
                 "z-poängen (Version C). Grön = låg risk, röd = hög risk. "
-                "Du kan zooma och panorera med musen.",
-                unsafe_allow_html=True,
+                "Håll musen över en kommun för att se detaljer.",
             )
 
 with col_hist:
@@ -240,7 +226,7 @@ with col_hist:
             layout["barmode"] = "stack"
             fig.update_layout(**layout)
 
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
         with st.expander("Om fördelningsgrafen"):
             st.markdown(

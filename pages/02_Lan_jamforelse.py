@@ -147,7 +147,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 )
                 layout["xaxis"]["dtick"] = 1
                 fig.update_layout(**layout)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
         with col_table:
             year_data = county_versions[county_versions["year"] == selected_year].copy()
