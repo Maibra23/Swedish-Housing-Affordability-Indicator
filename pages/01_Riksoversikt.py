@@ -12,6 +12,8 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
+import re
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -299,17 +301,17 @@ if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
 
     with col_worst:
         st.markdown(
-            _build_ranking_table(
+            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
                 df_ranked, ascending=False, title="Sämst överkomlighet (topp 15)"
-            ),
+            )),
             unsafe_allow_html=True,
         )
 
     with col_best:
         st.markdown(
-            _build_ranking_table(
+            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
                 df_ranked, ascending=True, title="Bäst överkomlighet (topp 15)"
-            ),
+            )),
             unsafe_allow_html=True,
         )
 
