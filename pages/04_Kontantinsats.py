@@ -17,9 +17,18 @@ import plotly.graph_objects as go
 
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, format_sek, card_header, footer_note
+from src.ui.components import (
+    _compact,
+    page_title,
+    format_sek,
+    format_pct,
+    card_header,
+    footer_note,
+    kpi_card,
+    render_kpi_row,
+)
 from src.ui.chart_theme import get_chart_layout
-from src.kontantinsats.engine import REGIMES, apply_regime, compare_regimes
+from src.kontantinsats.engine import REGIMES, compare_regimes
 
 inject_css()
 selections = render_sidebar(page_key="ki")
@@ -44,27 +53,33 @@ page_title(
     year=selected_year,
 )
 
-# ── Kommun selector + savings slider ─────────────────────────────────
-col_sel, col_slider = st.columns([2, 1])
-
-kommun_list = sorted(mun_year["region_name"].unique())
-with col_sel:
-    selected_kommun = st.selectbox(
-        "Välj kommun",
-        kommun_list,
-        index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
-        key="ki_kommun_select",
+# ── 1 · Controls ──────────────────────────────────────────────────────
+with st.container(border=True):
+    st.markdown(
+        card_header("Välj analysenhet", "Kommun och sparandeantagande", "URVAL"),
+        unsafe_allow_html=True,
     )
 
-with col_slider:
-    savings_rate = st.slider(
-        "Sparkvot (%)",
-        min_value=5,
-        max_value=25,
-        value=10,
-        step=1,
-        key="ki_savings_slider",
-    ) / 100.0
+    col_sel, col_slider = st.columns([2, 1])
+
+    kommun_list = sorted(mun_year["region_name"].unique())
+    with col_sel:
+        selected_kommun = st.selectbox(
+            "Välj kommun",
+            kommun_list,
+            index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
+            key="ki_kommun_select",
+        )
+
+    with col_slider:
+        savings_rate = st.slider(
+            "Sparkvot (%)",
+            min_value=5,
+            max_value=25,
+            value=10,
+            step=1,
+            key="ki_savings_slider",
+        ) / 100.0
 
 kommun_row = mun_year[mun_year["region_name"] == selected_kommun]
 if len(kommun_row) == 0:
@@ -78,77 +93,183 @@ rate = kommun_row["policy_rate"] / 100.0
 
 # ── Compute all regimes ──────────────────────────────────────────────
 results = compare_regimes(price, income, rate, savings_rate)
+baseline = results["amort_2"]
+regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2"]
 
-# ── Context summary ──────────────────────────────────────────────────
-st.markdown(
-    f"<div style='font-size:13px;color:{COLORS['text_secondary']};margin-bottom:16px;'>"
-    f"<strong>{selected_kommun}</strong> · "
-    f"Medianpris: <strong>{format_sek(price)} SEK</strong> · "
-    f"Medianinkomst: <strong>{format_sek(income)} SEK</strong> · "
-    f"Ränta: <strong>{kommun_row['policy_rate']:.2f}%</strong> · "
-    f"Sparkvot: <strong>{int(savings_rate*100)}%</strong>"
-    f"</div>",
-    unsafe_allow_html=True,
+# ── 2 · Affordability Snapshot ────────────────────────────────────────
+monthly_income = income / 12
+pi_ratio       = price / income
+insats_yrs     = baseline["required_cash"] / income
+cost_pct       = baseline["monthly_total"] / monthly_income * 100
+sparår         = baseline["years_to_save"]
+
+if sparår < 5:
+    aff_variant, aff_label = "success", "Tillgänglig"
+elif sparår < 10:
+    aff_variant, aff_label = "accent", "Ansträngd"
+else:
+    aff_variant, aff_label = "danger", "Otillgänglig"
+
+render_kpi_row(
+    [
+        kpi_card(
+            label="Pris/Inkomst-kvot",
+            value=f"{pi_ratio:.1f}".replace(".", ","),
+            unit="x",
+            variant="default",
+            tooltip="Under 5x normalt, 5–10x ansträngt, över 10x svårtillgängligt.",
+        ),
+        kpi_card(
+            label="Kontantinsatsbörda",
+            value=f"{insats_yrs:.1f}".replace(".", ","),
+            unit="x årsinkomst",
+            variant="default",
+            tooltip="Hur många årsinkoster kontantinsatsen motsvarar.",
+        ),
+        kpi_card(
+            label="Boendekostnadsbörda",
+            value=format_pct(cost_pct),
+            unit="",
+            variant="accent" if cost_pct >= 30 else "default",
+            tooltip="Andel av månadsinkomst. Under 30 % anses hållbart.",
+        ),
+        kpi_card(
+            label="Tillgänglighet",
+            value=aff_label,
+            unit="",
+            variant=aff_variant,
+            tooltip="Baserat på sparår under nuvarande regler.",
+        ),
+    ]
+)
+st.caption(
+    f"Nuläge · Amorteringskrav 2.0 · {selected_kommun} {selected_year} · "
+    f"Sparkvot {savings_rate*100:.0f}%"
 )
 
-# ── Four regime cards (native Streamlit — avoids HTML escaping in nested divs) ──
-regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2"]
-regime_cols = st.columns(4)
+# ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────
+render_kpi_row(
+    [
+        kpi_card(
+            label="Kontantinsats (idag)",
+            value=format_sek(baseline["required_cash"]),
+            unit="SEK",
+            variant="accent",
+            tooltip="Total kontantinsats (15 % av medianpriset under nuvarande bolånetak).",
+        ),
+        kpi_card(
+            label="År att spara (idag)",
+            value=f"{baseline['years_to_save']:.1f}".replace(".", ","),
+            unit="år",
+            variant="default",
+            tooltip="Antal år för att spara kontantinsatsen vid vald sparkvot.",
+        ),
+        kpi_card(
+            label="Månadskostnad (idag)",
+            value=format_sek(baseline["monthly_total"]),
+            unit="SEK",
+            variant="default",
+            tooltip="Ränte- + amorteringskostnad per månad efter att ha köpt.",
+        ),
+        kpi_card(
+            label="Kvarvarande inkomst (idag)",
+            value=format_sek(baseline["residual_income"]),
+            unit="SEK/år",
+            variant="default",
+            tooltip="Inkomst kvar efter att boendekostnaderna är betalda (per år).",
+        ),
+    ]
+)
 
+# ── 4 · Regelverkstidslinje ───────────────────────────────────────────
+with st.container(border=True):
+    st.markdown(
+        card_header("Regelverksutveckling", "Fyra regimer sedan 2010", "TIDSLINJE"),
+        unsafe_allow_html=True,
+    )
+    timeline_html = f"""
+<div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
+  <div style="flex:4;background:{COLORS['text_tertiary']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
+    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Före 2010</span>
+  </div>
+  <div style="flex:3;background:{COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
+    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Bolånetak 2010–2016</span>
+  </div>
+  <div style="flex:1;background:{COLORS['medium_risk']};display:flex;align-items:center;justify-content:center;padding:0 4px;">
+    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Amort 1.0 2016–18</span>
+  </div>
+  <div style="flex:3;background:{COLORS['primary']};border:2px solid {COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
+    <span style="color:#fff;font-size:11px;font-weight:700;white-space:nowrap;">Amorteringskrav 2.0 · 2018 →</span>
+  </div>
+</div>
+<div style="display:flex;width:100%;margin-top:4px;">
+  <div style="flex:4;text-align:center;font-size:10px;color:{COLORS['text_tertiary']};"></div>
+  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Okt 2010</div>
+  <div style="flex:1;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Jun 2016</div>
+  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Mar 2018</div>
+</div>
+"""
+    st.markdown(_compact(timeline_html), unsafe_allow_html=True)
+
+# ── 5 · Regime cards ─────────────────────────────────────────────────
 monthly_costs = {k: results[k]["monthly_total"] for k in regime_keys}
 min_cost_key = min(monthly_costs, key=monthly_costs.get)
 max_cost_key = max(monthly_costs, key=monthly_costs.get)
 
 regime_accent_colors = {
-    "pre_2010": "#9CA3AF",
-    "bolanetak": "#C4A35A",
-    "amort_1": "#D4A03C",
-    "amort_2": "#B94A48",
+    "pre_2010": COLORS["text_tertiary"],
+    "bolanetak": COLORS["accent"],
+    "amort_1": COLORS["medium_risk"],
+    "amort_2": COLORS["high_risk"],
 }
-
-for col, key in zip(regime_cols, regime_keys):
-    with col:
-        res = results[key]
-        regime = REGIMES[key]
-        with st.container(border=True):
-            if key == min_cost_key:
-                st.markdown(":green[**LÄGST KOSTNAD**]")
-            elif key == max_cost_key:
-                st.markdown(":red[**HÖGST KOSTNAD**]")
-            st.markdown(f"**{regime['label']}**")
-            st.caption(regime["period"])
-            st.metric(
-                "Kontantinsats",
-                f"{format_sek(res['required_cash'])} SEK",
-            )
-            st.metric(
-                "År att spara",
-                f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
-            )
-            st.metric(
-                "Månadskostnad",
-                f"{format_sek(res['monthly_total'])} SEK",
-            )
-            residual = res["residual_income"]
-            st.metric(
-                "Kvarvarande inkomst",
-                f"{format_sek(residual)} SEK/år",
-            )
-
-# ── Comparison bar chart ─────────────────────────────────────────────
-st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
-        card_header("Månadskostnad per regelverk", f"{selected_kommun} · {selected_year}", "JÄMFÖRELSE"),
+        card_header(
+            "Kontantinsatskrav per regelverk",
+            f"{selected_kommun} · {selected_year}",
+            "FYRA REGIMER",
+        ),
         unsafe_allow_html=True,
     )
 
+    regime_cols = st.columns(4)
+    for col, key in zip(regime_cols, regime_keys):
+        with col:
+            res = results[key]
+            regime = REGIMES[key]
+            tag = "LÄGST" if key == min_cost_key else "HÖGST" if key == max_cost_key else ""
+
+            with st.container(border=True):
+                st.markdown(
+                    card_header(regime["label"], regime["period"], tag),
+                    unsafe_allow_html=True,
+                )
+                st.metric(
+                    "Kontantinsats",
+                    f"{format_sek(res['required_cash'])} SEK",
+                )
+                st.metric(
+                    "År att spara",
+                    f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
+                )
+                st.metric(
+                    "Månadskostnad",
+                    f"{format_sek(res['monthly_total'])} SEK",
+                )
+
+# ── 6 · Jämförelsetabeller (with reference lines) ─────────────────────
+def _comparison_barchart(
+    *,
+    y_values: list[float],
+    yaxis_title: str,
+    value_fmt: str,
+    ref_lines: list[dict] | None = None,
+) -> go.Figure:
     fig = go.Figure()
 
     labels = [REGIMES[k]["label"] for k in regime_keys]
-    costs = [results[k]["monthly_total"] for k in regime_keys]
-    bar_colors = []
+    bar_colors: list[str] = []
     for k in regime_keys:
         if k == min_cost_key:
             bar_colors.append(COLORS["low_risk"])
@@ -157,24 +278,194 @@ with st.container(border=True):
         else:
             bar_colors.append(regime_accent_colors.get(k, COLORS["secondary"]))
 
-    fig.add_trace(go.Bar(
-        x=labels,
-        y=costs,
-        marker_color=bar_colors,
-        marker_line_color=[c.replace(")", ",0.8)").replace("rgb", "rgba") if "rgb" in c else c for c in bar_colors],
-        marker_line_width=0,
-        text=[f"{c:,.0f} SEK".replace(",", "\u00A0") for c in costs],
-        textposition="outside",
-        textfont=dict(family="IBM Plex Mono, monospace", size=12),
-        hovertemplate="<b>%{x}</b><br>Månadskostnad: %{text}<extra></extra>",
-    ))
+    text = []
+    for v in y_values:
+        if value_fmt == "sek":
+            text.append(f"{v:,.0f} SEK".replace(",", "\u00A0"))
+        elif value_fmt == "years":
+            text.append(f"{v:.1f}".replace(".", ",") + " år")
+        else:
+            text.append(str(v))
 
-    layout = get_chart_layout(height=380, yaxis_title="Månadskostnad (SEK)", showlegend=False)
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=y_values,
+            marker_color=bar_colors,
+            marker_line_width=0,
+            text=text,
+            textposition="outside",
+            textfont=dict(family="IBM Plex Mono, monospace", size=12),
+            hovertemplate="<b>%{x}</b><br>%{text}<extra></extra>",
+        )
+    )
+
+    if ref_lines:
+        for rl in ref_lines:
+            fig.add_hline(
+                y=rl["y"],
+                line_dash=rl.get("dash", "dot"),
+                line_color=rl.get("color", COLORS["text_secondary"]),
+                line_width=rl.get("width", 1.5),
+                annotation_text=rl.get("label", ""),
+                annotation_position="top right",
+                annotation_font_size=11,
+            )
+
+    layout = get_chart_layout(height=380, yaxis_title=yaxis_title, showlegend=False)
     fig.update_layout(**layout)
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    return fig
 
-# ── Detail table ─────────────────────────────────────────────────────
-with st.expander("Detaljerad jämförelse"):
+
+with st.container(border=True):
+    tab_cost, tab_save, tab_residual = st.tabs(
+        ["Månadskostnad", "År att spara", "Kvarvarande inkomst"]
+    )
+
+    with tab_cost:
+        st.markdown(
+            card_header(
+                "Månadskostnad per regelverk",
+                f"{selected_kommun} · {selected_year}",
+                "JÄMFÖRELSE",
+            ),
+            unsafe_allow_html=True,
+        )
+        costs = [results[k]["monthly_total"] for k in regime_keys]
+        st.plotly_chart(
+            _comparison_barchart(
+                y_values=costs,
+                yaxis_title="Månadskostnad (SEK)",
+                value_fmt="sek",
+                ref_lines=[
+                    {
+                        "y": monthly_income * 0.30,
+                        "color": COLORS["text_secondary"],
+                        "dash": "dot",
+                        "width": 1.5,
+                        "label": f"30 % av månadsink. · {format_sek(monthly_income * 0.30)} SEK",
+                    }
+                ],
+            ),
+            width="stretch",
+            config={"displayModeBar": False},
+        )
+        st.caption("Lägre månadskostnad innebär mindre löpande belastning givet samma pris- och inkomstnivå.")
+
+    with tab_save:
+        st.markdown(
+            card_header(
+                "År att spara kontantinsats",
+                f"{selected_kommun} · {selected_year}",
+                "JÄMFÖRELSE",
+            ),
+            unsafe_allow_html=True,
+        )
+        years = [results[k]["years_to_save"] for k in regime_keys]
+        st.plotly_chart(
+            _comparison_barchart(
+                y_values=years,
+                yaxis_title="År att spara",
+                value_fmt="years",
+                ref_lines=[
+                    {
+                        "y": 5,
+                        "color": COLORS["low_risk"],
+                        "dash": "dot",
+                        "width": 1.5,
+                        "label": "5 år – rimlig mål",
+                    },
+                    {
+                        "y": 10,
+                        "color": COLORS["high_risk"],
+                        "dash": "dot",
+                        "width": 1.5,
+                        "label": "10 år – svår tröskel",
+                    },
+                ],
+            ),
+            width="stretch",
+            config={"displayModeBar": False},
+        )
+        st.caption("Sparkvoten påverkar främst sparår; regelverken påverkar kravet på insats och amortering.")
+
+    with tab_residual:
+        st.markdown(
+            card_header(
+                "Kvarvarande inkomst per regelverk",
+                f"{selected_kommun} · {selected_year}",
+                "JÄMFÖRELSE",
+            ),
+            unsafe_allow_html=True,
+        )
+        residuals = [results[k]["residual_income"] for k in regime_keys]
+        st.plotly_chart(
+            _comparison_barchart(
+                y_values=residuals,
+                yaxis_title="Kvarvarande inkomst (SEK/år)",
+                value_fmt="sek",
+                ref_lines=[
+                    {
+                        "y": 0,
+                        "color": COLORS["high_risk"],
+                        "dash": "dash",
+                        "width": 1.5,
+                        "label": "Nollgräns",
+                    }
+                ],
+            ),
+            width="stretch",
+            config={"displayModeBar": False},
+        )
+        st.caption("Högre kvarvarande inkomst innebär mer utrymme efter boendekostnader givet antagandena.")
+
+# ── 7 · Nyckelinsikt ─────────────────────────────────────────────────
+best_key  = min(regime_keys, key=lambda k: results[k]["monthly_total"])
+worst_key = max(regime_keys, key=lambda k: results[k]["monthly_total"])
+cost_diff = results[worst_key]["monthly_total"] - results[best_key]["monthly_total"]
+pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
+
+insight_html = f"""
+<div class="shai-card" style="border-left:3px solid {COLORS['accent']};">
+  <div class="shai-card-header">
+    <div class="shai-card-title">Nyckelinsikt</div>
+    <span class="shai-card-tag">SYNTES</span>
+  </div>
+  <p style="font-size:14px;color:{COLORS['text_primary']};line-height:1.7;margin:0;">
+    Under <strong>nuvarande regler (Amorteringskrav 2.0)</strong> behöver du
+    <strong>{format_sek(baseline['required_cash'])} SEK</strong> i kontantinsats,
+    vilket tar <strong>{baseline['years_to_save']:.1f} år</strong> att spara
+    vid {int(savings_rate*100)} % sparkvot.
+    Månadskostnaden är <strong>{format_sek(baseline['monthly_total'])} SEK</strong>
+    (<strong>{cost_pct:.0f} % av månadsinkomst</strong>).<br><br>
+    Det historiskt förmånligaste regelverket
+    (<strong>{REGIMES[best_key]['label']}</strong>) innebar
+    <strong>{format_sek(cost_diff)} SEK lägre</strong> månadskostnad
+    ({pct_diff:.0f} % billigare).
+  </p>
+</div>
+"""
+st.markdown(_compact(insight_html), unsafe_allow_html=True)
+
+# ── 8 · Detaljer & antaganden ─────────────────────────────────────────
+with st.expander("Detaljer & antaganden"):
+    st.markdown(
+        f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;'>"
+        "<strong>Indata</strong><br>"
+        f"- Kommun: <strong>{selected_kommun}</strong> (analysår {selected_year})<br>"
+        f"- Medianpris: <strong>{format_sek(price)} SEK</strong><br>"
+        f"- Medianinkomst: <strong>{format_sek(income)} SEK</strong><br>"
+        f"- Styrränta: <strong>{kommun_row['policy_rate']:.2f}%</strong><br>"
+        f"- Sparkvot: <strong>{int(savings_rate*100)}%</strong><br><br>"
+        "<strong>Konstant mellan regelverk</strong><br>"
+        "- Samma pris, inkomst och räntenivå används i alla regimer<br>"
+        "- Skillnaderna drivs av insatskrav, maxbelåning och amorteringsregler<br><br>"
+        "<strong>Metod</strong><br>"
+        "Se Metodologi (Sida 06), avsnitt 6 för antaganden och definitioner."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
     detail_rows = []
     for key in regime_keys:
         res = results[key]
@@ -189,6 +480,7 @@ with st.expander("Detaljerad jämförelse"):
                 "LTI": f"{res['lti']:.1f}".replace(".", ",") + "x",
                 "Amort.": f"{res['amort_pct']*100:.1f}".replace(".", ",") + "%",
                 "Månkostnad (SEK)": format_sek(res["monthly_total"]),
+                "Kvar (SEK/år)": format_sek(res["residual_income"]),
             }
         )
     st.dataframe(
@@ -197,4 +489,5 @@ with st.expander("Detaljerad jämförelse"):
         hide_index=True,
     )
 
+# ── 9 · Footer ────────────────────────────────────────────────────────
 footer_note(source="SCB, Riksbanken, Finansinspektionen")
