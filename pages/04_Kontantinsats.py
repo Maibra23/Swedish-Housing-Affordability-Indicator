@@ -216,6 +216,13 @@ monthly_costs = {k: results[k]["monthly_total"] for k in regime_keys}
 min_cost_key = min(monthly_costs, key=monthly_costs.get)
 max_cost_key = max(monthly_costs, key=monthly_costs.get)
 
+REGIME_WHAT_CHANGED = {
+    "pre_2010": "Ingen formell insatsnivå; hög belåning var vanligare.",
+    "bolanetak": "Bolånetak införs (max 85 % belåning) → högre insats.",
+    "amort_1": "Amorteringskrav införs → högre månadskostnad vid hög belåning.",
+    "amort_2": "Skärpt amorteringskrav (även skuldkvot) → högst krav idag.",
+}
+
 regime_accent_colors = {
     "pre_2010": COLORS["text_tertiary"],
     "bolanetak": COLORS["accent"],
@@ -245,17 +252,44 @@ with st.container(border=True):
                     card_header(regime["label"], regime["period"], tag),
                     unsafe_allow_html=True,
                 )
+                st.caption(REGIME_WHAT_CHANGED.get(key, ""))
+
+                delta_cash = res["required_cash"] - baseline["required_cash"]
+                delta_years = res["years_to_save"] - baseline["years_to_save"]
+                delta_cost = res["monthly_total"] - baseline["monthly_total"]
+
                 st.metric(
                     "Kontantinsats",
                     f"{format_sek(res['required_cash'])} SEK",
+                    delta=(
+                        (f"{delta_cash:+,.0f} SEK".replace(",", "\u00A0"))
+                        if key != "amort_2"
+                        else None
+                    ),
+                    delta_color="inverse",
+                    help="Kontantinsats är eget kapital (insats) som krävs vid köp. Lägre är bättre.",
                 )
                 st.metric(
                     "År att spara",
                     f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
+                    delta=(
+                        (f"{delta_years:+.1f} år".replace(".", ","))
+                        if key != "amort_2"
+                        else None
+                    ),
+                    delta_color="inverse",
+                    help="Antal år för att spara kontantinsatsen vid vald sparkvot. Lägre är bättre.",
                 )
                 st.metric(
                     "Månadskostnad",
                     f"{format_sek(res['monthly_total'])} SEK",
+                    delta=(
+                        (f"{delta_cost:+,.0f} SEK".replace(",", "\u00A0"))
+                        if key != "amort_2"
+                        else None
+                    ),
+                    delta_color="inverse",
+                    help="Summa amortering + räntekostnad per månad. Lägre är bättre.",
                 )
 
 # ── 6 · Jämförelsetabeller (with reference lines) ─────────────────────
@@ -466,27 +500,98 @@ with st.expander("Detaljer & antaganden"):
         unsafe_allow_html=True,
     )
 
-    detail_rows = []
+    st.markdown(
+        f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;margin-top:8px;'>"
+        "<strong>Så läser du tabellen</strong><br>"
+        "- Δ-kolumner visar skillnad mot <strong>idag (Amorteringskrav 2.0)</strong><br>"
+        "- Markeringar: <strong>bäst</strong> = lägst för Insats/Sparår/Månkostnad, högst för Kvar"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    rows = []
     for key in regime_keys:
         res = results[key]
         regime = REGIMES[key]
-        detail_rows.append(
+        rows.append(
             {
                 "Regelverk": regime["label"],
-                "Insats (SEK)": format_sek(res["required_cash"]),
-                "Sparår": f"{res['years_to_save']:.1f}".replace(".", ","),
-                "Lån (SEK)": format_sek(res["loan_amount"]),
-                "LTV": f"{res['ltv']:.0%}",
-                "LTI": f"{res['lti']:.1f}".replace(".", ",") + "x",
-                "Amort.": f"{res['amort_pct']*100:.1f}".replace(".", ",") + "%",
-                "Månkostnad (SEK)": format_sek(res["monthly_total"]),
-                "Kvar (SEK/år)": format_sek(res["residual_income"]),
+                "Period": regime["period"],
+                "Insats": float(res["required_cash"]),
+                "Δ Insats": float(res["required_cash"] - baseline["required_cash"]),
+                "Sparår": float(res["years_to_save"]),
+                "Δ Sparår": float(res["years_to_save"] - baseline["years_to_save"]),
+                "Månkostnad": float(res["monthly_total"]),
+                "Δ Månkostnad": float(res["monthly_total"] - baseline["monthly_total"]),
+                "Kvar": float(res["residual_income"]),
+                "Δ Kvar": float(res["residual_income"] - baseline["residual_income"]),
+                "LTV": float(res["ltv"]),
+                "LTI": float(res["lti"]),
+                "Amort.": float(res["amort_pct"]),
             }
         )
+
+    df = pd.DataFrame(rows)
+
+    def _style_best_worst(_df: pd.DataFrame) -> pd.DataFrame:
+        out = pd.DataFrame("", index=_df.index, columns=_df.columns)
+        if len(_df) == 0:
+            return out
+
+        best_bg = "background-color: rgba(46,125,91,0.12);"   # low_risk
+        worst_bg = "background-color: rgba(185,74,72,0.10);"  # high_risk
+
+        # Lower is better
+        for col in ["Insats", "Sparår", "Månkostnad"]:
+            if col in _df.columns:
+                mn, mx = _df[col].min(), _df[col].max()
+                out.loc[_df[col] == mn, col] += best_bg
+                out.loc[_df[col] == mx, col] += worst_bg
+
+        # Higher is better
+        if "Kvar" in _df.columns:
+            mn, mx = _df["Kvar"].min(), _df["Kvar"].max()
+            out.loc[_df["Kvar"] == mx, "Kvar"] += best_bg
+            out.loc[_df["Kvar"] == mn, "Kvar"] += worst_bg
+
+        return out
+
+    styled = df.style.apply(_style_best_worst, axis=None)
+
     st.dataframe(
-        pd.DataFrame(detail_rows),
+        styled,
         use_container_width=True,
         hide_index=True,
+        column_order=[
+            "Regelverk",
+            "Period",
+            "Insats",
+            "Δ Insats",
+            "Sparår",
+            "Δ Sparår",
+            "Månkostnad",
+            "Δ Månkostnad",
+            "Kvar",
+            "Δ Kvar",
+            "LTV",
+            "LTI",
+            "Amort.",
+        ],
+        column_config={
+            "Regelverk": st.column_config.TextColumn("Regelverk", help="Regim/regelverk som jämförs."),
+            "Period": st.column_config.TextColumn("Period", help="Tidsperiod då regelverket gällde."),
+            "Insats": st.column_config.NumberColumn("Insats (SEK)", format="%.0f", help="Kontantinsats i SEK. Lägre är bättre."),
+            "Δ Insats": st.column_config.NumberColumn("Δ Insats vs idag", format="%+.0f", help="Skillnad i insats jämfört med nuvarande regler."),
+            "Sparår": st.column_config.NumberColumn("Sparår", format="%.1f", help="År att spara kontantinsatsen vid vald sparkvot. Lägre är bättre."),
+            "Δ Sparår": st.column_config.NumberColumn("Δ Sparår vs idag", format="%+.1f", help="Skillnad i sparår jämfört med nuvarande regler."),
+            "Månkostnad": st.column_config.NumberColumn("Månkostnad (SEK)", format="%.0f", help="Månadskostnad (ränta + amortering). Lägre är bättre."),
+            "Δ Månkostnad": st.column_config.NumberColumn("Δ Månkostnad vs idag", format="%+.0f", help="Skillnad i månadskostnad jämfört med idag."),
+            "Kvar": st.column_config.NumberColumn("Kvar (SEK/år)", format="%.0f", help="Kvarvarande inkomst per år efter boendekostnad. Högre är bättre."),
+            "Δ Kvar": st.column_config.NumberColumn("Δ Kvar vs idag", format="%+.0f", help="Skillnad i kvarvarande inkomst jämfört med idag."),
+            "LTV": st.column_config.NumberColumn("LTV", format="%.0f%%", help="Belåningsgrad: lån / bostadspris."),
+            "LTI": st.column_config.NumberColumn("LTI", format="%.1f", help="Skuldkvot: lån / årsinkomst."),
+            "Amort.": st.column_config.NumberColumn("Amort.", format="%.1f%%", help="Årlig amortering i % av lånet."),
+        },
     )
 
 # ── 9 · Footer ────────────────────────────────────────────────────────
