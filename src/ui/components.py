@@ -6,9 +6,17 @@ Design tokens match the KRI design system exactly.
 
 from __future__ import annotations
 
+import re
 import streamlit as st
 
 from src.ui.css import COLORS
+
+
+def _compact(html: str) -> str:
+    """Remove blank/whitespace-only lines from HTML to prevent the markdown
+    parser from splitting HTML blocks at blank lines, which causes subsequent
+    indented tags to be rendered as code blocks (raw text on screen)."""
+    return re.sub(r'\n[ \t]*\n', '\n', html)
 
 
 # ── Formatting utilities ──────────────────────────────────────────────
@@ -61,7 +69,7 @@ def page_title(
         {year_html}
     </div>
     """
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(_compact(html), unsafe_allow_html=True)
 
 
 # ── KPI card ──────────────────────────────────────────────────────────
@@ -218,7 +226,7 @@ def render_landing_stat_strip(stats: list[dict]) -> None:
         </div>
         """
     html = f'<div class="lp-stat-strip">{cells}</div>'
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(_compact(html), unsafe_allow_html=True)
 
 
 def render_landing_what_is_block() -> None:
@@ -332,7 +340,7 @@ def render_index_visual_block() -> None:
         </div>
     </div>
     """
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(_compact(html), unsafe_allow_html=True)
 
 
 def render_landing_steps() -> None:
@@ -384,7 +392,7 @@ def render_landing_steps() -> None:
         <div class="lp-steps">{steps_html}</div>
     </div>
     """
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(_compact(html), unsafe_allow_html=True)
 
 
 def render_landing_nav_card(

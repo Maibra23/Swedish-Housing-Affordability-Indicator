@@ -193,7 +193,7 @@ with st.expander("Detaljerad jämförelse"):
         )
     st.dataframe(
         pd.DataFrame(detail_rows),
-        width="stretch",
+        use_container_width=True,
         hide_index=True,
     )
 
