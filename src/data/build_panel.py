@@ -354,21 +354,27 @@ def build_municipal_panel() -> pd.DataFrame:
         muni_txn[["region_code", "year", "transaction_price_sek"]],
         on=["region_code", "year"], how="left",
     )
-    # County-level fallback for municipalities without native transaction price
+    # County-level villa price kept as an explicit reference column so UI
+    # comparisons can match granularity (e.g. when bostadsrätt is county-fallback,
+    # we compare county villa vs county bostadsrätt instead of muni-villa vs county-BR).
     county_txn = txn_price[txn_price["region_code"].isin(counties)].copy()
     county_txn = county_txn.rename(columns={
         "region_code": "lan_code",
-        "transaction_price_sek": "txn_price_county",
+        "transaction_price_sek": "transaction_price_sek_county",
     })
-    panel = panel.merge(county_txn[["lan_code", "year", "txn_price_county"]],
+    panel = panel.merge(county_txn[["lan_code", "year", "transaction_price_sek_county"]],
                         on=["lan_code", "year"], how="left")
     panel["has_native_price"] = panel["transaction_price_sek"].notna()
     panel["transaction_price_sek"] = panel["transaction_price_sek"].fillna(
-        panel["txn_price_county"]
+        panel["transaction_price_sek_county"]
     )
-    panel.drop(columns=["txn_price_county"], inplace=True)
+    # Note: transaction_price_sek_county is kept in the panel for UI use.
 
     # --- Merge bostadsrätt (apartment) transaction price with county fallback (F11 mitigation) ---
+    # Coverage per BO0701: municipal for ~150–200 larger municipalities, county for all 21.
+    # Smaller municipalities fall back to county level. We keep bostadsratt_price_sek_county
+    # as a reference column so the UI can compare apples-to-apples (county-vs-county) when
+    # the bostadsrätt value is a fallback.
     if br_price is not None:
         muni_br = br_price[br_price["region_code"].isin(municipalities)].copy()
         panel = panel.merge(
@@ -378,17 +384,17 @@ def build_municipal_panel() -> pd.DataFrame:
         county_br = br_price[br_price["region_code"].isin(counties)].copy()
         county_br = county_br.rename(columns={
             "region_code": "lan_code",
-            "bostadsratt_price_sek": "br_price_county",
+            "bostadsratt_price_sek": "bostadsratt_price_sek_county",
         })
-        panel = panel.merge(county_br[["lan_code", "year", "br_price_county"]],
+        panel = panel.merge(county_br[["lan_code", "year", "bostadsratt_price_sek_county"]],
                             on=["lan_code", "year"], how="left")
         panel["has_native_bostadsratt_price"] = panel["bostadsratt_price_sek"].notna()
         panel["bostadsratt_price_sek"] = panel["bostadsratt_price_sek"].fillna(
-            panel["br_price_county"]
+            panel["bostadsratt_price_sek_county"]
         )
-        panel.drop(columns=["br_price_county"], inplace=True)
     else:
         panel["bostadsratt_price_sek"] = np.nan
+        panel["bostadsratt_price_sek_county"] = np.nan
         panel["has_native_bostadsratt_price"] = False
 
     # --- Merge unemployment ---
@@ -413,8 +419,9 @@ def build_municipal_panel() -> pd.DataFrame:
         "region_code", "region_name", "lan_code", "year",
         "median_income", "median_income_tkr", "is_imputed_income",
         "price_index", "kt_ratio", "has_native_kt",
-        "transaction_price_sek", "has_native_price",
-        "bostadsratt_price_sek", "has_native_bostadsratt_price",
+        "transaction_price_sek", "transaction_price_sek_county", "has_native_price",
+        "bostadsratt_price_sek", "bostadsratt_price_sek_county",
+        "has_native_bostadsratt_price",
         "unemployment_rate", "population", "completions",
         "cpi_index", "cpi_yoy_pct", "policy_rate",
     ]
