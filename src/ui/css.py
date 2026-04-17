@@ -196,6 +196,14 @@ section[data-testid="stSidebarContent"] a[href][aria-current="page"] {
     font-weight: 600;
     margin-bottom: 6px;
 }
+/* Streamlit wraps label copy in <span>; sidebar span { white } was overriding these */
+section[data-testid="stSidebar"] .control-label,
+section[data-testid="stSidebar"] .control-label span {
+    color: #C4A35A !important;
+}
+section[data-testid="stSidebar"] .riskklass-rad span:not(.riskklass-punkt) {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
 
 /* ---- Sidebar pills/chips ---- */
 section[data-testid="stSidebar"] [data-testid="stPills"] button,
@@ -233,7 +241,7 @@ section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"] {
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.92);
     margin-bottom: 4px;
 }
 .riskklass-punkt {
@@ -535,6 +543,28 @@ section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"] {
     line-height: 1.6;
     max-width: 600px;
     margin: 0;
+}
+
+/* Hero: override stMain / Streamlit markdown h1+p colors on dark gradient */
+[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero,
+[data-testid="stMain"] .lp-hero {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero .lp-eyebrow,
+[data-testid="stMain"] .lp-hero .lp-eyebrow {
+    color: #C4A35A !important;
+}
+[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero h1.lp-headline,
+[data-testid="stMain"] .lp-hero h1.lp-headline {
+    color: #FFFFFF !important;
+}
+[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero .lp-hero-lead,
+[data-testid="stMain"] .lp-hero .lp-hero-lead {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero a,
+[data-testid="stMain"] .lp-hero a {
+    color: #E8D5A0 !important;
 }
 
 /* ---- Stat strip ---- */

@@ -392,7 +392,9 @@ def render_landing_steps() -> None:
         <div class="lp-steps">{steps_html}</div>
     </div>
     """
-    st.markdown(_compact(html), unsafe_allow_html=True)
+    # st.markdown parses as Markdown; indented HTML is treated as code blocks and
+    # the first step loses its tags (plain text inside .lp-steps). st.html is raw HTML.
+    st.html(_compact(html))
 
 
 def render_landing_nav_card(

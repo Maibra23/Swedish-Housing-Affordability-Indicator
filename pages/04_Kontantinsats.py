@@ -79,7 +79,13 @@ with st.container(border=True):
             value=10,
             step=1,
             key="ki_savings_slider",
+            help=(
+                "Andel av bruttoinkomsten som sparas årligen. "
+                "10 % är vanligt; över 20 % är ambitiöst. "
+                "Påverkar hur lång tid det tar att spara ihop insatsen."
+            ),
         ) / 100.0
+        _sparkvot_caption = st.empty()
 
 kommun_row = mun_year[mun_year["region_name"] == selected_kommun]
 if len(kommun_row) == 0:
@@ -90,6 +96,8 @@ kommun_row = kommun_row.iloc[0]
 price = kommun_row["transaction_price_sek"]
 income = kommun_row["median_income"]
 rate = kommun_row["policy_rate"] / 100.0
+
+_sparkvot_caption.caption(f"= {format_sek(income * savings_rate)} SEK/år i sparande")
 
 # ── Compute all regimes ──────────────────────────────────────────────
 results = compare_regimes(price, income, rate, savings_rate)
@@ -138,7 +146,11 @@ render_kpi_row(
             value=aff_label,
             unit="",
             variant=aff_variant,
-            tooltip="Baserat på sparår under nuvarande regler.",
+            tooltip=(
+                "Tillgänglig = under 5 års spartid. "
+                "Ansträngd = 5–10 år. "
+                "Otillgänglig = över 10 år spartid vid vald sparkvot."
+            ),
         ),
     ]
 )
@@ -212,6 +224,19 @@ with st.container(border=True):
     st.markdown(_compact(timeline_html), unsafe_allow_html=True)
 
 # ── 5 · Regime cards ─────────────────────────────────────────────────
+
+def _fmt_delta_sek(delta: float) -> str | None:
+    """Format a SEK delta: hide zeros, round to tkr when >= 10 000."""
+    if abs(delta) < 1:
+        return None
+    if abs(delta) >= 10_000:
+        tkr = round(delta / 1_000)
+        sign = "+" if tkr > 0 else ""
+        return f"{sign}{tkr}\u00A0tkr"
+    sign = "+" if delta > 0 else ""
+    return f"{sign}{delta:,.0f}\u00A0SEK".replace(",", "\u00A0")
+
+
 monthly_costs = {k: results[k]["monthly_total"] for k in regime_keys}
 min_cost_key = min(monthly_costs, key=monthly_costs.get)
 max_cost_key = max(monthly_costs, key=monthly_costs.get)
@@ -261,11 +286,7 @@ with st.container(border=True):
                 st.metric(
                     "Kontantinsats",
                     f"{format_sek(res['required_cash'])} SEK",
-                    delta=(
-                        (f"{delta_cash:+,.0f} SEK".replace(",", "\u00A0"))
-                        if key != "amort_2"
-                        else None
-                    ),
+                    delta=_fmt_delta_sek(delta_cash) if key != "amort_2" else None,
                     delta_color="inverse",
                     help="Kontantinsats är eget kapital (insats) som krävs vid köp. Lägre är bättre.",
                 )
@@ -274,7 +295,7 @@ with st.container(border=True):
                     f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
                     delta=(
                         (f"{delta_years:+.1f} år".replace(".", ","))
-                        if key != "amort_2"
+                        if (key != "amort_2" and abs(delta_years) >= 0.05)
                         else None
                     ),
                     delta_color="inverse",
@@ -283,14 +304,13 @@ with st.container(border=True):
                 st.metric(
                     "Månadskostnad",
                     f"{format_sek(res['monthly_total'])} SEK",
-                    delta=(
-                        (f"{delta_cost:+,.0f} SEK".replace(",", "\u00A0"))
-                        if key != "amort_2"
-                        else None
-                    ),
+                    delta=_fmt_delta_sek(delta_cost) if key != "amort_2" else None,
                     delta_color="inverse",
                     help="Summa amortering + räntekostnad per månad. Lägre är bättre.",
                 )
+
+                if key == "pre_2010":
+                    st.caption("Obs: Inget formellt insatskrav, men banker krävde ofta 5–10 %.")
 
 # ── 6 · Jämförelsetabeller (with reference lines) ─────────────────────
 def _comparison_barchart(
@@ -342,8 +362,11 @@ def _comparison_barchart(
                 line_color=rl.get("color", COLORS["text_secondary"]),
                 line_width=rl.get("width", 1.5),
                 annotation_text=rl.get("label", ""),
-                annotation_position="top right",
+                annotation_position=rl.get("annotation_position", "top left"),
                 annotation_font_size=11,
+                annotation_font_color=rl.get(
+                    "annotation_font_color", COLORS["text_secondary"]
+                ),
             )
 
     layout = get_chart_layout(height=380, yaxis_title=yaxis_title, showlegend=False)
@@ -352,6 +375,10 @@ def _comparison_barchart(
 
 
 with st.container(border=True):
+    st.caption(
+        "Välj flik för att jämföra regelverken från olika perspektiv. "
+        "Ändra år i sidopanelen för att se historiska scenarion."
+    )
     tab_cost, tab_save, tab_residual = st.tabs(
         ["Månadskostnad", "År att spara", "Kvarvarande inkomst"]
     )
@@ -407,14 +434,18 @@ with st.container(border=True):
                         "color": COLORS["low_risk"],
                         "dash": "dot",
                         "width": 1.5,
-                        "label": "5 år – rimlig mål",
+                        "label": "5 år – Tillgänglig",
+                        "annotation_position": "bottom right",
+                        "annotation_font_color": COLORS["low_risk"],
                     },
                     {
                         "y": 10,
                         "color": COLORS["high_risk"],
                         "dash": "dot",
                         "width": 1.5,
-                        "label": "10 år – svår tröskel",
+                        "label": "10 år – Otillgänglig",
+                        "annotation_position": "top left",
+                        "annotation_font_color": COLORS["high_risk"],
                     },
                 ],
             ),
