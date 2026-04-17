@@ -49,6 +49,13 @@ county_versions = county_versions.merge(county_names, on="lan_code", how="left")
 
 selected_year = selections["selected_year"]
 
+# Identify imputed-income years for visual annotation
+_imputed_years = set()
+if "is_imputed_income" in municipal.columns:
+    _imputed_years = set(
+        municipal[municipal["is_imputed_income"] == True]["year"].unique()
+    )
+
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
     eyebrow="Sida 02 · Regional jämförelse",
@@ -60,10 +67,10 @@ page_title(
 # ── Formula config ───────────────────────────────────────────────────
 FORMULA_INFO = {
     "Bankversion (A)": {
-        "formula": r"\text{Affordability}_A = \frac{\text{Inkomst}}{\text{K/T} \times \text{Ränta}}",
+        "formula": r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}",
         "desc": (
             "Den enklaste versionen — mäter hushållets betalningsförmåga relativt "
-            "bostadens pris och aktuell ränta. Speglar en traditionell bankbedömning. "
+            "bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. "
             "Högre värde = bättre överkomlighet."
         ),
         "col": "version_a",
@@ -71,7 +78,7 @@ FORMULA_INFO = {
         "color_others": "#4A6FA5",
     },
     "Makroversion (B)": {
-        "formula": r"\text{Risk}_B = 0{,}35 \cdot z(P/I) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
+        "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
         "desc": (
             "En sammansatt riskindikator som viktar fyra makrovariabler: pris/inkomst, "
             "ränta, arbetslöshet och inflation. Speglar centralbankens makrotillsynsperspektiv. "
@@ -81,12 +88,12 @@ FORMULA_INFO = {
         "color_highlight": "#C4A35A",
         "color_others": "#7B68A8",
         "footnote": (
-            "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), "
-            "inte AKU."
+            "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. "
+            "Obs: R och π är nationella variabler — de bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13)."
         ),
     },
     "Realversion (C)": {
-        "formula": r"\text{Affordability}_C = \frac{\text{Inkomst}}{\text{K/T} \times \max(R - \pi,\; 0{,}005)}",
+        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
         "desc": (
             "Den rekommenderade versionen — justerar för inflation genom att använda "
             "realräntan istället för nominalräntan. Akademiskt förankrad. "
@@ -95,6 +102,10 @@ FORMULA_INFO = {
         "col": "version_c",
         "color_highlight": "#2E7D5B",
         "color_others": "#D4785A",
+        "footnote": (
+            "Att olika formler rangordnar länen olika är förväntat och inte ett fel — "
+            "de mäter olika ekonomiska perspektiv."
+        ),
     },
 }
 
@@ -111,6 +122,8 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
         )
         if "footnote" in info:
             st.caption(f"ℹ️ {info['footnote']}")
+
+        st.caption("Stockholm visas som referenslän (markerat med starkare linje).")
 
         col_chart, col_table = st.columns([3, 2])
 
@@ -138,8 +151,29 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                         hovertemplate=f"<b>{name}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}<extra></extra>",
                     ))
 
+                # Shade imputed-income years
+                all_years = sorted(county_versions["year"].unique())
+                max_real_year = max((y for y in all_years if y not in _imputed_years), default=None)
+                if max_real_year and _imputed_years:
+                    # Add a shaded rectangle from first imputed year - 0.5 to last + 0.5
+                    imp_start = min(_imputed_years) - 0.5
+                    imp_end = max(_imputed_years) + 0.5
+                    fig.add_vrect(
+                        x0=imp_start, x1=imp_end,
+                        fillcolor="rgba(212, 120, 90, 0.08)",
+                        line_width=0,
+                        annotation_text="★ Imputerad inkomst",
+                        annotation_position="top left",
+                        annotation_font_size=10,
+                        annotation_font_color=COLORS["accent"],
+                    )
+
+                # Determine title suffix
+                all_yrs = sorted(county_versions["year"].unique())
+                yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else "2014–2024"
+
                 layout = get_chart_layout(
-                    title=f"{tab_name} — Länsutveckling 2014–2024",
+                    title=f"{tab_name} — Länsutveckling {yr_range}",
                     height=420,
                     xaxis_title="År",
                     yaxis_title="Indexvärde",

@@ -24,7 +24,7 @@ SHAI implements all three through the formula triplet (A, B, C), the kontantinsa
 |----------|--------|--------|------------------|------------|-----------|----------|
 | Median disposable income | I | SCB HE0110 | HE/HE0110/HE0110G/TabVX4bDispInkN | Municipal, county, national | Annual | 2011 to 2024 |
 | House price index | P_idx | SCB BO0501 | BO/BO0501/BO0501A/FastpiPSLanAr | County, national | Annual | 1990 to 2025 |
-| Median transaction price | P_sek | SCB BO0501 | BO/BO0501/BO0501B/FastprisSHRegionAr (BO0501C2) | Municipal, county, national | Annual | 1981 to 2024 |
+| Mean transaction price (arithmetic avg) | P_sek | SCB BO0501 | BO/BO0501/BO0501B/FastprisSHRegionAr (BO0501C2) | Municipal, county, national | Annual | 1981 to 2024 |
 | K/T ratio (descriptive) | KT | SCB BO0501 | Same table (BO0501C4) | Municipal, county | Annual | 1981 to 2024 |
 | Policy rate | R | Riksbanken Swea | /Observations/SECBREPOEFF/{from}/{to} | National | Daily → annual avg | 2014 to present |
 | CPI | π | SCB PR0101 | PR/PR0101/PR0101A/KPI2020M (00000807) | National | Monthly → annual avg | 1980 to present |
@@ -37,7 +37,7 @@ SHAI implements all three through the formula triplet (A, B, C), the kontantinsa
 ### Notes
 
 - **Unemployment is openly registered unemployment** (Arbetsförmedlingen definition), not AKU/ILO survey unemployment. The measures differ: the registered measure excludes persons in labor market programmes. Banking commentary in Sweden typically references AKU. We use Kolada N03937 because it provides consistent municipal coverage from 2010, which AKU does not.
-- **Price variable:** the formulas use median transaction price in SEK (BO0501C2) as the Price variable, not the price index or K/T ratio. See section 3 subsection "Why median transaction price" for rationale. K/T remains in the panel as a descriptive market indicator.
+- **Price variable:** the formulas use mean (arithmetic average) transaction price in SEK (BO0501C2) as the Price variable, not the price index or K/T ratio. BO0501C2 is labeled "Köpeskilling, medelvärde i tkr" — this is the MEAN, not the median. In thin markets (small municipalities) a single expensive sale can pull the mean above a representative level. See section 3 for full rationale. K/T remains in the panel as a descriptive market indicator.
 - **Policy rate starts 2014** in the Swea series used. Panel rows 2011 to 2013 exist for income and other variables but formulas cannot be computed until 2014.
 
 ## 3. Formulas
@@ -77,7 +77,7 @@ The max() floor prevents division explosion when real rates are near zero or neg
 **Strength:** Inflation adjusted, standard in economics literature.
 **Weakness:** Real rate can be near zero or negative, requires floor handling.
 
-### Why median transaction price in SEK, not price index or K/T ratio
+### Why mean transaction price in SEK, not price index or K/T ratio
 
 Three candidate Price variables exist in SCB BO0501:
 
@@ -85,9 +85,9 @@ Three candidate Price variables exist in SCB BO0501:
 
 2. **Köpeskillingskoefficient (K/T)**: ratio of transaction price to assessed value. Measures markup, not level. Rural counties have higher K/T because their assessed values lag market values more than urban areas do.
 
-3. **Median köpeskilling in SEK (BO0501C2)**: median transaction price in absolute SEK. Level measure, directly comparable across regions.
+3. **Mean köpeskilling in SEK (BO0501C2)**: arithmetic mean transaction price in absolute SEK. Level measure, directly comparable across regions. Note: SCB labels this variable "Köpeskilling, medelvärde i tkr" — it is the MEAN, not the median. In thin markets the mean can be pulled above a representative level by a single high-value transaction.
 
-SHAI uses option 3. An earlier iteration tried options 1 and 2 and both produced the counterintuitive result that Stockholm ranked most affordable. Transaction price in SEK produces the expected ordering (Stockholm least affordable, Norrbotten most affordable) because Stockholm's roughly 40 percent income advantage over Norrbotten is dominated by roughly 200 percent higher transaction prices.
+SHAI uses option 3 (mean transaction price in SEK). An earlier iteration tried options 1 and 2 and both produced the counterintuitive result that Stockholm ranked most affordable. Transaction price in SEK produces the expected ordering (Stockholm least affordable, Norrbotten most affordable) because Stockholm's roughly 40 percent income advantage over Norrbotten is dominated by roughly 200 percent higher transaction prices.
 
 K/T remains in the panel as a descriptive market indicator but does not enter any affordability formula.
 
@@ -154,7 +154,7 @@ Output: recalculated Version C affordability for selected county, with delta fro
 
 **Scope note:** the simulator recomputes Version C only. Versions A and B depend on additional inputs (unemployment for B) that are not exposed as sliders to keep the interface manageable. Users seeking to stress test B should adjust assumptions in the Metodologi section and rerun.
 
-## 8. Structural limitations (F1 to F10)
+## 8. Structural limitations (F1 to F15)
 
 | ID | Limitation | Mitigation | Severity |
 |----|------------|------------|----------|
@@ -166,8 +166,13 @@ Output: recalculated Version C affordability for selected county, with delta fro
 | F6 | Short forecast history (11 annual observations) limits horizon | Hard cap at 6 annual steps; persistent UI caveat | Medium |
 | F7 | SCB API rate limits (30 calls/10s, 150k cells/query) | All data cached as parquet at build time; no live API calls from Streamlit | Low |
 | F8 | Translation loses banking terminology nuance | Glossary file in swedish-translation skill; banking terms curated | Low |
-| F9 | Income for 2025 and 2026 is forward filled from 2024 | `is_imputed_income` flag; UI renders imputed values with reduced opacity and tooltip disclosure | Low |
+| F9 | Income for 2025 and 2026 is forward filled from 2024 with zero nominal growth | `is_imputed_income` flag; UI renders imputed values with disclosure. Pessimistic for 2025–2026 (actual wage growth ~3–4%/yr). | Low–Medium |
 | F10 | Unemployment is Arbetsförmedlingen registered rate, not AKU/ILO survey rate | Documented on every page where U enters a computation; definition footnote in Swedish | Low |
+| F11 | Price data covers only permanent small houses (Fastighetstyp 220, villor/småhus). Bostadsrätter and apartments are not included. In urban municipalities, villa prices are 2–3× higher than typical first-time buyer apartment prices. Kontantinsats figures are correspondingly high for urban users seeking apartments. | Prominent warning on Sida 04 (Kontantinsats). | **High** |
+| F12 | Policy rate used directly as mortgage rate. Actual mortgage rate ≈ policy rate + bank margin (~1.5–2.5 pp, typically ~1.7 pp for 3-month fixed). Monthly housing cost and affordability formula values are optimistic by ~30%. Municipal rankings are unaffected (all use the same national rate). | Documented in Detaljer on Sida 04; noted in formula descriptions. | Medium |
+| F13 | Version B: R and π are national variables (same value for all municipalities in a given year). Their z-scores carry no cross-municipal information within a single year — 45% of Version B weights (R: 25%, π: 20%) are time-only signals. Within-year municipal rankings are determined almost entirely by z(P_SEK/I) (35%) and z(U) (20%). | Documented in Version B formula description on Sida 02 and Sida 06. | Medium |
+| F14 | Income is individual gross earned income (sammanräknad förvärvsinkomst). Housing is typically purchased as a couple. Single-income years-to-save is 2× the household figure. | Caption below "År att spara" KPI on Sida 04 advises dividing by 2 for couples. | Medium |
+| F15 | Scenario simulator holds CPI inflation (π) constant when the rate is shocked. Real rate changes therefore equal nominal rate changes, not genuine real rate shocks. A +3 pp rate shock with unchanged inflation implies a +3 pp real rate increase, which differs from the 2022–2023 experience where real rates barely changed. | Documented in Förklaring expander on Sida 05. | Low–Medium |
 
 ### Eliminated from earlier versions
 

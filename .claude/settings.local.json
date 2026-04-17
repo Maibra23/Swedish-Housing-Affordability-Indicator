@@ -24,7 +24,8 @@
       "WebFetch(domain:kommunal-riskindikator-5zebavmumyub25e9rry4oe.streamlit.app)",
       "WebFetch(domain:localhost)",
       "Bash(start:*)",
-      "Bash(pip uninstall:*)"
+      "Bash(pip uninstall:*)",
+      "Bash(python3:*)"
     ]
   }
 }

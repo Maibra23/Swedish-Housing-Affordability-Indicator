@@ -16,6 +16,7 @@ def simulate(
     income_shock: float,
     price_shock: float,
     baseline_panel: dict,
+    cpi_shock: float = 0.0,
 ) -> dict:
     """Compute Version C under a scenario shock.
 
@@ -27,6 +28,10 @@ def simulate(
         baseline_panel: dict with keys:
             income (SEK), transaction_price_sek (SEK),
             policy_rate (percentage points), cpi_yoy_pct (percentage points).
+        cpi_shock: Absolute change in CPI inflation (percentage points, default 0).
+            When non-zero, the real rate is affected by both rate and inflation changes,
+            enabling realistic scenarios like the 2022 cycle where rate +4pp & CPI +8pp
+            left the real rate nearly unchanged.
 
     Returns:
         dict with baseline_v_c, scenario_v_c, delta, delta_pct, etc.
@@ -41,11 +46,12 @@ def simulate(
     real_rate_base_dec = real_rate_base / 100.0         # decimal
     baseline_v_c = income / (price * real_rate_base_dec)
 
-    # Scenario
+    # Scenario — CPI shock shifts inflation, affecting real rate
     s_income = income * (1 + income_shock)
     s_price = price * (1 + price_shock)
     s_rate = rate + rate_shock                         # pp
-    real_rate_scen = max(s_rate - cpi, 0.5)            # pp, floored at 0.5
+    s_cpi = cpi + cpi_shock                            # pp — CPI is now shockable
+    real_rate_scen = max(s_rate - s_cpi, 0.5)          # pp, floored at 0.5
     real_rate_scen_dec = real_rate_scen / 100.0         # decimal
     scenario_v_c = s_income / (s_price * real_rate_scen_dec)
 
@@ -63,6 +69,8 @@ def simulate(
         "scenario_price": s_price,
         "baseline_rate": rate,
         "scenario_rate": s_rate,
+        "baseline_cpi": cpi,
+        "scenario_cpi": s_cpi,
         "real_rate_base": real_rate_base,
         "real_rate_scen": real_rate_scen,
         "scope_note": "Simulatorn beräknar endast Version C (realversion)",

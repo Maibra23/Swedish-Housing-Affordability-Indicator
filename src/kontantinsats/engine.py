@@ -54,15 +54,18 @@ def apply_regime(
     rate: float,
     regime_key: str,
     savings_rate: float = 0.10,
+    bank_margin: float = 0.0,
 ) -> dict:
     """Compute kontantinsats requirements under a given regulatory regime.
 
     Args:
-        price_sek: Median transaction price in SEK (from panel transaction_price_sek).
-        income_sek: Household disposable income in SEK.
-        rate: Annual interest rate as decimal (e.g. 0.03 = 3%).
+        price_sek: Mean transaction price in SEK (from panel transaction_price_sek).
+        income_sek: Household income in SEK (individual or combined for couple).
+        rate: Policy rate as decimal (e.g. 0.036 = 3.6%).
         regime_key: One of "pre_2010", "bolanetak", "amort_1", "amort_2".
         savings_rate: Fraction of income saved annually (default 10%).
+        bank_margin: Bank's interest rate margin above policy rate, as decimal
+            (e.g. 0.017 = 1.7 pp). Default 0.0 (policy rate only, for backward compat).
 
     Returns:
         dict with:
@@ -71,6 +74,7 @@ def apply_regime(
           loan_amount       - loan size in SEK
           ltv               - loan-to-value ratio
           lti               - loan-to-income ratio
+          effective_rate    - actual borrowing rate used (policy + margin)
           annual_interest   - annual interest cost in SEK
           annual_amort      - annual amortization in SEK
           annual_total      - annual housing cost (interest + amort)
@@ -87,16 +91,17 @@ def apply_regime(
     required_cash = price_sek * regime["min_down_pct"]
     loan_amount = price_sek - required_cash
 
-    # Ratios
+    # Ratios — based on household income (may be individual or combined)
     ltv = loan_amount / price_sek if price_sek > 0 else 0.0
     lti = loan_amount / income_sek if income_sek > 0 else 0.0
 
-    # Years to save
+    # Years to save — based on household savings capacity
     annual_savings = income_sek * savings_rate
     years_to_save = required_cash / annual_savings if annual_savings > 0 else 0.0
 
-    # Interest cost
-    annual_interest = loan_amount * rate
+    # Interest cost — effective rate = policy rate + bank margin
+    effective_rate = rate + bank_margin
+    annual_interest = loan_amount * effective_rate
 
     # Amortization — rules are cumulative thresholds
     amort_pct = 0.0
@@ -119,6 +124,7 @@ def apply_regime(
         "loan_amount": loan_amount,
         "ltv": ltv,
         "lti": lti,
+        "effective_rate": effective_rate,
         "annual_interest": annual_interest,
         "annual_amort": annual_amort,
         "annual_total": annual_total,
@@ -133,13 +139,21 @@ def compare_regimes(
     income_sek: float,
     rate: float,
     savings_rate: float = 0.10,
+    bank_margin: float = 0.0,
 ) -> dict[str, dict]:
     """Compute all four regimes for a given price/income/rate combination.
+
+    Args:
+        price_sek: Mean transaction price in SEK.
+        income_sek: Household income in SEK (individual or couple combined).
+        rate: Policy rate as decimal.
+        savings_rate: Fraction of income saved annually.
+        bank_margin: Bank interest rate margin above policy rate, as decimal.
 
     Returns dict keyed by regime_key with apply_regime() results.
     """
     return {
-        key: apply_regime(price_sek, income_sek, rate, key, savings_rate)
+        key: apply_regime(price_sek, income_sek, rate, key, savings_rate, bank_margin)
         for key in REGIMES
     }
 
