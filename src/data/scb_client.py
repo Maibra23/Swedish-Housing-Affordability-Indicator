@@ -388,27 +388,13 @@ def fetch_transaction_price(force: bool = False) -> pd.DataFrame:
 def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
     """Mean transaction price in SEK for bostadsrätter (housing co-op apartments).
 
-    Source: SCB BO0701 — Bostadsrättsstatistik.
+    Primary source: SCB BO0501C/FastprisBRFRegionAr (live-verified PxWeb path).
+    This table currently exposes county + national + metro aggregates (not full
+    municipal coverage). We still keep BO0701 legacy candidates as fallbacks in
+    case SCB moves the series back under a dedicated BO0701 product area.
 
-    Granularity (confirmed by SCB BO0701 product page):
-    - **Municipal** for the larger ~150–200 of 290 kommuner (those with enough
-      transaction volume).
-    - **County** (21 län) — all years.
-    - **National** — all years.
-    Smaller municipalities have no municipal BR price; callers (see
-    `build_panel._clean_bostadsratt_price`) fall back to the county value and
-    set `has_native_bostadsratt_price=False` so downstream consumers can
-    match granularity in comparisons (muni-vs-muni, or county-vs-county).
-
-    Time coverage: roughly 2012 onward, annual.
-
-    Table path: the BO0701 product area has gone through minor renamings over
-    the years. The first entry below is the currently documented table; if it
-    returns 404 we fall through to the other known variants rather than
-    hard-failing, and log which one succeeded so the resolved path is visible.
-
-    Content code: we select the content code whose label contains "köpeskilling"
-    or "pris" (mean purchase price per bostadsrätt, in tkr).
+    Content code: select the first tabellinnehåll label containing "köpe" or
+    "pris" (mean/median purchase price per bostadsrätt, typically in tkr).
     """
     cache = _cache_path("BO0701_bostadsratt_price")
     if not force and _cache_is_fresh(cache):
@@ -416,6 +402,7 @@ def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
         return pd.read_parquet(cache)
 
     candidate_table_paths = [
+        "BO/BO0501/BO0501C/FastprisBRFRegionAr",
         "BO/BO0701/BO0701A/Bostprissh",
         "BO/BO0701/BO0701A/BostprisAr",
         "BO/BO0701/BO0701A/Bostpris",
@@ -435,8 +422,9 @@ def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
             continue
     if meta is None or table_path is None:
         raise RuntimeError(
-            "Could not locate SCB BO0701 table under any known path. "
-            "Check https://api.scb.se/OV0104/v1/doris/sv/ssd/BO/BO0701/ for the "
+            "Could not locate SCB bostadsrätt price table under any known path. "
+            "Check https://api.scb.se/OV0104/v1/doris/sv/ssd/BO/BO0501/BO0501C/ and "
+            "https://api.scb.se/OV0104/v1/doris/sv/ssd/BO/BO0701/ for the "
             f"current table id. Last error: {last_err}"
         )
     variables = meta["variables"]
