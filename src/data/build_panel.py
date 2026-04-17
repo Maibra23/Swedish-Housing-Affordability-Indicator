@@ -188,6 +188,44 @@ def _clean_transaction_price() -> pd.DataFrame:
     return df
 
 
+def _clean_bostadsratt_price() -> pd.DataFrame | None:
+    """Mean transaction price in SEK per bostadsrätt (housing co-op apartment),
+    region × year. Returns None if the raw BO0701 file is not present yet.
+
+    Source: SCB BO0701 content code for mean purchase price per bostadsrätt.
+    Complements small-house prices (BO0501C2) for audit finding F11.
+    Coverage: larger municipalities + all counties + national. Small
+    municipalities will be missing and are filled from county values
+    in build_municipal_panel.
+    """
+    path = RAW_DIR / "BO0701_bostadsratt_price.parquet"
+    if not path.exists():
+        logger.info("BO0701 bostadsrätt price not cached yet — skipping apartment merge")
+        return None
+
+    df = _read("BO0701_bostadsratt_price")
+
+    region_col = "Region_code" if "Region_code" in df.columns else "Region"
+    time_col = "Tid_code" if "Tid_code" in df.columns else "Tid"
+
+    df = df[[region_col, time_col, "value"]].copy()
+    df.rename(columns={region_col: "region_code", time_col: "year",
+                       "value": "bostadsratt_price_ksek"}, inplace=True)
+    # SCB publishes the mean price in tkr → convert to SEK.
+    df["year"] = df["year"].astype(int)
+    df["bostadsratt_price_sek"] = df["bostadsratt_price_ksek"] * 1000
+    df.drop(columns=["bostadsratt_price_ksek"], inplace=True)
+
+    # Split combined 08+09 (Kalmar+Gotland) if present, same convention as villa data.
+    combined = df[df["region_code"] == "08+09"].copy()
+    if not combined.empty:
+        row_08 = combined.copy(); row_08["region_code"] = "08"
+        row_09 = combined.copy(); row_09["region_code"] = "09"
+        df = pd.concat([df[df["region_code"] != "08+09"], row_08, row_09], ignore_index=True)
+
+    return df
+
+
 def _clean_cpi() -> pd.DataFrame:
     """CPI index (2020=100) and YoY change per year (annual average of monthly)."""
     df = _read("PR0101_cpi")
@@ -243,6 +281,7 @@ def build_municipal_panel() -> pd.DataFrame:
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
     txn_price = _clean_transaction_price()
+    br_price = _clean_bostadsratt_price()  # None if BO0701 cache missing
     unemp = _clean_unemployment()
     pop = _clean_population()
     constr = _clean_construction()
@@ -329,6 +368,29 @@ def build_municipal_panel() -> pd.DataFrame:
     )
     panel.drop(columns=["txn_price_county"], inplace=True)
 
+    # --- Merge bostadsrätt (apartment) transaction price with county fallback (F11 mitigation) ---
+    if br_price is not None:
+        muni_br = br_price[br_price["region_code"].isin(municipalities)].copy()
+        panel = panel.merge(
+            muni_br[["region_code", "year", "bostadsratt_price_sek"]],
+            on=["region_code", "year"], how="left",
+        )
+        county_br = br_price[br_price["region_code"].isin(counties)].copy()
+        county_br = county_br.rename(columns={
+            "region_code": "lan_code",
+            "bostadsratt_price_sek": "br_price_county",
+        })
+        panel = panel.merge(county_br[["lan_code", "year", "br_price_county"]],
+                            on=["lan_code", "year"], how="left")
+        panel["has_native_bostadsratt_price"] = panel["bostadsratt_price_sek"].notna()
+        panel["bostadsratt_price_sek"] = panel["bostadsratt_price_sek"].fillna(
+            panel["br_price_county"]
+        )
+        panel.drop(columns=["br_price_county"], inplace=True)
+    else:
+        panel["bostadsratt_price_sek"] = np.nan
+        panel["has_native_bostadsratt_price"] = False
+
     # --- Merge unemployment ---
     unemp_for_join = muni_unemp[["region_code", "year", "unemployment_rate"]]
     panel = panel.merge(unemp_for_join, on=["region_code", "year"], how="left")
@@ -352,6 +414,7 @@ def build_municipal_panel() -> pd.DataFrame:
         "median_income", "median_income_tkr", "is_imputed_income",
         "price_index", "kt_ratio", "has_native_kt",
         "transaction_price_sek", "has_native_price",
+        "bostadsratt_price_sek", "has_native_bostadsratt_price",
         "unemployment_rate", "population", "completions",
         "cpi_index", "cpi_yoy_pct", "policy_rate",
     ]
@@ -366,6 +429,7 @@ def build_county_panel() -> pd.DataFrame:
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
     txn_price = _clean_transaction_price()
+    br_price = _clean_bostadsratt_price()
     unemp = _clean_unemployment()
     pop = _clean_population()
     constr = _clean_construction()
@@ -406,6 +470,15 @@ def build_county_panel() -> pd.DataFrame:
     panel = panel.merge(county_txn[["lan_code", "year", "transaction_price_sek"]],
                         on=["lan_code", "year"], how="left")
 
+    # Bostadsrätt price at county level (apartment prices, F11 mitigation)
+    if br_price is not None:
+        county_br = br_price[br_price["region_code"].isin(counties)].copy()
+        county_br = county_br.rename(columns={"region_code": "lan_code"})
+        panel = panel.merge(county_br[["lan_code", "year", "bostadsratt_price_sek"]],
+                            on=["lan_code", "year"], how="left")
+    else:
+        panel["bostadsratt_price_sek"] = np.nan
+
     # Unemployment at county level (Kolada uses 4-digit codes: "0001" for county "01")
     # Read full Kolada dataset including county aggregates
     unemp_all = _read("kolada_unemployment_all")
@@ -441,6 +514,7 @@ def build_national_panel() -> pd.DataFrame:
     price_idx = _clean_price_index()
     kt = _clean_kt_ratio()
     txn_price = _clean_transaction_price()
+    br_price = _clean_bostadsratt_price()
     unemp_all = _read("kolada_unemployment_all")
     pop = _clean_population()
     constr = _clean_construction()
@@ -475,6 +549,13 @@ def build_national_panel() -> pd.DataFrame:
     # National transaction price
     nat_txn = txn_price[txn_price["region_code"] == "00"][["year", "transaction_price_sek"]]
     panel = panel.merge(nat_txn, on="year", how="left")
+
+    # National bostadsrätt price (F11 mitigation)
+    if br_price is not None:
+        nat_br = br_price[br_price["region_code"] == "00"][["year", "bostadsratt_price_sek"]]
+        panel = panel.merge(nat_br, on="year", how="left")
+    else:
+        panel["bostadsratt_price_sek"] = np.nan
 
     # National unemployment (Kolada code "0000")
     nat_unemp = unemp_all[unemp_all["municipality_code"] == "0000"][["year", "unemployment_rate"]].copy()

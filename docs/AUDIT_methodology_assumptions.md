@@ -430,7 +430,7 @@ The following should be added to the Metodologi page (Section 6) and METHODOLOGY
 
 | New ID | Limitation | Mitigation |
 |---|---|---|
-| **F11** | Price data covers only permanent small houses (Fastighetstyp 220). Bostadsrätter not included. Kontantinsats numbers are 2–3× higher than typical first-time buyer reality in cities. | Prominent caveat on Kontantinsats page. |
+| **F11** | SHAI indices (A/B/C) still compute on villa prices only (SCB BO0501C2, Fastighetstyp 220) for a systemic view. Bostadsrätt prices (SCB BO0701) are now fetched and merged into the municipal/county/national panels (`bostadsratt_price_sek`) with county-level fallback for thin municipalities. Page 04 (Kontantinsats) exposes a `Pristyp` toggle (småhus / bostadsrätt) and a villa-vs-bostadsrätt comparison card so urban first-time buyers see apartment-based kontantinsats rather than villa-based. Phase C (parallel bostadsrätt SHAI index) remains deferred pending confirmation of BO0701 municipal coverage ≥150. | Pristyp selector + comparison card on Sida 04. |
 | **F12** | Policy rate used as mortgage rate. Actual mortgage rate ≈ policy rate + 1.5–2.5 pp bank margin. Monthly cost and affordability formulas are correspondingly optimistic. | Add optional bank margin slider on page 04. |
 | **F13** | Version B rate and CPI z-scores carry no cross-municipal variation in a single year (national variables). 45% of Version B weights are time-only signals. | Document in formula description on pages 02 and 06. |
 | **F14** | Income is individual gross earned income. Housing is typically purchased as a couple. Single-income years-to-save is 2× the household figure. | Add household multiplier control on page 04. |
