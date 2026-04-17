@@ -54,11 +54,18 @@ page_title(
 )
 
 _has_br_column = "bostadsratt_price_sek" in municipal.columns
-_br_available_rows = (
-    int(mun_year["bostadsratt_price_sek"].notna().sum()) if _has_br_column else 0
-)
+# Row counts distinguish *native municipal* BR coverage from county-fallback coverage.
+if _has_br_column:
+    _br_any_rows = int(mun_year["bostadsratt_price_sek"].notna().sum())
+    _br_native_rows = (
+        int(mun_year["has_native_bostadsratt_price"].sum())
+        if "has_native_bostadsratt_price" in mun_year.columns else 0
+    )
+    _br_fallback_rows = _br_any_rows - _br_native_rows
+else:
+    _br_any_rows = _br_native_rows = _br_fallback_rows = 0
 
-if not _has_br_column or _br_available_rows == 0:
+if not _has_br_column or _br_any_rows == 0:
     st.warning(
         "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker "
         "permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. "
@@ -68,12 +75,13 @@ if not _has_br_column or _br_available_rows == 0:
     )
 else:
     st.info(
-        "**Nytt — välj Pristyp:** Panelen innehåller nu både småhuspriser (SCB BO0501C2, "
-        "Fastighetstyp 220) och bostadsrättspriser (SCB BO0701). Använd `Pristyp` nedan för "
-        "att växla mellan villapris (systemisk vy) och bostadsrättspris "
-        "(realistisk vy för förstagångsköpare i städer). "
-        f"Bostadsrättspris tillgängligt för {_br_available_rows} kommun(er) år {selected_year}; "
-        "övriga använder länets värde som fallback. Se Begränsning F11 i Metodologi (Sida 06)."
+        "**Nytt — välj Pristyp:** Panelen innehåller både småhuspriser (SCB BO0501C2, "
+        "kommunnivå för alla 290 kommuner) och bostadsrättspriser (SCB BO0701). "
+        f"Bostadsrätt är **kommunspecifikt för {_br_native_rows} av {_br_any_rows} kommuner** "
+        f"år {selected_year}; {_br_fallback_rows} kommuner använder länets genomsnitt som fallback. "
+        "Jämförelsen *Villa vs. bostadsrätt* nedan matchar automatiskt geografisk "
+        "nivå (kommun-mot-kommun där båda finns, annars län-mot-län). "
+        "Se Begränsning F11 i Metodologi (Sida 06)."
     )
 
 # ── 1 · Controls ──────────────────────────────────────────────────────
@@ -165,11 +173,18 @@ if len(kommun_row) == 0:
 
 kommun_row = kommun_row.iloc[0]
 _villa_price = kommun_row["transaction_price_sek"]
+_villa_price_county = kommun_row.get("transaction_price_sek_county", None)
+_villa_native = bool(kommun_row.get("has_native_price", True))
 _br_price = (
     kommun_row["bostadsratt_price_sek"]
     if _has_br_column and pd.notna(kommun_row.get("bostadsratt_price_sek", None))
     else None
 )
+_br_price_county = (
+    kommun_row.get("bostadsratt_price_sek_county", None)
+    if _has_br_column else None
+)
+_br_native = bool(kommun_row.get("has_native_bostadsratt_price", False))
 
 # Pristyp fallback: if user picked Bostadsrätt but this kommun has no BR data,
 # fall back to villa price and flag it inline.
@@ -177,16 +192,23 @@ pristyp_fallback_note: str | None = None
 if use_bostadsratt and _br_price is None:
     price = _villa_price
     pristyp_fallback_note = (
-        "Bostadsrättspris saknas för denna kommun (även länets värde) — "
+        "Bostadsrättspris saknas både på kommun- och länsnivå för detta val — "
         "småhuspriset används som fallback."
     )
     price_source_label = "Småhus (fallback)"
 elif use_bostadsratt:
     price = _br_price
-    price_source_label = "Bostadsrätt (SCB BO0701)"
+    # BO0701 is municipal for ~150–200 kommuner and county for the rest.
+    price_source_label = (
+        "Bostadsrätt — kommun (SCB BO0701)" if _br_native
+        else "Bostadsrätt — län (SCB BO0701, kommunvärde saknas)"
+    )
 else:
     price = _villa_price
-    price_source_label = "Småhus (SCB BO0501C2)"
+    price_source_label = (
+        "Småhus — kommun (SCB BO0501C2)" if _villa_native
+        else "Småhus — län (SCB BO0501C2, kommunvärde saknas)"
+    )
 
 _individual_income = kommun_row["median_income"]
 income = _individual_income * household_multiplier   # household income
@@ -266,46 +288,77 @@ if pristyp_fallback_note:
     st.caption(f"⚠ {pristyp_fallback_note}")
 
 # ── 2b · Villa vs. bostadsrätt side-by-side jämförelse (Phase B) ─────
+# Granularity matters: BO0501 småhus is municipal for all 290 kommuner, but
+# BO0701 bostadsrätt is municipal only for the larger ~150–200 kommuner and
+# county-level for the rest. When bostadsrätt is a county-fallback we MUST
+# also compare with the county-level villa price (not the municipal villa),
+# otherwise the ratio mixes a municipal number with a county average.
 if _has_br_column and _br_price is not None and _villa_price is not None:
     from src.kontantinsats.engine import apply_regime as _apply_regime
-    _villa_res = _apply_regime(_villa_price, income, rate, "amort_2",
-                               savings_rate, bank_margin)
-    _br_res = _apply_regime(_br_price, income, rate, "amort_2",
-                            savings_rate, bank_margin)
-    _ratio = _villa_price / _br_price if _br_price > 0 else float("nan")
-    with st.container(border=True):
-        st.markdown(
-            card_header(
-                "Villa vs. bostadsrätt",
-                f"{selected_kommun} · {selected_year} · Amorteringskrav 2.0",
-                "PRISTYPSJÄMFÖRELSE",
-            ),
-            unsafe_allow_html=True,
+
+    if _br_native:
+        # Both are municipal → compare municipal villa vs municipal bostadsrätt.
+        _cmp_level = "kommun"
+        _cmp_villa_price = _villa_price
+        _cmp_br_price = _br_price
+    elif _villa_price_county is not None and pd.notna(_villa_price_county) \
+         and _br_price_county is not None and pd.notna(_br_price_county):
+        # Bostadsrätt is county-fallback → use county villa too for matched comparison.
+        _cmp_level = "län"
+        _cmp_villa_price = float(_villa_price_county)
+        _cmp_br_price = float(_br_price_county)
+    else:
+        # Missing one side of the county reference — skip the card to avoid
+        # publishing an apples-to-oranges ratio.
+        _cmp_villa_price = None
+        _cmp_br_price = None
+        _cmp_level = None
+
+    if _cmp_villa_price is not None and _cmp_br_price is not None:
+        _villa_res = _apply_regime(_cmp_villa_price, income, rate, "amort_2",
+                                   savings_rate, bank_margin)
+        _br_res = _apply_regime(_cmp_br_price, income, rate, "amort_2",
+                                savings_rate, bank_margin)
+        _ratio = (_cmp_villa_price / _cmp_br_price) if _cmp_br_price > 0 else float("nan")
+        _level_label = (
+            f"jämförelse på kommunnivå — {selected_kommun}"
+            if _cmp_level == "kommun"
+            else f"jämförelse på länsnivå — {kommun_row['lan_code']} (bostadsrätt saknas som kommunvärde)"
         )
-        c_villa, c_br = st.columns(2)
-        with c_villa:
-            st.markdown("**Småhus (villa)** — SCB BO0501C2")
-            st.metric("Pris", f"{format_sek(_villa_price)} SEK")
-            st.metric("Kontantinsats (15 %)",
-                      f"{format_sek(_villa_res['required_cash'])} SEK")
-            st.metric("År att spara",
-                      f"{_villa_res['years_to_save']:.1f}".replace(".", ",") + " år")
-            st.metric("Månadskostnad",
-                      f"{format_sek(_villa_res['monthly_total'])} SEK")
-        with c_br:
-            st.markdown("**Bostadsrätt** — SCB BO0701")
-            st.metric("Pris", f"{format_sek(_br_price)} SEK")
-            st.metric("Kontantinsats (15 %)",
-                      f"{format_sek(_br_res['required_cash'])} SEK")
-            st.metric("År att spara",
-                      f"{_br_res['years_to_save']:.1f}".replace(".", ",") + " år")
-            st.metric("Månadskostnad",
-                      f"{format_sek(_br_res['monthly_total'])} SEK")
-        st.caption(
-            f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
-            "Samma hushållsinkomst, ränta och regelverk (Amorteringskrav 2.0). "
-            "Skillnaden drivs enbart av prisnivån mellan fastighetstyperna."
-        )
+        with st.container(border=True):
+            st.markdown(
+                card_header(
+                    "Villa vs. bostadsrätt",
+                    f"{_level_label} · {selected_year} · Amorteringskrav 2.0",
+                    "PRISTYPSJÄMFÖRELSE",
+                ),
+                unsafe_allow_html=True,
+            )
+            c_villa, c_br = st.columns(2)
+            with c_villa:
+                st.markdown(f"**Småhus (villa)** — SCB BO0501C2, {_cmp_level}")
+                st.metric("Pris", f"{format_sek(_cmp_villa_price)} SEK")
+                st.metric("Kontantinsats (15 %)",
+                          f"{format_sek(_villa_res['required_cash'])} SEK")
+                st.metric("År att spara",
+                          f"{_villa_res['years_to_save']:.1f}".replace(".", ",") + " år")
+                st.metric("Månadskostnad",
+                          f"{format_sek(_villa_res['monthly_total'])} SEK")
+            with c_br:
+                st.markdown(f"**Bostadsrätt** — SCB BO0701, {_cmp_level}")
+                st.metric("Pris", f"{format_sek(_cmp_br_price)} SEK")
+                st.metric("Kontantinsats (15 %)",
+                          f"{format_sek(_br_res['required_cash'])} SEK")
+                st.metric("År att spara",
+                          f"{_br_res['years_to_save']:.1f}".replace(".", ",") + " år")
+                st.metric("Månadskostnad",
+                          f"{format_sek(_br_res['monthly_total'])} SEK")
+            st.caption(
+                f"Priskvot villa/bostadsrätt (på {_cmp_level}nivå): **{_ratio:.1f}×**. "
+                "Samma hushållsinkomst, ränta och regelverk (Amorteringskrav 2.0). "
+                "Båda priser hämtas från samma geografiska nivå så kvoten speglar "
+                "enbart skillnad mellan fastighetstyperna."
+            )
 
 # ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────
 render_kpi_row(

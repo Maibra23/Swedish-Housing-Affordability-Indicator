@@ -386,38 +386,62 @@ def fetch_transaction_price(force: bool = False) -> pd.DataFrame:
 
 
 def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
-    """Mean transaction price in SEK for bostadsrätter (housing co-op apartments),
-    municipal + county + national level, annual.
+    """Mean transaction price in SEK for bostadsrätter (housing co-op apartments).
 
-    Source: SCB BO0701 — Bostadsrättsstatistik
-    Table: BO/BO0701/BO0701A/Bostprissh
-    Content code: the mean purchase price per bostadsrätt (tkr).
+    Source: SCB BO0701 — Bostadsrättsstatistik.
 
-    Coverage: municipal level for the larger municipalities (~150–200 out of 290);
-    county and national level for all counties; annual series from ~2012–present.
+    Granularity (confirmed by SCB BO0701 product page):
+    - **Municipal** for the larger ~150–200 of 290 kommuner (those with enough
+      transaction volume).
+    - **County** (21 län) — all years.
+    - **National** — all years.
+    Smaller municipalities have no municipal BR price; callers (see
+    `build_panel._clean_bostadsratt_price`) fall back to the county value and
+    set `has_native_bostadsratt_price=False` so downstream consumers can
+    match granularity in comparisons (muni-vs-muni, or county-vs-county).
 
-    Smaller municipalities with thin trading volume will be missing; callers should
-    fall back to county-level values (see build_panel._clean_bostadsratt_price).
+    Time coverage: roughly 2012 onward, annual.
 
-    This is the apartment analog of `fetch_transaction_price()` (which covers only
-    småhus / Fastighetstyp 220). Adding it addresses audit finding F11 — the villa
-    price used in affordability computations overstates typical first-time buyer
-    costs in urban municipalities by 2–3×.
+    Table path: the BO0701 product area has gone through minor renamings over
+    the years. The first entry below is the currently documented table; if it
+    returns 404 we fall through to the other known variants rather than
+    hard-failing, and log which one succeeded so the resolved path is visible.
+
+    Content code: we select the content code whose label contains "köpeskilling"
+    or "pris" (mean purchase price per bostadsrätt, in tkr).
     """
     cache = _cache_path("BO0701_bostadsratt_price")
     if not force and _cache_is_fresh(cache):
         logger.info("Using cached %s", cache)
         return pd.read_parquet(cache)
 
-    table_path = "BO/BO0701/BO0701A/Bostprissh"
-    meta = _get_table_metadata(table_path)
+    candidate_table_paths = [
+        "BO/BO0701/BO0701A/Bostprissh",
+        "BO/BO0701/BO0701A/BostprisAr",
+        "BO/BO0701/BO0701A/Bostpris",
+    ]
+    last_err: Exception | None = None
+    meta = None
+    table_path = None
+    for candidate in candidate_table_paths:
+        try:
+            meta = _get_table_metadata(candidate)
+            table_path = candidate
+            logger.info("BO0701 table path resolved to: %s", candidate)
+            break
+        except requests.HTTPError as exc:
+            last_err = exc
+            logger.info("BO0701 candidate %s not available (%s)", candidate, exc)
+            continue
+    if meta is None or table_path is None:
+        raise RuntimeError(
+            "Could not locate SCB BO0701 table under any known path. "
+            "Check https://api.scb.se/OV0104/v1/doris/sv/ssd/BO/BO0701/ for the "
+            f"current table id. Last error: {last_err}"
+        )
     variables = meta["variables"]
 
-    # Select the mean transaction price per bostadsrätt. Content code names
-    # have historically been BO0701V1 or similar; to be robust against minor
-    # SCB renamings, we scan the ContentsCode values and pick the first one
-    # whose label mentions "Köpeskilling" (purchase price). If the table
-    # publishes only one content code (common), this is a no-op.
+    # Pick a price-like content code (labels may include 'Köpeskilling', 'Pris')
     overrides: dict[str, list[str]] = {}
     for var in variables:
         if var["code"] == "ContentsCode":
@@ -425,10 +449,11 @@ def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
             labels = var.get("valueTexts", values)
             chosen = []
             for code, label in zip(values, labels):
-                if "köpe" in str(label).lower() or "pris" in str(label).lower():
+                lbl = str(label).lower()
+                if "köpe" in lbl or "pris" in lbl:
                     chosen.append(code)
             if chosen:
-                overrides["ContentsCode"] = chosen[:1]  # prefer first price-like code
+                overrides["ContentsCode"] = chosen[:1]
             break
 
     df = _chunked_fetch(table_path, variables, overrides, chunk_var="Region")
