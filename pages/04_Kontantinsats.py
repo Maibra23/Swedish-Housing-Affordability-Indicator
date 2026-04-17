@@ -53,14 +53,22 @@ page_title(
     year=selected_year,
 )
 
+st.warning(
+    "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker "
+    "permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej. "
+    "I storstäder är typiska bostadsrätspriser 2–3× lägre än villapriser — "
+    "kontantinsatskraven och spartiderna är därmed höga för stadsbor som söker lägenhet. "
+    "Se Begränsning F11 i Metodologi (Sida 06)."
+)
+
 # ── 1 · Controls ──────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Välj analysenhet", "Kommun och sparandeantagande", "URVAL"),
+        card_header("Välj analysenhet", "Kommun, hushållstyp och sparandeantagande", "URVAL"),
         unsafe_allow_html=True,
     )
 
-    col_sel, col_slider = st.columns([2, 1])
+    col_sel, col_type, col_slider = st.columns([2, 1, 1])
 
     kommun_list = sorted(mun_year["region_name"].unique())
     with col_sel:
@@ -70,6 +78,19 @@ with st.container(border=True):
             index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
             key="ki_kommun_select",
         )
+
+    with col_type:
+        household_type = st.radio(
+            "Hushållstyp",
+            options=["Singelhushåll", "Par (2 inkomster)"],
+            index=0,
+            key="ki_household_type",
+            help=(
+                "Singelhushåll: en individuell inkomst. "
+                "Par: sammanlagd inkomst (2×) — halverar spartiden och sänker LTI."
+            ),
+        )
+        household_multiplier = 2 if household_type == "Par (2 inkomster)" else 1
 
     with col_slider:
         savings_rate = st.slider(
@@ -87,6 +108,23 @@ with st.container(border=True):
         ) / 100.0
         _sparkvot_caption = st.empty()
 
+    # Advanced settings (bank margin)
+    with st.expander("Avancerade inställningar — Räntepåslag"):
+        st.caption(
+            "Riksbankens styrränta används som bas. Bankens räntepåslag adderas för att "
+            "approximera faktisk bolåneränta. Typiskt ~1,7 pp för 3-månaders rörlig ränta."
+        )
+        bank_margin_pct = st.slider(
+            "Bankens räntepåslag (pp ovan styrräntan)",
+            min_value=0.0,
+            max_value=3.0,
+            value=1.7,
+            step=0.1,
+            key="ki_bank_margin_slider",
+            help="Faktisk bolåneränta ≈ styrränta + räntepåslag. 0 pp = enbart styrränta (historisk default). 1,7 pp = typisk 2024 bankmarknad.",
+        )
+        bank_margin = bank_margin_pct / 100.0
+
 kommun_row = mun_year[mun_year["region_name"] == selected_kommun]
 if len(kommun_row) == 0:
     st.warning("Inga data tillgängliga för den valda kommunen.")
@@ -94,13 +132,18 @@ if len(kommun_row) == 0:
 
 kommun_row = kommun_row.iloc[0]
 price = kommun_row["transaction_price_sek"]
-income = kommun_row["median_income"]
+_individual_income = kommun_row["median_income"]
+income = _individual_income * household_multiplier   # household income
 rate = kommun_row["policy_rate"] / 100.0
+effective_rate_pct = kommun_row["policy_rate"] + bank_margin_pct
 
-_sparkvot_caption.caption(f"= {format_sek(income * savings_rate)} SEK/år i sparande")
+_sparkvot_caption.caption(
+    f"= {format_sek(income * savings_rate)} SEK/år "
+    f"({'par' if household_multiplier == 2 else 'singel'})"
+)
 
 # ── Compute all regimes ──────────────────────────────────────────────
-results = compare_regimes(price, income, rate, savings_rate)
+results = compare_regimes(price, income, rate, savings_rate, bank_margin)
 baseline = results["amort_2"]
 regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2"]
 
@@ -132,7 +175,7 @@ render_kpi_row(
             value=f"{insats_yrs:.1f}".replace(".", ","),
             unit="x årsinkomst",
             variant="default",
-            tooltip="Hur många årsinkoster kontantinsatsen motsvarar.",
+            tooltip="Hur många årsinkomster kontantinsatsen motsvarar.",
         ),
         kpi_card(
             label="Boendekostnadsbörda",
@@ -157,6 +200,11 @@ render_kpi_row(
 st.caption(
     f"Nuläge · Amorteringskrav 2.0 · {selected_kommun} {selected_year} · "
     f"Sparkvot {savings_rate*100:.0f}%"
+)
+st.caption(
+    "Inkomsten är individuell bruttoinkomst (SCB HE0110). "
+    "Vid gemensamt köp (par): dividera spartiden med 2. "
+    "Se Begränsning F14 i Metodologi (Sida 06)."
 )
 
 # ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────
@@ -490,6 +538,12 @@ worst_key = max(regime_keys, key=lambda k: results[k]["monthly_total"])
 cost_diff = results[worst_key]["monthly_total"] - results[best_key]["monthly_total"]
 pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
 
+_hushall_label = "par" if household_multiplier == 2 else "singelhushåll"
+_rate_note = (
+    f"styrränta {kommun_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_pct:.2f}%"
+    if bank_margin_pct > 0
+    else f"styrränta {kommun_row['policy_rate']:.2f}%"
+)
 insight_html = f"""
 <div class="shai-card" style="border-left:3px solid {COLORS['accent']};">
   <div class="shai-card-header">
@@ -497,7 +551,8 @@ insight_html = f"""
     <span class="shai-card-tag">SYNTES</span>
   </div>
   <p style="font-size:14px;color:{COLORS['text_primary']};line-height:1.7;margin:0;">
-    Under <strong>nuvarande regler (Amorteringskrav 2.0)</strong> behöver du
+    För ett <strong>{_hushall_label}</strong> ({_rate_note}) under
+    <strong>nuvarande regler (Amorteringskrav 2.0)</strong> krävs
     <strong>{format_sek(baseline['required_cash'])} SEK</strong> i kontantinsats,
     vilket tar <strong>{baseline['years_to_save']:.1f} år</strong> att spara
     vid {int(savings_rate*100)} % sparkvot.
@@ -518,9 +573,14 @@ with st.expander("Detaljer & antaganden"):
         f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;'>"
         "<strong>Indata</strong><br>"
         f"- Kommun: <strong>{selected_kommun}</strong> (analysår {selected_year})<br>"
-        f"- Medianpris: <strong>{format_sek(price)} SEK</strong><br>"
-        f"- Medianinkomst: <strong>{format_sek(income)} SEK</strong><br>"
+        f"- Medianpris (småhus): <strong>{format_sek(price)} SEK</strong><br>"
+        f"- Hushållstyp: <strong>{household_type}</strong><br>"
+        f"- Individuell medianinkomst: <strong>{format_sek(_individual_income)} SEK</strong><br>"
+        f"- Hushållsinkomst (används): <strong>{format_sek(income)} SEK</strong>"
+        f"{' (2 × individuell)' if household_multiplier == 2 else ''}<br>"
         f"- Styrränta: <strong>{kommun_row['policy_rate']:.2f}%</strong><br>"
+        f"- Bankens räntepåslag: <strong>{bank_margin_pct:.1f} pp</strong><br>"
+        f"- Effektiv bolåneränta (används): <strong>{effective_rate_pct:.2f}%</strong><br>"
         f"- Sparkvot: <strong>{int(savings_rate*100)}%</strong><br><br>"
         "<strong>Konstant mellan regelverk</strong><br>"
         "- Samma pris, inkomst och räntenivå används i alla regimer<br>"

@@ -90,22 +90,26 @@ if len(latest) > 0:
             delta=f"{vc_delta_pct:+.1f}%".replace(".", ",") if len(prev) > 0 else "",
             delta_direction="down" if vc_delta > 0 else "up" if vc_delta < 0 else "flat",
             variant="accent",
+            tooltip="Realversion. Inkomst / (Pris × max(R−π, 0,5%)). Högre = bättre överkomlighet. Råkvot, ej ett 0–100 index.",
         ),
         kpi_card(
             label="Medianinkomst",
             value=f"{lat['median_income']:,.0f}".replace(",", "\u00A0"),
             unit="SEK",
             variant="default",
+            tooltip="Sammanräknad förvärvsinkomst, medelvärde per individ (SCB HE0110). Individuell bruttoinkomst — ej hushållsinkomst.",
         ),
         kpi_card(
             label="K/T-kvot",
             value=f"{lat['kt_ratio']:.2f}".replace(".", ","),
             variant="default",
+            tooltip="Köpeskillingskoefficient: köpeskilling / taxeringsvärde. Speglar relativ prisnivå. Obs: K/T ingår ej i SHAI-formeln — transaktionspriset i SEK används.",
         ),
         kpi_card(
             label="Styrränta",
             value=f"{lat['policy_rate']:.2f}%".replace(".", ","),
             variant="default",
+            tooltip="Riksbankens styrränta, årsgenomsnitt. Nationell — samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
         ),
     ])
 
@@ -209,6 +213,7 @@ with tab_prophet:
             card_header(f"Prognos — {selected_kommun}", "Prophet-modell", "PROPHET"),
             unsafe_allow_html=True,
         )
+        st.caption("Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.")
         if len(forecast_prophet) > 0:
             fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})

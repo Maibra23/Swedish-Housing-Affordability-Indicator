@@ -150,10 +150,13 @@ def _clean_construction() -> pd.DataFrame:
 
 
 def _clean_transaction_price() -> pd.DataFrame:
-    """Median transaction price in SEK per region x year.
+    """Mean (arithmetic average) transaction price in SEK per region x year.
 
-    Source: SCB BO0501 content code BO0501C2 (kopsekilling, 1000 SEK).
-    Fastighetstyp 220 (permanent small house).
+    Source: SCB BO0501 content code BO0501C2 (köpeskilling medelvärde, 1000 SEK).
+    Note: BO0501C2 is labeled 'Köpeskilling, medelvärde i tkr' — this is the MEAN,
+    not the median. All documentation and comments should reflect this.
+    Fastighetstyp 220 (permanent small house / permanentbostad ej tomträtt).
+    Bostadsrätter are NOT included.
 
     The combined 08+09 code (Kalmar+Gotland) is split so both counties
     get the same price.
@@ -260,14 +263,24 @@ def build_municipal_panel() -> pd.DataFrame:
     panel = muni_income[["region_code", "region_name", "year", "median_income", "median_income_tkr"]].copy()
 
     # --- Forward-fill income for current year if missing (income lag) ---
+    # Apply 3% nominal growth per year (conservative Swedish wage growth assumption).
+    # Zero-growth was a pessimistic assumption per audit finding F9.
+    IMPUTED_INCOME_GROWTH_RATE = 0.03  # 3% nominal per year
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
     if max_income_year < current_year:
-        logger.info("Income lag detected: latest income year %d, current year %d. Forward-filling.",
-                     max_income_year, current_year)
+        logger.info(
+            "Income lag detected: latest income year %d, current year %d. "
+            "Forward-filling with %.0f%% nominal growth/year.",
+            max_income_year, current_year, IMPUTED_INCOME_GROWTH_RATE * 100,
+        )
         for fill_year in range(max_income_year + 1, current_year + 1):
             fill = panel[panel["year"] == max_income_year].copy()
             fill["year"] = fill_year
+            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
+            fill["median_income"] = fill["median_income"] * growth_factor
+            if "median_income_tkr" in fill.columns:
+                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
             fill["is_imputed_income"] = True
             panel = pd.concat([panel, fill], ignore_index=True)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)

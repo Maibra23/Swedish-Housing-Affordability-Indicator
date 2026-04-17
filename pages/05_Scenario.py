@@ -68,17 +68,64 @@ with col_county:
     )
 selected_county_code = county_options[selected_county_name]
 
-col_rate, col_income, col_price = st.columns(3)
+# ── Preset scenario buttons ───────────────────────────────────────────
+st.markdown("**Förinställda scenarier:**")
+preset_col1, preset_col2, preset_col3, preset_col4 = st.columns(4)
+
+_presets = {
+    "riksbanken_2022": {"rate": 4.0, "income": 0, "price": -15, "cpi": 8},
+    "deflation_risk":  {"rate": -1.0, "income": 0, "price": -10, "cpi": -2},
+    "löneboom":        {"rate": 1.0, "income": 5, "price": 10, "cpi": 3},
+    "reset":           {"rate": 0.0, "income": 0, "price": 0, "cpi": 0},
+}
+
+with preset_col1:
+    if st.button("📈 Riksbanken 2022\n+4pp ränta, +8pp KPI, −15% pris", use_container_width=True, key="sc_preset_2022"):
+        p = _presets["riksbanken_2022"]
+        st.session_state["sc_rate_slider"] = float(p["rate"])
+        st.session_state["sc_income_slider"] = int(p["income"])
+        st.session_state["sc_price_slider"] = int(p["price"])
+        st.session_state["sc_cpi_slider"] = float(p["cpi"])
+        st.rerun()
+with preset_col2:
+    if st.button("📉 Deflationsrisk\n−1pp ränta, −2pp KPI, −10% pris", use_container_width=True, key="sc_preset_deflation"):
+        p = _presets["deflation_risk"]
+        st.session_state["sc_rate_slider"] = float(p["rate"])
+        st.session_state["sc_income_slider"] = int(p["income"])
+        st.session_state["sc_price_slider"] = int(p["price"])
+        st.session_state["sc_cpi_slider"] = float(p["cpi"])
+        st.rerun()
+with preset_col3:
+    if st.button("💰 Löneboom\n+1pp ränta, +5% lön, +10% pris", use_container_width=True, key="sc_preset_wage"):
+        p = _presets["löneboom"]
+        st.session_state["sc_rate_slider"] = float(p["rate"])
+        st.session_state["sc_income_slider"] = int(p["income"])
+        st.session_state["sc_price_slider"] = int(p["price"])
+        st.session_state["sc_cpi_slider"] = float(p["cpi"])
+        st.rerun()
+with preset_col4:
+    if st.button("↺ Återställ\nBasfall", use_container_width=True, key="sc_preset_reset"):
+        p = _presets["reset"]
+        st.session_state["sc_rate_slider"] = float(p["rate"])
+        st.session_state["sc_income_slider"] = int(p["income"])
+        st.session_state["sc_price_slider"] = int(p["price"])
+        st.session_state["sc_cpi_slider"] = float(p["cpi"])
+        st.rerun()
+
+st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+col_rate, col_income, col_price, col_cpi = st.columns(4)
 
 with col_rate:
     rate_shock = st.slider(
-        "Räntechock (procentenheter)",
+        "Räntechock (pp)",
         min_value=-2.0,
         max_value=5.0,
-        value=0.0,
+        value=float(st.session_state.get("sc_rate_slider", 0.0)),
         step=0.25,
         format="%.2f",
         key="sc_rate_slider",
+        help="+4 pp ≈ Riksbankens höjningscykel 2022–2023. Adderas till styrräntan. Kombinera med KPI-chock för realistiska scenarier.",
     )
 
 with col_income:
@@ -86,9 +133,10 @@ with col_income:
         "Inkomsttillväxt (%)",
         min_value=-10,
         max_value=10,
-        value=0,
+        value=int(st.session_state.get("sc_income_slider", 0)),
         step=1,
         key="sc_income_slider",
+        help="+3–4 % ≈ ett års normal löneutveckling i Sverige. −5 % simulerar recession med lönesänkningar.",
     )
 
 with col_price:
@@ -96,9 +144,22 @@ with col_price:
         "Prischock (%)",
         min_value=-25,
         max_value=25,
-        value=0,
+        value=int(st.session_state.get("sc_price_slider", 0)),
         step=5,
         key="sc_price_slider",
+        help="−20 % ≈ det svenska bostadsprisfallet 2022. +25 % simulerar en prisspiral.",
+    )
+
+with col_cpi:
+    cpi_shock = st.slider(
+        "KPI-chock (pp)",
+        min_value=-5.0,
+        max_value=10.0,
+        value=float(st.session_state.get("sc_cpi_slider", 0.0)),
+        step=0.5,
+        format="%.1f",
+        key="sc_cpi_slider",
+        help="+8 pp ≈ svensk inflationstopp 2022. Påverkar realräntan (R−π). Höjd KPI med oförändrad ränta sänker realräntan → bättre affordability.",
     )
 
 # ── Run simulation ───────────────────────────────────────────────────
@@ -124,6 +185,7 @@ try:
         income_shock=income_shock_pct / 100.0,
         price_shock=price_shock_pct / 100.0,
         baseline_panel=baseline_panel,
+        cpi_shock=cpi_shock,                         # pp — new in Phase 3
     )
 except Exception as e:
     st.error("Beräkningsfel. Se metodologisidan för detaljer.")
@@ -218,6 +280,7 @@ with col_table:
                 "Medianinkomst (SEK)",
                 "Transaktionspris (SEK)",
                 "Styrränta (%)",
+                "KPI-inflation (%)",
                 "Realränta (%)",
                 "SHAI (Version C)",
             ],
@@ -225,6 +288,7 @@ with col_table:
                 format_sek(result["baseline_income"]),
                 format_sek(result["baseline_price"]),
                 f"{result['baseline_rate']:.2f}%".replace(".", ","),
+                f"{result['baseline_cpi']:.2f}%".replace(".", ","),
                 f"{result['real_rate_base']:.2f}%".replace(".", ","),
                 f"{result['baseline_v_c']:.1f}".replace(".", ","),
             ],
@@ -232,6 +296,7 @@ with col_table:
                 format_sek(result["scenario_income"]),
                 format_sek(result["scenario_price"]),
                 f"{result['scenario_rate']:.2f}%".replace(".", ","),
+                f"{result['scenario_cpi']:.2f}%".replace(".", ","),
                 f"{result['real_rate_scen']:.2f}%".replace(".", ","),
                 f"{result['scenario_v_c']:.1f}".replace(".", ","),
             ],
@@ -261,6 +326,13 @@ with st.expander("Förklaring"):
     - Räntechock adderas till styrräntan (procentenheter)
     - Inkomsttillväxt multipliceras med inkomsten (relativ förändring)
     - Prischock multipliceras med transaktionspriset (relativ förändring)
+
+    **Begränsning F15 — Inflationen (π) hålls konstant:**
+    Scenariosimulatorn ändrar inte KPI-inflationen när räntan chockas. Det innebär att
+    en räntehöjning på +3 pp tolkas som en ökning av realräntan med +3 pp, vilket inte
+    stämmer om höjningen är ett svar på hög inflation (som i 2022–2023 då realräntan
+    förblev låg trots tredubblade nominella räntor). Resultaten gäller nominell räntechock
+    med oförändrad inflation.
     """)
 
 footer_note()

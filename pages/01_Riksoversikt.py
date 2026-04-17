@@ -92,6 +92,15 @@ page_title(
     year=selected_year,
 )
 
+# Imputed income warning for 2025+
+_imputed_years_in_view = mun_year["is_imputed_income"].any() if "is_imputed_income" in mun_year.columns else False
+if _imputed_years_in_view:
+    st.warning(
+        f"**Imputerat inkomstår {selected_year}:** Inkomstdata för {selected_year} saknas från SCB. "
+        "Värdet är framskrivet från 2024 med 3 % nominell tillväxt per år. "
+        "Affordabilitysiffrorna för detta år bör tolkas med extra försiktighet."
+    )
+
 # ── KPI cards ────────────────────────────────────────────────────────
 mean_vc = mun_year["version_c"].mean() if len(mun_year) > 0 else 0
 mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
@@ -127,7 +136,7 @@ render_kpi_row([
         delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
         delta_direction="up" if delta_vc > 0 else "down" if delta_vc < 0 else "flat",
         variant="default",
-        tooltip="Genomsnittlig Version C-poäng för alla 290 kommuner. Högre = bättre överkomlighet.",
+        tooltip="Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla 290 kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
     ),
     kpi_card(
         label="Högrisk kommuner",
@@ -139,13 +148,13 @@ render_kpi_row([
         tooltip="Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög).",
     ),
     kpi_card(
-        label="Medianpris (K/T ratio)",
+        label="K/T-kvot (genomsnitt)",
         value=f"{mean_kt:.2f}".replace(".", ","),
         unit="genomsnitt",
         delta=f"{delta_kt_pct:+.1f}%".replace(".", ","),
         delta_direction="up" if delta_kt_pct > 0 else "down" if delta_kt_pct < 0 else "flat",
         variant="accent",
-        tooltip="Genomsnittlig köpeskillingskoefficient. Högre = dyrare bostäder relativt taxeringsvärde.",
+        tooltip="Genomsnittlig köpeskillingskoefficient (K/T): köpeskilling / taxeringsvärde. Dimensionslös kvot, typiskt 1,0–4,0. Högre = dyrare relativt taxeringsvärde. Obs: K/T ingår ej i formeln — transaktionspriset i SEK används.",
     ),
     kpi_card(
         label="Befolkningsförändring",
@@ -170,6 +179,7 @@ with col_map:
         )
         if len(df_ranked) > 0:
             render_choropleth(df_ranked, key="rv_choropleth")
+            st.caption("Färgskala: Grön = låg risk (z ≤ −0,67) · Gul = medel risk · Röd = hög risk (z > 0,67)")
         else:
             st.info("Ingen data tillgänglig för kartvisning.")
         with st.expander("Om kartan"):
@@ -189,6 +199,7 @@ with col_hist:
             card_header("Fördelning av SHAI poäng", f"Version C · {selected_year}", "HISTOGRAM"),
             unsafe_allow_html=True,
         )
+        st.caption("Z-poäng = standardavvikelser från riksgenomsnittet. Noll = rikssnitt. Högre z = bättre överkomlighet.")
         if "z_c" in df_ranked.columns and len(df_ranked) > 0:
             z_vals = df_ranked["z_c"].dropna()
 
