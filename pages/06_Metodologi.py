@@ -64,7 +64,8 @@ with st.container(border=True):
     | Variabel | Symbol | Källa | Upplösning | Frekvens | Täckning |
     |----------|--------|-------|------------|----------|----------|
     | Medianinkomst (sammanräknad förvärvsinkomst) | I | SCB HE0110 | Kommun, län, riket | Årlig | 2011–2024 |
-    | **Transaktionspris (medelvärde, SEK)** | **P_SEK** | **SCB BO0501B (BO0501C2)** | **Kommun, län** | **Årlig** | **1981–2024** |
+    | **Transaktionspris småhus (medelvärde, SEK)** | **P_SEK** | **SCB BO0501B (BO0501C2)** | **Kommun, län** | **Årlig** | **1981–2024** |
+    | **Transaktionspris bostadsrätt (medelvärde, SEK)** | **P_BR** | **SCB BO0701 (Bostprissh)** | **Kommun (större), län, riket** | **Årlig** | **~2012–present** |
     | Fastighetsprisindex | P_idx | SCB BO0501A | Län (21), riket | Årlig | 1990–2025 |
     | Köpeskillingskoefficient (K/T, deskriptiv) | KT | SCB BO0501B (BO0501C4) | Kommun (312), län | Årlig | 1981–2024 |
     | Styrränta | R | Riksbanken Swea | Riket | Dag → årssnitt | 2014–idag |
@@ -76,7 +77,11 @@ with st.container(border=True):
     | Bostadsbyggande | H | SCB BO0101 | Kommun, län, riket | Årlig | 1975–2024 |
 
     **Obs:** P_SEK (SCB BO0501C2) är *medelvärdet* (ej medianen) av köpeskillingen för permanenta
-    småhus (Fastighetstyp 220). Bostadsrätter ingår ej. P_SEK används i formlerna A, B och C.
+    småhus (Fastighetstyp 220). SHAI-formlerna A, B och C använder P_SEK (villapris) som
+    primär prisvariabel (systemisk vy). P_BR (SCB BO0701, bostadsrättspris) ingår i panelen
+    och exponeras som valbar "Pristyp" på Sida 04 (Kontantinsats), så att
+    förstagångsköpare i städer kan få en mer realistisk bild av kontantinsatskraven
+    (typisk bostadsrätt i Stockholm ≈ 3,5 MSEK vs. villa ≈ 8,6 MSEK). Se F11 nedan.
     K/T används enbart som deskriptiv indikator — den ingår inte i formeln.
 
     **Arbetslöshetsdefinition:** Öppet arbetslösa inskrivna vid Arbetsförmedlingen, 18–65 år,
@@ -232,7 +237,7 @@ with st.expander("6. Begränsningar (F1–F15)"):
     | **F8** | Översättning tappar nyanser i bankterminologi. | Ordlista i dokumentation. |
     | **F9** | Imputering av inkomstdata 2025–2026. | `is_imputed_income`-flagga; nolltillväxt antagen. |
     | **F10** | Arbetslöshetsdefinition (Af, inte AKU/ILO). | Fotnot på relevanta sidor. |
-    | **F11** | Prisdata avser enbart permanenta småhus (Fastighetstyp 220, villor). Bostadsrätter ingår ej. Kontantinsatssiffrorna är 2–3× högre än typisk förstagångsköpare i städer upplever. | Tydlig varning på Sida 04 (Kontantinsats). |
+    | **F11** | SHAI-indexformlerna (A, B, C) beräknas fortfarande enbart på villapriser (SCB BO0501C2, Fastighetstyp 220) — systemisk vy, bevarad för metodologisk kontinuitet. Bostadsrättspriser (SCB BO0701) ingår nu i panelen och exponeras som valbar Pristyp på Sida 04 (Kontantinsats) samt i en sida-vid-sida villa/bostadsrätt-jämförelse. Bostadsrätt har lägre kommunal täckning (~150–200 av 290 kommuner); övriga faller tillbaka på länets bostadsrättspris. | Pristyp-väljare + jämförelsekort på Sida 04. |
     | **F12** | Styrräntan används direkt som bolåneränta. Faktisk bolåneränta ≈ styrränta + bankens marginal (ca 1,5–2,5 pp). Månadskostnad och affordability-formler är optimistiska. | Notering i Detaljer på Sida 04. |
     | **F13** | Version B: R och π är nationella variabler (samma för alla kommuner ett givet år). Z-poäng för dessa bär ingen kommunspecifik information inom ett enskilt år — 45% av vikterna diskriminerar enbart i tid, inte i rum. | Dokumenterat i formelbeskriving ovan. |
     | **F14** | Inkomst är individuell bruttoinkomst. Bostad köps typiskt av ett hushåll (par). Spartiden för singelhushåll är 2× hushållssiffran. | Notering under "År att spara" KPI på Sida 04. |
@@ -261,7 +266,8 @@ with st.expander("7. Datavalidering"):
 # ══════════════════════════════════════════════════════════════════════
 with st.expander("8. Referenser"):
     st.markdown("""
-    - **SCB BO0501** (Fastighetspriser och lagfarter): [scb.se/bo0501](https://www.scb.se/bo0501-en)
+    - **SCB BO0501** (Fastighetspriser och lagfarter, småhus): [scb.se/bo0501](https://www.scb.se/bo0501-en)
+    - **SCB BO0701** (Bostadsrättsstatistik — priser): [scb.se/bo0701](https://www.scb.se/bo0701)
     - **SCB HE0110** (Hushållens ekonomi): [scb.se/he0110](https://www.scb.se/he0110-en)
     - **SCB BE0101** (Befolkningsstatistik): [scb.se/be0101](https://www.scb.se/be0101)
     - **SCB PR0101** (Konsumentprisindex): [scb.se/pr0101](https://www.scb.se/pr0101)

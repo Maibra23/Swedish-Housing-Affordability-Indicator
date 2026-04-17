@@ -385,6 +385,56 @@ def fetch_transaction_price(force: bool = False) -> pd.DataFrame:
     return _save_and_return(df, "BO0501_transaction_price")
 
 
+def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
+    """Mean transaction price in SEK for bostadsrätter (housing co-op apartments),
+    municipal + county + national level, annual.
+
+    Source: SCB BO0701 — Bostadsrättsstatistik
+    Table: BO/BO0701/BO0701A/Bostprissh
+    Content code: the mean purchase price per bostadsrätt (tkr).
+
+    Coverage: municipal level for the larger municipalities (~150–200 out of 290);
+    county and national level for all counties; annual series from ~2012–present.
+
+    Smaller municipalities with thin trading volume will be missing; callers should
+    fall back to county-level values (see build_panel._clean_bostadsratt_price).
+
+    This is the apartment analog of `fetch_transaction_price()` (which covers only
+    småhus / Fastighetstyp 220). Adding it addresses audit finding F11 — the villa
+    price used in affordability computations overstates typical first-time buyer
+    costs in urban municipalities by 2–3×.
+    """
+    cache = _cache_path("BO0701_bostadsratt_price")
+    if not force and _cache_is_fresh(cache):
+        logger.info("Using cached %s", cache)
+        return pd.read_parquet(cache)
+
+    table_path = "BO/BO0701/BO0701A/Bostprissh"
+    meta = _get_table_metadata(table_path)
+    variables = meta["variables"]
+
+    # Select the mean transaction price per bostadsrätt. Content code names
+    # have historically been BO0701V1 or similar; to be robust against minor
+    # SCB renamings, we scan the ContentsCode values and pick the first one
+    # whose label mentions "Köpeskilling" (purchase price). If the table
+    # publishes only one content code (common), this is a no-op.
+    overrides: dict[str, list[str]] = {}
+    for var in variables:
+        if var["code"] == "ContentsCode":
+            values = var.get("values", [])
+            labels = var.get("valueTexts", values)
+            chosen = []
+            for code, label in zip(values, labels):
+                if "köpe" in str(label).lower() or "pris" in str(label).lower():
+                    chosen.append(code)
+            if chosen:
+                overrides["ContentsCode"] = chosen[:1]  # prefer first price-like code
+            break
+
+    df = _chunked_fetch(table_path, variables, overrides, chunk_var="Region")
+    return _save_and_return(df, "BO0701_bostadsratt_price")
+
+
 def fetch_cpi(force: bool = False) -> pd.DataFrame:
     """Consumer Price Index (KPI), national, monthly. Base year 2020=100.
 
@@ -419,6 +469,7 @@ def fetch_all(force: bool = False) -> dict[str, pd.DataFrame]:
         ("price_index", fetch_price_index),
         ("kt_ratio", fetch_kt_ratio),
         ("transaction_price", fetch_transaction_price),
+        ("bostadsratt_price", fetch_bostadsratt_price),
         ("unemployment", fetch_unemployment),
         ("population", fetch_population),
         ("construction", fetch_construction),
