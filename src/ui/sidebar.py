@@ -5,7 +5,9 @@ Renders brand block, page_link navigation, year pills, risk filter, and footer.
 
 from __future__ import annotations
 
+import tomllib
 from datetime import date
+from pathlib import Path
 
 import streamlit as st
 
@@ -19,7 +21,26 @@ PAGES = [
     ("pages/06_Metodologi.py", "Metodologi och källor"),
 ]
 
-YEAR_RANGE = list(range(2020, 2025))
+# Dynamic year range: always includes up to the current calendar year so that
+# forward-filled panel rows (is_imputed_income=True) are selectable in the UI.
+_DATA_START_YEAR = 2020
+YEAR_RANGE = list(range(_DATA_START_YEAR, date.today().year + 1))
+
+# Last year with actual (non-imputed) SCB income data
+_LAST_ACTUAL_DATA_YEAR = 2024
+
+
+def _app_version() -> str:
+    """Read the project version from pyproject.toml."""
+    try:
+        _toml = Path(__file__).resolve().parents[2] / "pyproject.toml"
+        with open(_toml, "rb") as f:
+            return tomllib.load(f)["project"]["version"]
+    except Exception:
+        return "1.3.0"
+
+
+APP_VERSION = _app_version()
 
 
 def render_sidebar(page_key: str = "main") -> dict:
@@ -33,11 +54,11 @@ def render_sidebar(page_key: str = "main") -> dict:
     """
     with st.sidebar:
         # ── Brand block ──────────────────────────────────────────
-        st.markdown("""
+        st.markdown(f"""
         <div class="sidebar-brand">
             <div class="brand-mark">SHAI KONTROLLPANEL</div>
             <div class="brand-title">Bostadsekonomisk<br>hållbarhet</div>
-            <div class="brand-sub">Sverige · 2014 till 2024</div>
+            <div class="brand-sub">Sverige · 2014 till {YEAR_RANGE[-1]}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -108,10 +129,18 @@ def render_sidebar(page_key: str = "main") -> dict:
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
         # ── Footer ───────────────────────────────────────────────
+        _imputed_years = date.today().year - _LAST_ACTUAL_DATA_YEAR
+        _imputed_note = (
+            f"<div style='color:#D4A03C;margin-top:4px;font-size:10px;'>"
+            f"⚠ Inkomst 2025–{date.today().year} är modellberäknad (+3%/år)</div>"
+            if _imputed_years > 0 else ""
+        )
         st.markdown(f"""
         <div class="sidebar-footer">
             <div style="margin-bottom:4px;"><strong>KÄLLA:</strong> SCB, Riksbanken, Kolada</div>
             <div>Senast uppdaterad: {date.today().strftime('%Y-%m-%d')}</div>
+            {_imputed_note}
+            <div style="margin-top:4px;font-size:10px;color:#8A8FA8;">v{APP_VERSION}</div>
         </div>
         """, unsafe_allow_html=True)
 

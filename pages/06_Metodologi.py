@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 from src.ui.css import inject_css, COLORS
-from src.ui.sidebar import render_sidebar
+from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import page_title, card_header, footer_note
 
 inject_css()
@@ -279,4 +279,4 @@ with st.expander("8. Referenser"):
     - **SCB PxWeb API v1**: [scb.se/api](https://www.scb.se/api/)
     """)
 
-footer_note(version="SHAI v1.3 — Metodologi baserad på METHODOLOGY.md")
+footer_note(version=f"SHAI v{APP_VERSION} — Metodologi baserad på METHODOLOGY.md")

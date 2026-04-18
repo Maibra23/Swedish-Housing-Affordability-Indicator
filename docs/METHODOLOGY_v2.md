@@ -1,10 +1,22 @@
 # SHAI Methodology Reference (v2)
 ## Theoretical Framework, Variables, Sources, Limitations
 
-**Version:** 2.0
-**Companion to:** PRD.md, PLAYBOOK.md
-**Status:** Post Day 2 revision, incorporates DEVIATIONS D1 to D13
-**Last updated:** 2026-04-14
+**Version:** 2.1
+**App version:** 1.3.0
+**Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
+**Status:** Post Day 2 revision + deployment audit fixes
+**Last updated:** 2026-04-18
+
+### Changelog v2.0 → v2.1
+- County and national panels now apply the same 3% nominal income growth when
+  forward-filling imputed years (was applying zero growth — audit fix)
+- Bostadsrätt prices (BO0701) now forward-filled into imputed years for all three
+  panel levels, preventing NaN on sida 04 in years beyond the last data release
+- Forecast pipelines (ARIMA, Prophet) now detect the training `END_YEAR` dynamically
+  from the panel's last non-imputed year — no longer requires a code change when
+  new annual data arrives
+- Sidebar year range is now dynamic (always includes current calendar year)
+- Version string read from `pyproject.toml` — single source of truth
 
 ---
 

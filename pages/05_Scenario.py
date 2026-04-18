@@ -266,7 +266,7 @@ with col_chart:
 
         layout = get_chart_layout(height=350, yaxis_title="SHAI poäng", showlegend=False)
         fig.update_layout(**layout)
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
 with col_table:
     with st.container(border=True):

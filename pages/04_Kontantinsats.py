@@ -191,7 +191,7 @@ else:
 _individual_income = kommun_row["median_income"]
 income = _individual_income * household_multiplier   # household income
 rate = kommun_row["policy_rate"] / 100.0
-effective_rate_pct = kommun_row["policy_rate"] + bank_margin_pct
+effective_rate_display_pct = kommun_row["policy_rate"] + bank_margin_pct
 
 _sparkvot_caption.caption(
     f"= {format_sek(income * savings_rate)} SEK/år "
@@ -557,7 +557,7 @@ with st.container(border=True):
                 ],
             ),
             width="stretch",
-            config={"displayModeBar": False},
+            config={"displayModeBar": "hover"},
         )
         st.caption("Lägre månadskostnad innebär mindre löpande belastning givet samma pris- och inkomstnivå.")
 
@@ -598,7 +598,7 @@ with st.container(border=True):
                 ],
             ),
             width="stretch",
-            config={"displayModeBar": False},
+            config={"displayModeBar": "hover"},
         )
         st.caption("Sparkvoten påverkar främst sparår; regelverken påverkar kravet på insats och amortering.")
 
@@ -628,7 +628,7 @@ with st.container(border=True):
                 ],
             ),
             width="stretch",
-            config={"displayModeBar": False},
+            config={"displayModeBar": "hover"},
         )
         st.caption("Högre kvarvarande inkomst innebär mer utrymme efter boendekostnader givet antagandena.")
 
@@ -640,7 +640,7 @@ pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
 
 _hushall_label = "par" if household_multiplier == 2 else "singelhushåll"
 _rate_note = (
-    f"styrränta {kommun_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_pct:.2f}%"
+    f"styrränta {kommun_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_display_pct:.2f}%"
     if bank_margin_pct > 0
     else f"styrränta {kommun_row['policy_rate']:.2f}%"
 )
@@ -691,7 +691,7 @@ with st.expander("Detaljer & antaganden"):
         f"{' (2 × individuell)' if household_multiplier == 2 else ''}<br>"
         f"- Styrränta: <strong>{kommun_row['policy_rate']:.2f}%</strong><br>"
         f"- Bankens räntepåslag: <strong>{bank_margin_pct:.1f} pp</strong><br>"
-        f"- Effektiv bolåneränta (används): <strong>{effective_rate_pct:.2f}%</strong><br>"
+        f"- Effektiv bolåneränta (används): <strong>{effective_rate_display_pct:.2f}%</strong><br>"
         f"- Sparkvot: <strong>{int(savings_rate*100)}%</strong><br><br>"
         "<strong>Konstant mellan regelverk</strong><br>"
         "- Samma pris, inkomst och räntenivå används i alla regimer<br>"

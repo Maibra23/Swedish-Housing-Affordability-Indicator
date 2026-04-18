@@ -243,7 +243,7 @@ with col_hist:
             layout["barmode"] = "stack"
             fig.update_layout(**layout)
 
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
         with st.expander("Om fördelningsgrafen"):
             st.markdown(

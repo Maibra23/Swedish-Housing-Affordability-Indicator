@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 RAW_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
 OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "processed"
 
+# 3% nominal income growth applied when forward-filling imputed years (audit F9).
+# Shared by municipal, county, and national panel builders.
+IMPUTED_INCOME_GROWTH_RATE = 0.03
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -304,7 +308,6 @@ def build_municipal_panel() -> pd.DataFrame:
     # --- Forward-fill income for current year if missing (income lag) ---
     # Apply 3% nominal growth per year (conservative Swedish wage growth assumption).
     # Zero-growth was a pessimistic assumption per audit finding F9.
-    IMPUTED_INCOME_GROWTH_RATE = 0.03  # 3% nominal per year
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
     if max_income_year < current_year:
@@ -387,6 +390,11 @@ def build_municipal_panel() -> pd.DataFrame:
             panel["br_price_county"]
         )
         panel.drop(columns=["br_price_county"], inplace=True)
+        # Forward-fill BR prices into imputed years (data lags like income)
+        panel = panel.sort_values(["region_code", "year"])
+        panel["bostadsratt_price_sek"] = (
+            panel.groupby("region_code")["bostadsratt_price_sek"].ffill()
+        )
     else:
         panel["bostadsratt_price_sek"] = np.nan
         panel["has_native_bostadsratt_price"] = False
@@ -443,13 +451,17 @@ def build_county_panel() -> pd.DataFrame:
     county_income.rename(columns={"region_code": "lan_code"}, inplace=True)
     panel = county_income[["lan_code", "region_name", "year", "median_income", "median_income_tkr"]].copy()
 
-    # Forward-fill income
+    # Forward-fill income (same 3% nominal growth as municipal panel)
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
     if max_income_year < current_year:
         for fill_year in range(max_income_year + 1, current_year + 1):
             fill = panel[panel["year"] == max_income_year].copy()
             fill["year"] = fill_year
+            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
+            fill["median_income"] = fill["median_income"] * growth_factor
+            if "median_income_tkr" in fill.columns:
+                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
             fill["is_imputed_income"] = True
             panel = pd.concat([panel, fill], ignore_index=True)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)
@@ -476,6 +488,11 @@ def build_county_panel() -> pd.DataFrame:
         county_br = county_br.rename(columns={"region_code": "lan_code"})
         panel = panel.merge(county_br[["lan_code", "year", "bostadsratt_price_sek"]],
                             on=["lan_code", "year"], how="left")
+        # Forward-fill BR prices into imputed years (data lags like income)
+        panel = panel.sort_values(["lan_code", "year"])
+        panel["bostadsratt_price_sek"] = (
+            panel.groupby("lan_code")["bostadsratt_price_sek"].ffill()
+        )
     else:
         panel["bostadsratt_price_sek"] = np.nan
 
@@ -526,13 +543,17 @@ def build_national_panel() -> pd.DataFrame:
 
     panel = nat_income.copy()
 
-    # Forward-fill income
+    # Forward-fill income (same 3% nominal growth as municipal panel)
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
     if max_income_year < current_year:
         for fill_year in range(max_income_year + 1, current_year + 1):
             fill = panel[panel["year"] == max_income_year].copy()
             fill["year"] = fill_year
+            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
+            fill["median_income"] = fill["median_income"] * growth_factor
+            if "median_income_tkr" in fill.columns:
+                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
             fill["is_imputed_income"] = True
             panel = pd.concat([panel, fill], ignore_index=True)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)
@@ -554,6 +575,9 @@ def build_national_panel() -> pd.DataFrame:
     if br_price is not None:
         nat_br = br_price[br_price["region_code"] == "00"][["year", "bostadsratt_price_sek"]]
         panel = panel.merge(nat_br, on="year", how="left")
+        # Forward-fill BR prices into imputed years (data lags like income)
+        panel = panel.sort_values("year")
+        panel["bostadsratt_price_sek"] = panel["bostadsratt_price_sek"].ffill()
     else:
         panel["bostadsratt_price_sek"] = np.nan
 

@@ -24,8 +24,16 @@ logger = logging.getLogger(__name__)
 
 FORECAST_HORIZON = 6  # annual steps
 BASE_YEAR = 2014
-END_YEAR = 2024
+END_YEAR = 2024  # default; overridden at runtime from the panel's last non-imputed year
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "processed"
+
+
+def _resolve_end_year(panel: pd.DataFrame) -> int:
+    """Return the last year with actual (non-imputed) data from the panel."""
+    actual = panel[~panel.get("is_imputed_income", pd.Series(False, index=panel.index))]
+    if len(actual) > 0:
+        return int(actual["year"].max())
+    return END_YEAR
 
 
 def _fit_and_forecast(
@@ -89,6 +97,7 @@ def forecast_county(
     county_panel: pd.DataFrame,
     county_code: str,
     national_panel: pd.DataFrame,
+    end_year: int = END_YEAR,
 ) -> tuple[pd.DataFrame, list[dict]]:
     """Forecast all component variables for one county.
 
@@ -97,15 +106,15 @@ def forecast_county(
     county = county_panel[
         (county_panel["lan_code"] == county_code)
         & (county_panel["year"] >= BASE_YEAR)
-        & (county_panel["year"] <= END_YEAR)
+        & (county_panel["year"] <= end_year)
     ].sort_values("year")
 
     national = national_panel[
         (national_panel["year"] >= BASE_YEAR)
-        & (national_panel["year"] <= END_YEAR)
+        & (national_panel["year"] <= end_year)
     ].sort_values("year")
 
-    target_years = list(range(END_YEAR + 1, END_YEAR + 1 + FORECAST_HORIZON))
+    target_years = list(range(end_year + 1, end_year + 1 + FORECAST_HORIZON))
     rows = []
     meta_rows = []
 
@@ -183,6 +192,9 @@ def run_all(
     if national_panel is None:
         national_panel = pd.read_parquet(DATA_DIR / "panel_national.parquet")
 
+    end_year = _resolve_end_year(county_panel)
+    logger.info("Forecast training end year: %d", end_year)
+
     counties = sorted(county_panel["lan_code"].unique())
     logger.info("Running ARIMA forecasts for %d counties ...", len(counties))
 
@@ -191,7 +203,7 @@ def run_all(
 
     for i, code in enumerate(counties):
         logger.info("  [%d/%d] County %s", i + 1, len(counties), code)
-        fc, meta = forecast_county(county_panel, code, national_panel)
+        fc, meta = forecast_county(county_panel, code, national_panel, end_year=end_year)
         all_forecasts.append(fc)
         all_meta.extend(meta)
 
