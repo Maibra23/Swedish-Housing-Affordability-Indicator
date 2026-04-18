@@ -14,12 +14,12 @@ st.set_page_config(
     menu_items={
         "Get Help": None,
         "Report a bug": None,
-        "About": "SHAI v1.3 — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
+        "About": "SHAI — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
     },
 )
 
 from src.ui.css import inject_css
-from src.ui.sidebar import render_sidebar
+from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import (
     render_landing_hero,
     render_landing_stat_strip,
@@ -39,7 +39,7 @@ render_landing_hero()
 
 # ── Stat strip (connected to hero) ───────────────────────────────────
 render_landing_stat_strip([
-    {"label": "Analysperiod", "value": "2014–2024", "unit": "11 år"},
+    {"label": "Analysperiod", "value": "2014–2024", "unit": f"11 år  ·  v{APP_VERSION}"},
     {"label": "Kommuner", "value": "290", "unit": "analyserade"},
     {"label": "Län", "value": "21", "unit": "jämförda"},
     {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},

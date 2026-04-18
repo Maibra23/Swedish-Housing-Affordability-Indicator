@@ -19,7 +19,7 @@ import plotly.graph_objects as go
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import page_title, card, card_header, footer_note
-from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
+from src.ui.chart_theme import get_chart_layout
 
 inject_css()
 selections = render_sidebar(page_key="lj")
@@ -181,7 +181,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 )
                 layout["xaxis"]["dtick"] = 1
                 fig.update_layout(**layout)
-                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
         with col_table:
             year_data = county_versions[county_versions["year"] == selected_year].copy()

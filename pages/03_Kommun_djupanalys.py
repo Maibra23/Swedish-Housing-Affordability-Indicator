@@ -216,7 +216,7 @@ with tab_prophet:
         st.caption("Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.")
         if len(forecast_prophet) > 0:
             fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
         else:
             st.info("Prognosdata (Prophet) saknas.")
 
@@ -228,7 +228,7 @@ with tab_arima:
         )
         if len(forecast_arima) > 0:
             fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA")
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
         else:
             st.info("Prognosdata (ARIMA) saknas.")
 
@@ -287,7 +287,7 @@ with st.container(border=True):
             layout["xaxis"]["dtick"] = 2
             layout["margin"] = {"l": 50, "r": 10, "t": 40, "b": 40}
             fig.update_layout(**layout)
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
     if driver:
         st.markdown(

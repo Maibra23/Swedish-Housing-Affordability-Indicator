@@ -27,7 +27,7 @@ GEOJSON_PATH = PROJECT_ROOT / "data" / "geo" / "kommuner.geojson"
 
 # Initial map zoom; labels appear only after this many zoom-in steps from here.
 _MAP_ZOOM_START = 5
-_LABEL_ZOOM_STEPS = 2
+_LABEL_ZOOM_STEPS = 1  # show labels one zoom step earlier for better UX
 _LABEL_MIN_ZOOM = _MAP_ZOOM_START + _LABEL_ZOOM_STEPS
 
 

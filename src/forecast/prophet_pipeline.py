@@ -23,8 +23,16 @@ logger = logging.getLogger(__name__)
 
 FORECAST_HORIZON = 6  # annual steps
 BASE_YEAR = 2014
-END_YEAR = 2024
+END_YEAR = 2024  # default; overridden at runtime from the panel's last non-imputed year
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "processed"
+
+
+def _resolve_end_year(panel: pd.DataFrame) -> int:
+    """Return the last year with actual (non-imputed) data from the panel."""
+    actual = panel[~panel.get("is_imputed_income", pd.Series(False, index=panel.index))]
+    if len(actual) > 0:
+        return int(actual["year"].max())
+    return END_YEAR
 
 
 def _fit_and_forecast(
@@ -32,6 +40,7 @@ def _fit_and_forecast(
     years: pd.Series,
     horizon: int = FORECAST_HORIZON,
     interval_width: float = 0.80,
+    end_year: int = END_YEAR,
 ) -> pd.DataFrame:
     """Fit Prophet on annual data and forecast `horizon` steps ahead.
 
@@ -50,7 +59,7 @@ def _fit_and_forecast(
 
     if len(df) < 3:
         logger.warning("Too few observations (%d) for Prophet, returning NaN forecast", len(df))
-        future_years = list(range(END_YEAR + 1, END_YEAR + 1 + horizon))
+        future_years = list(range(end_year + 1, end_year + 1 + horizon))
         return pd.DataFrame({
             "target_year": future_years,
             "mean": [np.nan] * horizon,
@@ -72,7 +81,7 @@ def _fit_and_forecast(
         # Create future dataframe for horizon years
         future_dates = pd.DataFrame({
             "ds": pd.to_datetime(
-                [y for y in range(END_YEAR + 1, END_YEAR + 1 + horizon)],
+                [y for y in range(end_year + 1, end_year + 1 + horizon)],
                 format="%Y",
             )
         })
@@ -80,7 +89,7 @@ def _fit_and_forecast(
         forecast = m.predict(future_dates)
 
     result = pd.DataFrame({
-        "target_year": list(range(END_YEAR + 1, END_YEAR + 1 + horizon)),
+        "target_year": list(range(end_year + 1, end_year + 1 + horizon)),
         "mean": forecast["yhat"].values,
         "lower_80": forecast["yhat_lower"].values,
         "upper_80": forecast["yhat_upper"].values,
@@ -93,6 +102,7 @@ def forecast_county(
     county_panel: pd.DataFrame,
     county_code: str,
     national_panel: pd.DataFrame,
+    end_year: int = END_YEAR,
 ) -> pd.DataFrame:
     """Forecast all component variables for one county.
 
@@ -107,18 +117,18 @@ def forecast_county(
     county = county_panel[
         (county_panel["lan_code"] == county_code)
         & (county_panel["year"] >= BASE_YEAR)
-        & (county_panel["year"] <= END_YEAR)
+        & (county_panel["year"] <= end_year)
     ].sort_values("year")
 
     national = national_panel[
         (national_panel["year"] >= BASE_YEAR)
-        & (national_panel["year"] <= END_YEAR)
+        & (national_panel["year"] <= end_year)
     ].sort_values("year")
 
     rows = []
 
     # 1. Forecast income
-    fc_income = _fit_and_forecast(county["median_income"], county["year"])
+    fc_income = _fit_and_forecast(county["median_income"], county["year"], end_year=end_year)
     for _, r in fc_income.iterrows():
         rows.append({
             "county_kod": county_code,
@@ -131,7 +141,7 @@ def forecast_county(
 
     # 2. Forecast transaction price
     fc_price = _fit_and_forecast(
-        county["transaction_price_sek"], county["year"]
+        county["transaction_price_sek"], county["year"], end_year=end_year
     )
     for _, r in fc_price.iterrows():
         rows.append({
@@ -144,7 +154,7 @@ def forecast_county(
         })
 
     # 3. Forecast policy rate (national)
-    fc_rate = _fit_and_forecast(national["policy_rate"], national["year"])
+    fc_rate = _fit_and_forecast(national["policy_rate"], national["year"], end_year=end_year)
     for _, r in fc_rate.iterrows():
         rows.append({
             "county_kod": county_code,
@@ -156,7 +166,7 @@ def forecast_county(
         })
 
     # 4. Forecast CPI YoY (national, needed for real rate in V.C)
-    fc_cpi = _fit_and_forecast(national["cpi_yoy_pct"], national["year"])
+    fc_cpi = _fit_and_forecast(national["cpi_yoy_pct"], national["year"], end_year=end_year)
     for _, r in fc_cpi.iterrows():
         rows.append({
             "county_kod": county_code,
@@ -170,7 +180,7 @@ def forecast_county(
     df = pd.DataFrame(rows)
 
     # 5. Compose Version C affordability from component means
-    for year in range(END_YEAR + 1, END_YEAR + 1 + FORECAST_HORIZON):
+    for year in range(end_year + 1, end_year + 1 + FORECAST_HORIZON):
         yr_data = df[df["target_year"] == year]
         income_mean = yr_data.loc[yr_data["variable"] == "income", "mean"].iloc[0]
         price_mean = yr_data.loc[yr_data["variable"] == "transaction_price_sek", "mean"].iloc[0]
@@ -219,13 +229,16 @@ def run_all(
     if national_panel is None:
         national_panel = pd.read_parquet(DATA_DIR / "panel_national.parquet")
 
+    end_year = _resolve_end_year(county_panel)
+    logger.info("Forecast training end year: %d", end_year)
+
     counties = sorted(county_panel["lan_code"].unique())
     logger.info("Running Prophet forecasts for %d counties ...", len(counties))
 
     frames = []
     for i, code in enumerate(counties):
         logger.info("  [%d/%d] County %s", i + 1, len(counties), code)
-        fc = forecast_county(county_panel, code, national_panel)
+        fc = forecast_county(county_panel, code, national_panel, end_year=end_year)
         frames.append(fc)
 
     result = pd.concat(frames, ignore_index=True)

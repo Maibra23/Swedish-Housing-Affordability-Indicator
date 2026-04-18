@@ -25,7 +25,11 @@
       "WebFetch(domain:localhost)",
       "Bash(start:*)",
       "Bash(pip uninstall:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python -c \"print\\(''hello''\\)\")",
+      "Bash(py --version)",
+      "Bash(grep:*)",
+      "Bash(sed:*)"
     ]
   }
 }
