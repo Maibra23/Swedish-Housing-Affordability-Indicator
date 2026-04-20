@@ -8,7 +8,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI — Bostadsekonomisk hållbarhet",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
@@ -64,40 +64,40 @@ st.markdown("""
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(render_landing_nav_card(
-        "🗺️", "Riksöversikt",
+        "Riksöversikt",
         "Nationell överblick med karta, histogram och rankingtabeller för 290 kommuner.",
         tag="SIDA 01",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
-        "📊", "Län jämförelse",
+        "Län jämförelse",
         "21 län jämförda under tre ekonometriska formler (A, B, C).",
         tag="SIDA 02",
     ), unsafe_allow_html=True)
 with col2:
     st.markdown(render_landing_nav_card(
-        "🔍", "Kommun djupanalys",
+        "Kommun djupanalys",
         "Historisk analys och prognos per kommun med Prophet och ARIMA.",
         tag="SIDA 03",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
-        "💰", "Kontantinsats",
+        "Kontantinsats",
         "Jämför insatskrav under fyra regulatoriska regimer sedan 2010.",
         tag="SIDA 04",
     ), unsafe_allow_html=True)
 with col3:
     st.markdown(render_landing_nav_card(
-        "⚡", "Scenariosimulator",
+        "Scenariosimulator",
         "Stresstesta med ränta-, inkomst- och prisförändringar per län.",
         tag="SIDA 05",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
-        "📖", "Metodologi",
+        "Metodologi",
         "Formler, datakällor, begränsningar (F1–F10) och validering.",
         tag="SIDA 06",
     ), unsafe_allow_html=True)
 
 # ── Credibility block ────────────────────────────────────────────────
-render_landing_credibility()
+render_landing_credibility(version=APP_VERSION)
 
 # ── Footer ───────────────────────────────────────────────────────────
 footer_note()

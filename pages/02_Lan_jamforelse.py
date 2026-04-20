@@ -7,7 +7,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI · Län jämförelse",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     menu_items={"Get Help": None, "Report a bug": None},
 )
@@ -162,7 +162,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                         x0=imp_start, x1=imp_end,
                         fillcolor="rgba(212, 120, 90, 0.08)",
                         line_width=0,
-                        annotation_text="★ Imputerad inkomst",
+                        annotation_text="Imputerad inkomst",
                         annotation_position="top left",
                         annotation_font_size=10,
                         annotation_font_color=COLORS["accent"],

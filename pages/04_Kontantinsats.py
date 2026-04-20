@@ -7,7 +7,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI · Kontantinsats",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     menu_items={"Get Help": None, "Report a bug": None},
 )
@@ -44,6 +44,14 @@ except Exception as e:
 
 selected_year = selections["selected_year"]
 mun_year = municipal[municipal["year"] == selected_year]
+
+if len(mun_year) == 0:
+    _available = sorted(municipal["year"].unique(), reverse=True)
+    st.warning(
+        f"Inga data tillgängliga för {selected_year}. "
+        f"Välj ett år med data: {', '.join(str(y) for y in _available[:5])}."
+    )
+    st.stop()
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
@@ -263,7 +271,7 @@ st.caption(
     "Se Begränsning F14 i Metodologi (Sida 06)."
 )
 if pristyp_fallback_note:
-    st.caption(f"⚠ {pristyp_fallback_note}")
+    st.caption(pristyp_fallback_note)
 
 # ── 2b · Villa vs. bostadsrätt side-by-side jämförelse (Phase B) ─────
 if _has_br_column and _br_price is not None and _villa_price is not None:

@@ -8,7 +8,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI · Kommun djupanalys",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     menu_items={"Get Help": None, "Report a bug": None},
 )
@@ -277,7 +277,7 @@ with st.container(border=True):
                 hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:,.2f}} {unit}<extra></extra>",
             ))
 
-            title_prefix = "★ " if is_driver else ""
+            title_prefix = ""
             layout = get_chart_layout(
                 title=f"{title_prefix}{label}",
                 height=250,
@@ -292,7 +292,7 @@ with st.container(border=True):
     if driver:
         st.markdown(
             f"<div style='font-size:13px;color:{COLORS['text_secondary']};text-align:center;padding:8px 0;'>"
-            f"★ <strong>{driver}</strong> har störst relativ variation och driver mest av "
+            f"<strong>{driver}</strong> har störst relativ variation och driver mest av "
             f"SHAI-förändringen för {selected_kommun}.</div>",
             unsafe_allow_html=True,
         )
