@@ -398,7 +398,6 @@ def render_landing_steps() -> None:
 
 
 def render_landing_nav_card(
-    icon: str,
     title: str,
     desc: str,
     tag: str = "",
@@ -408,7 +407,6 @@ def render_landing_nav_card(
     return f"""
     <div class="lp-nav-card">
         <div class="lp-nav-card-head">
-            <div class="lp-nav-icon">{icon}</div>
             {tag_html}
         </div>
         <div class="lp-nav-title">{title}</div>
@@ -417,9 +415,10 @@ def render_landing_nav_card(
     """
 
 
-def render_landing_credibility() -> None:
+def render_landing_credibility(version: str = "") -> None:
     """Render the credibility/data source block."""
-    html = """
+    version_str = f"SHAI v{version} &middot; " if version else ""
+    html = f"""
     <div class="lp-cred">
         <div class="lp-cred-pills">
             <span class="lp-cred-pill">SCB</span>
@@ -428,7 +427,7 @@ def render_landing_credibility() -> None:
             <span class="lp-cred-pill">Finansinspektionen</span>
         </div>
         <div class="lp-cred-meta">
-            SHAI v1.3 &middot; Öppen data &middot; 290 kommuner &middot; 2014&ndash;2024
+            {version_str}Öppen data &middot; 290 kommuner &middot; 2014&ndash;2024
         </div>
     </div>
     """

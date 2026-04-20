@@ -74,16 +74,19 @@ def render_sidebar(page_key: str = "main") -> dict:
             '<div class="control-label">Valt år</div>',
             unsafe_allow_html=True,
         )
+        # Default to last actual data year so pages render correctly on first load.
+        # Years beyond _LAST_ACTUAL_DATA_YEAR contain forward-filled imputed data.
+        _default_year = min(YEAR_RANGE[-1], _LAST_ACTUAL_DATA_YEAR)
         selected_year = st.pills(
             "Välj år",
             options=YEAR_RANGE,
-            default=YEAR_RANGE[-1],
+            default=_default_year,
             label_visibility="collapsed",
             key=f"{page_key}_year_pills",
         )
         # Fallback if nothing selected
         if selected_year is None:
-            selected_year = YEAR_RANGE[-1]
+            selected_year = _default_year
 
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
@@ -132,7 +135,7 @@ def render_sidebar(page_key: str = "main") -> dict:
         _imputed_years = date.today().year - _LAST_ACTUAL_DATA_YEAR
         _imputed_note = (
             f"<div style='color:#D4A03C;margin-top:4px;font-size:10px;'>"
-            f"⚠ Inkomst 2025–{date.today().year} är modellberäknad (+3%/år)</div>"
+            f"Inkomst 2025–{date.today().year}: modellberäknad (+3%/år)</div>"
             if _imputed_years > 0 else ""
         )
         st.markdown(f"""

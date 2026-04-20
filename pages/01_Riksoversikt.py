@@ -7,7 +7,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI · Riksöversikt",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     menu_items={"Get Help": None, "Report a bug": None},
 )

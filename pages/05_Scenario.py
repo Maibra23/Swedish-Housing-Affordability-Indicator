@@ -7,7 +7,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="SHAI · Scenariosimulator",
-    page_icon="🏠",
+    page_icon=None,
     layout="wide",
     menu_items={"Get Help": None, "Report a bug": None},
 )
@@ -38,6 +38,14 @@ except Exception as e:
 
 selected_year = selections["selected_year"]
 county_year = county_panel[county_panel["year"] == selected_year]
+
+if len(county_year) == 0:
+    _available = sorted(county_panel["year"].unique(), reverse=True)
+    st.warning(
+        f"Inga data tillgängliga för {selected_year}. "
+        f"Välj ett år med data: {', '.join(str(y) for y in _available[:5])}."
+    )
+    st.stop()
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
@@ -80,7 +88,8 @@ _presets = {
 }
 
 with preset_col1:
-    if st.button("📈 Riksbanken 2022\n+4pp ränta, +8pp KPI, −15% pris", use_container_width=True, key="sc_preset_2022"):
+    if st.button("Riksbanken 2022", use_container_width=True, key="sc_preset_2022",
+                 help="+4pp ränta, +8pp KPI, −15% pris"):
         p = _presets["riksbanken_2022"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -88,7 +97,8 @@ with preset_col1:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col2:
-    if st.button("📉 Deflationsrisk\n−1pp ränta, −2pp KPI, −10% pris", use_container_width=True, key="sc_preset_deflation"):
+    if st.button("Deflationsrisk", use_container_width=True, key="sc_preset_deflation",
+                 help="−1pp ränta, −2pp KPI, −10% pris"):
         p = _presets["deflation_risk"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -96,7 +106,8 @@ with preset_col2:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col3:
-    if st.button("💰 Löneboom\n+1pp ränta, +5% lön, +10% pris", use_container_width=True, key="sc_preset_wage"):
+    if st.button("Löneboom", use_container_width=True, key="sc_preset_wage",
+                 help="+1pp ränta, +5% lön, +10% pris"):
         p = _presets["löneboom"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -104,7 +115,8 @@ with preset_col3:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col4:
-    if st.button("↺ Återställ\nBasfall", use_container_width=True, key="sc_preset_reset"):
+    if st.button("Återställ", use_container_width=True, key="sc_preset_reset",
+                 help="Nollställ alla scenariojusteringar till basfall"):
         p = _presets["reset"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
