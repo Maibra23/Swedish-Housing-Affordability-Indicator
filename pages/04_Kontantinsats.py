@@ -57,7 +57,7 @@ if len(mun_year) == 0:
 page_title(
     eyebrow="Sida 04 · Kontantinsats",
     title="Kontantinsats analys",
-    subtitle="Historiska regelverk och insatskrav per kommun",
+    subtitle="Historiska och nuvarande regelverk och insatskrav per kommun",
     year=selected_year,
 )
 
@@ -208,8 +208,8 @@ _sparkvot_caption.caption(
 
 # ── Compute all regimes ──────────────────────────────────────────────
 results = compare_regimes(price, income, rate, savings_rate, bank_margin)
-baseline = results["amort_2"]
-regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2"]
+baseline = results["latt_2026"]
+regime_keys = ["pre_2010", "bolanetak", "amort_1", "amort_2", "latt_2026"]
 
 # ── 2 · Affordability Snapshot ────────────────────────────────────────
 monthly_income = income / 12
@@ -262,7 +262,7 @@ render_kpi_row(
     ]
 )
 st.caption(
-    f"Nuläge · Amorteringskrav 2.0 · {selected_kommun} {selected_year} · "
+    f"Nuläge · Lättnad 2026 · {selected_kommun} {selected_year} · "
     f"Sparkvot {savings_rate*100:.0f}% · Pristyp: {price_source_label}"
 )
 st.caption(
@@ -276,16 +276,16 @@ if pristyp_fallback_note:
 # ── 2b · Villa vs. bostadsrätt side-by-side jämförelse (Phase B) ─────
 if _has_br_column and _br_price is not None and _villa_price is not None:
     from src.kontantinsats.engine import apply_regime as _apply_regime
-    _villa_res = _apply_regime(_villa_price, income, rate, "amort_2",
+    _villa_res = _apply_regime(_villa_price, income, rate, "latt_2026",
                                savings_rate, bank_margin)
-    _br_res = _apply_regime(_br_price, income, rate, "amort_2",
+    _br_res = _apply_regime(_br_price, income, rate, "latt_2026",
                             savings_rate, bank_margin)
     _ratio = _villa_price / _br_price if _br_price > 0 else float("nan")
     with st.container(border=True):
         st.markdown(
             card_header(
                 "Villa vs. bostadsrätt",
-                f"{selected_kommun} · {selected_year} · Amorteringskrav 2.0",
+                f"{selected_kommun} · {selected_year} · Lättnad 2026",
                 "PRISTYPSJÄMFÖRELSE",
             ),
             unsafe_allow_html=True,
@@ -294,7 +294,7 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
         with c_villa:
             st.markdown("**Småhus (villa)** — SCB BO0501C2")
             st.metric("Pris", f"{format_sek(_villa_price)} SEK")
-            st.metric("Kontantinsats (15 %)",
+            st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_villa_res['required_cash'])} SEK")
             st.metric("År att spara",
                       f"{_villa_res['years_to_save']:.1f}".replace(".", ",") + " år")
@@ -303,7 +303,7 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
         with c_br:
             st.markdown("**Bostadsrätt** — SCB BO0701")
             st.metric("Pris", f"{format_sek(_br_price)} SEK")
-            st.metric("Kontantinsats (15 %)",
+            st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_br_res['required_cash'])} SEK")
             st.metric("År att spara",
                       f"{_br_res['years_to_save']:.1f}".replace(".", ",") + " år")
@@ -311,7 +311,7 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
                       f"{format_sek(_br_res['monthly_total'])} SEK")
         st.caption(
             f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
-            "Samma hushållsinkomst, ränta och regelverk (Amorteringskrav 2.0). "
+            "Samma hushållsinkomst, ränta och regelverk (Lättnad 2026). "
             "Skillnaden drivs enbart av prisnivån mellan fastighetstyperna."
         )
 
@@ -323,7 +323,7 @@ render_kpi_row(
             value=format_sek(baseline["required_cash"]),
             unit="SEK",
             variant="accent",
-            tooltip="Total kontantinsats (15 % av medianpriset under nuvarande bolånetak).",
+            tooltip="Total kontantinsats (10 % av medianpriset under nuvarande bolånetak, gäller fr.o.m. apr 2026).",
         ),
         kpi_card(
             label="År att spara (idag)",
@@ -352,29 +352,33 @@ render_kpi_row(
 # ── 4 · Regelverkstidslinje ───────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Regelverksutveckling", "Fyra regimer sedan 2010", "TIDSLINJE"),
+        card_header("Regelverksutveckling", "Fem regimer sedan 2010", "TIDSLINJE"),
         unsafe_allow_html=True,
     )
     timeline_html = f"""
 <div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
-  <div style="flex:4;background:{COLORS['text_tertiary']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
-    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Före 2010</span>
+  <div style="flex:3;background:{COLORS['text_tertiary']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Före 2010</span>
   </div>
-  <div style="flex:3;background:{COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
-    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Bolånetak 2010–2016</span>
+  <div style="flex:3;background:{COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Bolånetak 2010–2016</span>
   </div>
-  <div style="flex:1;background:{COLORS['medium_risk']};display:flex;align-items:center;justify-content:center;padding:0 4px;">
-    <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">Amort 1.0 2016–18</span>
+  <div style="flex:1;background:{COLORS['medium_risk']};display:flex;align-items:center;justify-content:center;padding:0 2px;">
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amort 1.0</span>
   </div>
-  <div style="flex:3;background:{COLORS['primary']};border:2px solid {COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 8px;">
-    <span style="color:#fff;font-size:11px;font-weight:700;white-space:nowrap;">Amorteringskrav 2.0 · 2018 →</span>
+  <div style="flex:3;background:{COLORS['high_risk']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amort 2.0 2018–2026</span>
+  </div>
+  <div style="flex:2;background:{COLORS['low_risk']};border:2px solid {COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
+    <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;">Lättnad 2026 →</span>
   </div>
 </div>
 <div style="display:flex;width:100%;margin-top:4px;">
-  <div style="flex:4;text-align:center;font-size:10px;color:{COLORS['text_tertiary']};"></div>
+  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_tertiary']};"></div>
   <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Okt 2010</div>
   <div style="flex:1;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Jun 2016</div>
   <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Mar 2018</div>
+  <div style="flex:2;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Apr 2026</div>
 </div>
 """
     st.markdown(_compact(timeline_html), unsafe_allow_html=True)
@@ -401,7 +405,8 @@ REGIME_WHAT_CHANGED = {
     "pre_2010": "Ingen formell insatsnivå; hög belåning var vanligare.",
     "bolanetak": "Bolånetak införs (max 85 % belåning) → högre insats.",
     "amort_1": "Amorteringskrav införs → högre månadskostnad vid hög belåning.",
-    "amort_2": "Skärpt amorteringskrav (även skuldkvot) → högst krav idag.",
+    "amort_2": "Skärpt amorteringskrav (skuldkvot LTI > 4,5×). Gällde mar 2018 – mar 2026.",
+    "latt_2026": "Bolånetak höjt till 90 % (insats 10 %) + skärpt amorteringskrav slopat. Gäller fr.o.m. apr 2026.",
 }
 
 regime_accent_colors = {
@@ -409,6 +414,7 @@ regime_accent_colors = {
     "bolanetak": COLORS["accent"],
     "amort_1": COLORS["medium_risk"],
     "amort_2": COLORS["high_risk"],
+    "latt_2026": COLORS["low_risk"],
 }
 
 with st.container(border=True):
@@ -421,7 +427,7 @@ with st.container(border=True):
         unsafe_allow_html=True,
     )
 
-    regime_cols = st.columns(4)
+    regime_cols = st.columns(5)
     for col, key in zip(regime_cols, regime_keys):
         with col:
             res = results[key]
@@ -442,7 +448,7 @@ with st.container(border=True):
                 st.metric(
                     "Kontantinsats",
                     f"{format_sek(res['required_cash'])} SEK",
-                    delta=_fmt_delta_sek(delta_cash) if key != "amort_2" else None,
+                    delta=_fmt_delta_sek(delta_cash) if key != "latt_2026" else None,
                     delta_color="inverse",
                     help="Kontantinsats är eget kapital (insats) som krävs vid köp. Lägre är bättre.",
                 )
@@ -451,7 +457,7 @@ with st.container(border=True):
                     f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
                     delta=(
                         (f"{delta_years:+.1f} år".replace(".", ","))
-                        if (key != "amort_2" and abs(delta_years) >= 0.05)
+                        if (key != "latt_2026" and abs(delta_years) >= 0.05)
                         else None
                     ),
                     delta_color="inverse",
@@ -460,7 +466,7 @@ with st.container(border=True):
                 st.metric(
                     "Månadskostnad",
                     f"{format_sek(res['monthly_total'])} SEK",
-                    delta=_fmt_delta_sek(delta_cost) if key != "amort_2" else None,
+                    delta=_fmt_delta_sek(delta_cost) if key != "latt_2026" else None,
                     delta_color="inverse",
                     help="Summa amortering + räntekostnad per månad. Lägre är bättre.",
                 )
@@ -660,7 +666,7 @@ insight_html = f"""
   </div>
   <p style="font-size:14px;color:{COLORS['text_primary']};line-height:1.7;margin:0;">
     För ett <strong>{_hushall_label}</strong> ({_rate_note}) under
-    <strong>nuvarande regler (Amorteringskrav 2.0)</strong> krävs
+    <strong>nuvarande regler (Lättnad 2026)</strong> krävs
     <strong>{format_sek(baseline['required_cash'])} SEK</strong> i kontantinsats,
     vilket tar <strong>{baseline['years_to_save']:.1f} år</strong> att spara
     vid {int(savings_rate*100)} % sparkvot.
@@ -713,7 +719,7 @@ with st.expander("Detaljer & antaganden"):
     st.markdown(
         f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;margin-top:8px;'>"
         "<strong>Så läser du tabellen</strong><br>"
-        "- Δ-kolumner visar skillnad mot <strong>idag (Amorteringskrav 2.0)</strong><br>"
+        "- Δ-kolumner visar skillnad mot <strong>idag (Lättnad 2026)</strong><br>"
         "- Markeringar: <strong>bäst</strong> = lägst för Insats/Sparår/Månkostnad, högst för Kvar"
         "</div>",
         unsafe_allow_html=True,

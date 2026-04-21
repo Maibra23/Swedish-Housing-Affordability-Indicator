@@ -1,14 +1,15 @@
 """Kontantinsats regime engine per METHODOLOGY_v2.md section 6.
 
-Models four Swedish regulatory regimes for housing down payments and
+Models five Swedish regulatory regimes for housing down payments and
 amortization requirements. Uses transaction_price_sek directly from
 the panel (no K/T proxy conversion needed).
 
 Regimes:
-  pre_2010  : No formal minimum down payment, no mandatory amortization
-  bolanetak : 15% minimum down payment (Oct 2010)
-  amort_1   : + 2% amort if LTV>70%, 1% if LTV>50% (Jun 2016)
-  amort_2   : + 1% extra amort if LTI>4.5x (Mar 2018, current)
+  pre_2010   : No formal minimum down payment, no mandatory amortization
+  bolanetak  : 15% minimum down payment (Oct 2010)
+  amort_1    : + 2% amort if LTV>70%, 1% if LTV>50% (Jun 2016)
+  amort_2    : + 1% extra amort if LTI>4.5x (Mar 2018 – Mar 2026)
+  latt_2026  : Bolånetak raised to 90% (10% down), LTI rule removed (Apr 2026)
 """
 
 from __future__ import annotations
@@ -37,12 +38,21 @@ REGIMES = {
     },
     "amort_2": {
         "label": "Amorteringskrav 2.0",
-        "period": "Mar 2018 – nuvarande",
+        "period": "Mar 2018 – mar 2026",
         "min_down_pct": 0.15,
         "amort_rules": [
             {"ltv_threshold": 0.70, "amort_pct": 0.02},
             {"ltv_threshold": 0.50, "amort_pct": 0.01},
             {"lti_threshold": 4.5, "amort_pct": 0.01},
+        ],
+    },
+    "latt_2026": {
+        "label": "Lättnad 2026",
+        "period": "Apr 2026 – nuvarande",
+        "min_down_pct": 0.10,
+        "amort_rules": [
+            {"ltv_threshold": 0.70, "amort_pct": 0.02},
+            {"ltv_threshold": 0.50, "amort_pct": 0.01},
         ],
     },
 }
@@ -62,7 +72,7 @@ def apply_regime(
         price_sek: Mean transaction price in SEK (from panel transaction_price_sek).
         income_sek: Household income in SEK (individual or combined for couple).
         rate: Policy rate as decimal (e.g. 0.036 = 3.6%).
-        regime_key: One of "pre_2010", "bolanetak", "amort_1", "amort_2".
+        regime_key: One of "pre_2010", "bolanetak", "amort_1", "amort_2", "latt_2026".
         savings_rate: Fraction of income saved annually (default 10%).
         bank_margin: Bank's interest rate margin above policy rate, as decimal
             (e.g. 0.017 = 1.7 pp). Default 0.0 (policy rate only, for backward compat).
