@@ -70,18 +70,18 @@ if not _has_br_column or _br_available_rows == 0:
     st.warning(
         "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker "
         "permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. "
-        "I storstäder är typiska bostadsrätspriser 2–3× lägre än villapriser — "
+        "I storstäder är typiska bostadsrätspriser lägre än villapriser — "
         "kontantinsatskraven och spartiderna är därmed höga för stadsbor som söker lägenhet. "
         "Se Begränsning F11 i Metodologi (Sida 06)."
     )
 else:
     st.info(
-        "**Nytt — välj Pristyp:** Panelen innehåller nu både småhuspriser (SCB BO0501C2, "
-        "Fastighetstyp 220) och bostadsrättspriser (SCB BO0701). Använd `Pristyp` nedan för "
+        "**Välj Pristyp:** Panelen innehåller nu både småhuspriser (SCB BO0501C2, "
+        "Fastighetstyp 220) och bostadsrättspriser (SCB BO0501C). Använd `Pristyp` nedan för "
         "att växla mellan villapris (systemisk vy) och bostadsrättspris "
         "(realistisk vy för förstagångsköpare i städer). "
-        f"Bostadsrättspris tillgängligt för {_br_available_rows} kommun(er) år {selected_year}; "
-        "övriga använder länets värde som fallback. Se Begränsning F11 i Metodologi (Sida 06)."
+        "**OBS:** SCB publicerar bostadsrättspriser enbart på länsnivå — alla kommuner i "
+        "samma län delar samma bostadsrättspris. Priset visas med länets namn för tydlighet."
     )
 
 # ── 1 · Controls ──────────────────────────────────────────────────────
@@ -112,9 +112,11 @@ with st.container(border=True):
             index=0,
             key="ki_pristyp",
             help=(
-                "Småhus = SCB BO0501C2 (Fastighetstyp 220), småhus/villor. "
-                "Bostadsrätt = SCB BO0701, typisk lägenhet. "
-                "För förstagångsköpare i storstäder är bostadsrätt mer representativt."
+                "Småhus = SCB BO0501C2 (Fastighetstyp 220), permanenta småhus/villor. "
+                "Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt på länsnivå. "
+                "SCB publicerar inga kommunspecifika bostadsrättspriser — "
+                "kommunen hämtar länets medelpris automatiskt. "
+                "För förstagångsköpare i städer är bostadsrätt mer representativt."
             ),
             horizontal=False,
         )
@@ -179,19 +181,32 @@ _br_price = (
     else None
 )
 
-# Pristyp fallback: if user picked Bostadsrätt but this kommun has no BR data,
-# fall back to villa price and flag it inline.
+# County name lookup — SCB BO0501C only publishes county-level BR prices,
+# so we always show which county's data is being used.
+_LAN_NAMES = {
+    "01": "Stockholms län", "03": "Uppsala län", "04": "Södermanlands län",
+    "05": "Östergötlands län", "06": "Jönköpings län", "07": "Kronobergs län",
+    "08": "Kalmar län", "09": "Gotlands län", "10": "Blekinge län",
+    "12": "Skåne län", "13": "Hallands län", "14": "Västra Götalands län",
+    "17": "Värmlands län", "18": "Örebro län", "19": "Västmanlands län",
+    "20": "Dalarnas län", "21": "Gävleborgs län", "22": "Västernorrlands län",
+    "23": "Jämtlands län", "24": "Västerbottens län", "25": "Norrbottens län",
+}
+_lan_code = str(kommun_row.get("lan_code", "")).zfill(2)
+_lan_name = _LAN_NAMES.get(_lan_code, f"Län {_lan_code}")
+
+# Pristyp selection: BR is always county-level; fall back to villa if county has no data.
 pristyp_fallback_note: str | None = None
 if use_bostadsratt and _br_price is None:
     price = _villa_price
     pristyp_fallback_note = (
-        "Bostadsrättspris saknas för denna kommun (även länets värde) — "
+        f"Bostadsrättspris saknas för {_lan_name} — "
         "småhuspriset används som fallback."
     )
     price_source_label = "Småhus (fallback)"
 elif use_bostadsratt:
     price = _br_price
-    price_source_label = "Bostadsrätt (SCB BO0701)"
+    price_source_label = f"Bostadsrätt — {_lan_name} (SCB BO0501C)"
 else:
     price = _villa_price
     price_source_label = "Småhus (SCB BO0501C2)"
@@ -312,7 +327,8 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
         st.caption(
             f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
             "Samma hushållsinkomst, ränta och regelverk (Lättnad 2026). "
-            "Skillnaden drivs enbart av prisnivån mellan fastighetstyperna."
+            f"Bostadsrättspriset avser **{_lan_name}** (länsnivå, SCB BO0501C) — "
+            "SCB publicerar inga kommunspecifika bostadsrättspriser."
         )
 
 # ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────

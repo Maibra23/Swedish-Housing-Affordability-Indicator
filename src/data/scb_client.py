@@ -387,52 +387,35 @@ def fetch_transaction_price(force: bool = False) -> pd.DataFrame:
 
 def fetch_bostadsratt_price(force: bool = False) -> pd.DataFrame:
     """Mean transaction price in SEK for bostadsrätter (housing co-op apartments),
-    municipal + county + national level, annual.
+    county + national level, annual.
 
-    Source: SCB BO0701 — Bostadsrättsstatistik
-    Table: BO/BO0701/BO0701A/Bostprissh
-    Content code: the mean purchase price per bostadsrätt (tkr).
+    Source: SCB BO0501C — Bostadsrätter
+    Table: BO/BO0501/BO0501C/FastprisBRFRegionAr
+    Content code: BO0501R7 — Medelpris i tkr (mean purchase price in thousands SEK).
 
-    Coverage: municipal level for the larger municipalities (~150–200 out of 290);
-    county and national level for all counties; annual series from ~2012–present.
-
-    Smaller municipalities with thin trading volume will be missing; callers should
-    fall back to county-level values (see build_panel._clean_bostadsratt_price).
+    Coverage: 21 counties (01–25) + national (00). No municipality-level data exists
+    in SCB for bostadsrätt prices — all municipalities receive their county's value
+    as a fallback (see build_panel._clean_bostadsratt_price). Annual series 2000–present.
 
     This is the apartment analog of `fetch_transaction_price()` (which covers only
     småhus / Fastighetstyp 220). Adding it addresses audit finding F11 — the villa
     price used in affordability computations overstates typical first-time buyer
-    costs in urban municipalities by 2–3×.
+    costs in urban municipalities.
     """
-    cache = _cache_path("BO0701_bostadsratt_price")
+    cache = _cache_path("BO0501C_bostadsratt_price")
     if not force and _cache_is_fresh(cache):
         logger.info("Using cached %s", cache)
         return pd.read_parquet(cache)
 
-    table_path = "BO/BO0701/BO0701A/Bostprissh"
+    table_path = "BO/BO0501/BO0501C/FastprisBRFRegionAr"
     meta = _get_table_metadata(table_path)
     variables = meta["variables"]
 
-    # Select the mean transaction price per bostadsrätt. Content code names
-    # have historically been BO0701V1 or similar; to be robust against minor
-    # SCB renamings, we scan the ContentsCode values and pick the first one
-    # whose label mentions "Köpeskilling" (purchase price). If the table
-    # publishes only one content code (common), this is a no-op.
-    overrides: dict[str, list[str]] = {}
-    for var in variables:
-        if var["code"] == "ContentsCode":
-            values = var.get("values", [])
-            labels = var.get("valueTexts", values)
-            chosen = []
-            for code, label in zip(values, labels):
-                if "köpe" in str(label).lower() or "pris" in str(label).lower():
-                    chosen.append(code)
-            if chosen:
-                overrides["ContentsCode"] = chosen[:1]  # prefer first price-like code
-            break
+    # BO0501R7 = Medelpris i tkr (mean price). Fixed content code — no scanning needed.
+    overrides: dict[str, list[str]] = {"ContentsCode": ["BO0501R7"]}
 
     df = _chunked_fetch(table_path, variables, overrides, chunk_var="Region")
-    return _save_and_return(df, "BO0701_bostadsratt_price")
+    return _save_and_return(df, "BO0501C_bostadsratt_price")
 
 
 def fetch_cpi(force: bool = False) -> pd.DataFrame:

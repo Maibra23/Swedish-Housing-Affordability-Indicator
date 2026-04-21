@@ -1,20 +1,36 @@
 # SHAI Methodology Reference (v2)
 ## Theoretical Framework, Variables, Sources, Limitations
 
-**Version:** 2.1
+**Version:** 2.2
 **App version:** 1.3.0
 **Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
-**Status:** Post Day 2 revision + deployment audit fixes
-**Last updated:** 2026-04-18
+**Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
+**Last updated:** 2026-04-21
+
+### Changelog v2.1 → v2.2 (2026-04-21)
+- **Bostadsrätt data source corrected:** SCB BO0701 does not exist in the API. The
+  correct table is `BO/BO0501/BO0501C/FastprisBRFRegionAr` (content code BO0501R7 —
+  Medelpris i tkr). All references to BO0701 in code and docs updated to BO0501C.
+- **Bostadsrätt coverage clarified:** BO0501C is county-level only (21 counties +
+  national). No municipality-level bostadsrätt prices exist from SCB. All municipalities
+  inherit their county's mean price; the panel no longer carries the misleading
+  `has_native_bostadsratt_price` flag (was always False).
+- **Kontantinsats regime engine extended to 5 regimes:** Added `latt_2026`
+  ("Lättnad 2026") reflecting the new Swedish mortgage law effective 1 April 2026:
+  bolånetak raised from 85% to 90% (min down payment 10%), skärpt amorteringskrav
+  (LTI > 4.5× → +1% amort) removed. `amort_2` period updated to "Mar 2018 – mar 2026".
+  New regime is now the default baseline on Sida 04.
+- **UI county-name display:** Sida 04 now shows the county name alongside the
+  bostadsrätt price (e.g. "Bostadsrätt — Stockholms län (SCB BO0501C)") so users
+  understand the data is at county level, not municipality level.
+- **refresh_data.py import fix:** `compute_affordability` renamed to `compute_all`
+  to match the actual function name in `src/indices/affordability.py`.
 
 ### Changelog v2.0 → v2.1
 - County and national panels now apply the same 3% nominal income growth when
   forward-filling imputed years (was applying zero growth — audit fix)
-- Bostadsrätt prices (BO0701) now forward-filled into imputed years for all three
-  panel levels, preventing NaN on sida 04 in years beyond the last data release
-- Forecast pipelines (ARIMA, Prophet) now detect the training `END_YEAR` dynamically
-  from the panel's last non-imputed year — no longer requires a code change when
-  new annual data arrives
+- Bostadsrätt prices forward-filled into imputed years for all three panel levels
+- Forecast pipelines detect training `END_YEAR` dynamically from panel
 - Sidebar year range is now dynamic (always includes current calendar year)
 - Version string read from `pyproject.toml` — single source of truth
 
@@ -37,7 +53,7 @@ SHAI implements all three through the formula triplet (A, B, C), the kontantinsa
 | Median disposable income | I | SCB HE0110 | HE/HE0110/HE0110G/TabVX4bDispInkN | Municipal, county, national | Annual | 2011 to 2024 |
 | House price index | P_idx | SCB BO0501 | BO/BO0501/BO0501A/FastpiPSLanAr | County, national | Annual | 1990 to 2025 |
 | Mean transaction price, småhus (arithmetic avg) | P_sek | SCB BO0501 | BO/BO0501/BO0501B/FastprisSHRegionAr (BO0501C2) | Municipal, county, national | Annual | 1981 to 2024 |
-| Mean transaction price, bostadsrätt (apartment) | P_BR | SCB BO0701 | BO/BO0701/BO0701A/Bostprissh | Municipal (larger ~150–200), county, national | Annual | ~2012 to present |
+| Mean transaction price, bostadsrätt (apartment) | P_BR | SCB BO0501C | BO/BO0501/BO0501C/FastprisBRFRegionAr (BO0501R7) | **County only** (21 counties + national; no municipal data in SCB) | Annual | 2000 to 2024 |
 | K/T ratio (descriptive) | KT | SCB BO0501 | Same table (BO0501C4) | Municipal, county | Annual | 1981 to 2024 |
 | Policy rate | R | Riksbanken Swea | /Observations/SECBREPOEFF/{from}/{to} | National | Daily → annual avg | 2014 to present |
 | CPI | π | SCB PR0101 | PR/PR0101/PR0101A/KPI2020M (00000807) | National | Monthly → annual avg | 1980 to present |
@@ -137,14 +153,28 @@ Rationale: only 11 annual observations (2014 to 2024). With such limited history
 
 ## 6. Kontantinsats regime engine
 
-Four regulatory regimes modeled:
+Five regulatory regimes modeled (updated 2026-04-21 to include the new mortgage law):
 
-| Regime | Period | Down payment | Amortization rule |
-|--------|--------|--------------|-------------------|
-| Pre 2010 | Until Oct 2010 | No formal min | None mandatory |
-| Bolånetak | Oct 2010 to Jun 2016 | 15% min | None mandatory |
-| Amortization 1.0 | Jun 2016 to Mar 2018 | 15% min | 2% if LTV>70%, 1% if LTV>50% |
-| Amortization 2.0 | Mar 2018 to present | 15% min | Above + 1% extra if LTI>4.5x |
+| Regime key | Label | Period | Down payment | Amortization rule |
+|------------|-------|--------|--------------|-------------------|
+| `pre_2010` | Före 2010 | Until Oct 2010 | No formal min | None mandatory |
+| `bolanetak` | Bolånetak | Oct 2010 to Jun 2016 | 15% min (LTV cap 85%) | None mandatory |
+| `amort_1` | Amorteringskrav 1.0 | Jun 2016 to Mar 2018 | 15% min | 2% if LTV>70%, 1% if LTV>50% |
+| `amort_2` | Amorteringskrav 2.0 | Mar 2018 to **Mar 2026** | 15% min | Above + 1% extra if LTI>4.5x |
+| `latt_2026` | Lättnad 2026 | **Apr 2026 to present** | **10% min (LTV cap 90%)** | 2% if LTV>70%, 1% if LTV>50% (LTI rule removed) |
+
+**Regulatory basis for `latt_2026`:** New Swedish mortgage law effective 1 April 2026
+(prop. to riksdag Feb 2026, voted Mar 2026; FI no longer issues regulations — codified in law):
+- Bolånetak raised from 85% → 90% of market value
+- Kontantinsats lowered from 15% → 10%
+- Skärpt amorteringskrav (LTI > 4.5× → +1% extra amort) fully removed
+- LTV-based amortization tiers unchanged (same as Amortization 1.0)
+- Tilläggslån cap separately lowered from 85% → 80% (not modeled on Sida 04)
+
+Sources: Regeringen.se 2025-12, Riksdag 2026-03, Handelsbanken/SEB/Nordea 2026-04.
+
+The `latt_2026` regime is now the **default baseline** on Sida 04. Δ-columns on the
+comparison table show differences relative to current rules, not the 2018 rules.
 
 For each regime applied to today's median price and median income per municipality:
 
@@ -181,7 +211,7 @@ Output: recalculated Version C affordability for selected county, with delta fro
 | F8 | Translation loses banking terminology nuance | Glossary file in swedish-translation skill; banking terms curated | Low |
 | F9 | Income for 2025 and 2026 is forward filled from 2024 with zero nominal growth | `is_imputed_income` flag; UI renders imputed values with disclosure. Pessimistic for 2025–2026 (actual wage growth ~3–4%/yr). | Low–Medium |
 | F10 | Unemployment is Arbetsförmedlingen registered rate, not AKU/ILO survey rate | Documented on every page where U enters a computation; definition footnote in Swedish | Low |
-| F11 | SHAI formulas (A, B, C) still use only small-house prices (SCB BO0501C2, Fastighetstyp 220) for methodological continuity and a systemic-risk perspective. Bostadsrätt prices (SCB BO0701) are now part of the panel (`bostadsratt_price_sek`) and are exposed as a user-selectable `Pristyp` toggle on Sida 04 (Kontantinsats), together with a side-by-side villa vs. bostadsrätt comparison card. Bostadsrätt coverage is municipal for the larger ~150–200 municipalities; others fall back to county-level BR price. | Pristyp selector + comparison card on Sida 04; F11 retained to document the index-scope decision. | Medium |
+| F11 | SHAI formulas (A, B, C) still use only small-house prices (SCB BO0501C2, Fastighetstyp 220) for methodological continuity and a systemic-risk perspective. Bostadsrätt prices (SCB BO0501C, `FastprisBRFRegionAr`, content code BO0501R7) are now part of the panel (`bostadsratt_price_sek`) and are exposed as a user-selectable `Pristyp` toggle on Sida 04 (Kontantinsats), together with a side-by-side villa vs. bostadsrätt comparison card. **Important:** SCB publishes bostadsrätt prices at county level only — no municipal granularity exists. All 290 municipalities inherit their county's mean bostadsrätt price. The UI displays the county name (e.g. "Bostadsrätt — Stockholms län") to make this clear. The `has_native_bostadsratt_price` flag has been removed from the panel schema as it was always False. | Pristyp selector + county-name display + comparison card on Sida 04; F11 retained to document the index-scope and county-granularity limitation. | Medium |
 | F12 | Policy rate used directly as mortgage rate. Actual mortgage rate ≈ policy rate + bank margin (~1.5–2.5 pp, typically ~1.7 pp for 3-month fixed). Monthly housing cost and affordability formula values are optimistic by ~30%. Municipal rankings are unaffected (all use the same national rate). | Documented in Detaljer on Sida 04; noted in formula descriptions. | Medium |
 | F13 | Version B: R and π are national variables (same value for all municipalities in a given year). Their z-scores carry no cross-municipal information within a single year — 45% of Version B weights (R: 25%, π: 20%) are time-only signals. Within-year municipal rankings are determined almost entirely by z(P_SEK/I) (35%) and z(U) (20%). | Documented in Version B formula description on Sida 02 and Sida 06. | Medium |
 | F14 | Income is individual gross earned income (sammanräknad förvärvsinkomst). Housing is typically purchased as a couple. Single-income years-to-save is 2× the household figure. | Caption below "År att spara" KPI on Sida 04 advises dividing by 2 for couples. | Medium |

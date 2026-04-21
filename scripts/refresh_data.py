@@ -98,7 +98,7 @@ def step_compute_indices() -> None:
     logger.info("=" * 60)
 
     import pandas as pd
-    from src.indices.affordability import compute_affordability
+    from src.indices.affordability import compute_all as compute_affordability
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()

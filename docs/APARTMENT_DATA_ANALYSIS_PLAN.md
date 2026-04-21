@@ -1,7 +1,22 @@
 # Bostadsrätt / Apartment Data — Feasibility & Impact Analysis
 
 **Date:** 2026-04-17
+**Updated:** 2026-04-21 — Implementation complete; findings corrected after live API verification.
 **Context:** Audit finding F11 — current price data (SCB BO0501C2) covers only permanent small houses (Fastighetstyp 220/villor). This document assesses whether apartment data can be added and what impact it would have.
+
+---
+
+## Implementation Status (as of 2026-04-21)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase A — Fetch + panel integration | ✅ Complete | Source corrected to BO0501C (see §2 correction below) |
+| Phase B — Villa vs. bostadsrätt comparison card | ✅ Complete | Shows county name, ratio, and linked regime |
+| Phase C — Parallel SHAI indices on BR prices | ⏸ Deferred | Decision unchanged: keep indices on villa prices |
+
+**Key correction from original plan:** SCB BO0701 does not exist in the API (HTTP 400).
+The actual bostadsrätt price table is `BO/BO0501/BO0501C/FastprisBRFRegionAr` (content
+code `BO0501R7` — Medelpris i tkr). See §2 corrected findings below.
 
 ---
 
@@ -41,18 +56,35 @@ SCB's BO0501 table (FastprisSHRegionAr) contains multiple content codes:
 
 **Critical finding:** SCB's BO0501 FastprisSHRegionAr table covers **Fastighetspriser för Småhus** (small house prices). The "SH" in the table name stands for Småhus. This table does NOT contain bostadsrätt prices.
 
-### What SCB table covers bostadsrätter?
+### What SCB table covers bostadsrätter? (Corrected 2026-04-21)
 
-Bostadsrätt transaction prices are published under a separate SCB table:
+**Original plan was wrong about BO0701.** Live API verification on 2026-04-21 confirmed:
 
-| Table | Name | Coverage |
-|-------|------|----------|
-| **BO0501C** | Fastighetspriser och lagfarter — Bostadsrätter | County, national; quarterly/annual |
-| Content code | Köpeskilling, medelvärde per bostadsrätt | Municipal (limited), county, national |
+| Claim in original plan | Actual finding |
+|------------------------|---------------|
+| BO0701 table exists at `BO/BO0701/BO0701A/Bostprissh` | **HTTP 400 — table does not exist** |
+| BO0701 covers ~200+ municipalities | **No municipal data exists anywhere in SCB for bostadsrätt prices** |
+| Coverage from ~2012 | **BO0501C covers 2000–2024** |
 
-**Important limitation:** SCB's bostadsrätt price data has **lower geographic granularity** than the small house data:
-- Small house prices (BO0501C2): available at **municipal level** for ~290 municipalities
-- Bostadsrätt prices (BO0501C): available at **county level** (21 counties) for most years; municipal coverage is **partial** — mainly larger municipalities (estimated ~100–150 of 290)
+The correct table is:
+
+| Table | API path | Content code | Coverage |
+|-------|----------|-------------|----------|
+| **BO0501C** / FastprisBRFRegionAr | `BO/BO0501/BO0501C/FastprisBRFRegionAr` | `BO0501R7` (Medelpris i tkr) | **County level only**: 21 counties + 4 storstadsområden + national (26 regions total). **No municipal data.** Annual 2000–2024. |
+
+**Geographic granularity — verified:**
+- Small house prices (BO0501C2): municipal level (~290 municipalities)
+- Bostadsrätt prices (BO0501C): **county level only** — all 290 municipalities inherit their county's mean price
+
+**Observed price values (2024, medelpris):**
+
+| County | BR medelpris | Villa medelpris | Ratio villa/BR |
+|--------|-------------|----------------|---------------|
+| Stockholms län | 4,206,000 SEK | 6,850,000 SEK | 1.63× |
+| Västra Götalands län | 2,524,000 SEK | 2,891,000 SEK | 1.15× |
+| Skåne län | 2,181,000 SEK | 3,423,000 SEK | 1.57× |
+| Norrbottens län | 1,453,000 SEK | 1,457,000 SEK | 1.00× |
+| Riket | 2,821,000 SEK | — | — |
 
 ### Alternative: Mäklarstatistik / Hemnet
 
@@ -61,14 +93,7 @@ Commercial aggregators (Mäklarstatistik, Hemnet) publish quarterly bostadsrätt
 - Require commercial license or web scraping
 - Different methodology from SCB (listing price vs. transaction price)
 
-### Alternative: SCB's PxWeb — Bostadsrättsstatistik BO0701
-
-SCB publishes a dedicated bostadsrätt register (BO0701) with:
-- Annual mean transaction price for bostadsrätter
-- Available at municipal level for ~200+ municipalities (larger ones)
-- Coverage: ~2012–present
-
-**This is the most viable data addition.**
+**Status: out of scope.** County-level SCB data is sufficient for the Pristyp toggle purpose.
 
 ---
 
@@ -106,83 +131,95 @@ The SHAI affordability indices currently use villa prices for all municipalities
 
 ## 4. Implementation Plan
 
-### Phase A — Add bostadsrätt prices to Kontantinsats (High Priority)
+### Phase A — Add bostadsrätt prices to Kontantinsats ✅ COMPLETE (2026-04-21)
 
-**Effort:** Medium (1–2 days)
+**Actual implementation:**
 
-**Steps:**
+1. **Fetch SCB BO0501C bostadsrätt price data** ✅
+   - Table: `BO/BO0501/BO0501C/FastprisBRFRegionAr`, content code `BO0501R7`
+   - `src/data/scb_client.py`: `fetch_bostadsratt_price()` updated with correct path
+   - Cached to `data/raw/BO0501C_bostadsratt_price.parquet` (650 rows, 26 regions × 25 years)
 
-1. **Fetch SCB BO0701 bostadsrätt price data**
-   - Table: `BO/BO0701/BO0701A/BostPrisAr` (or equivalent)
-   - Content code: mean transaction price per bostadsrätt, annual, municipal
-   - Add to `src/data/scb_client.py` as `fetch_bostadsratt_price()`
-   - Cache to `data/raw/BO0701_bostadsratt_price.parquet`
+2. **Build pipeline updated** (`src/data/build_panel.py`) ✅
+   - `_clean_bostadsratt_price()`: reads `BO0501C_bostadsratt_price`, filters to 2-char codes
+     (county codes 01–25 + national "00"), excludes storstadsområden
+   - Municipal merge: removed dead municipality-level attempt (no such data exists).
+     All municipalities merged directly via `lan_code` → county's mean BR price
+   - `has_native_bostadsratt_price` flag removed (was always False — misleading)
+   - Result: `bostadsratt_price_sek` populated for all 290 municipalities, 0% null
 
-2. **Add to build pipeline** (`src/data/build_panel.py`)
-   - New function `_clean_bostadsratt_price()`
-   - Merge with municipal panel as `bostadsratt_price_sek`
-   - Note: ~30–40% of municipalities will have NaN (small municipalities)
-   - Use county fallback for missing municipal values (same strategy as K/T)
+3. **Sida 04 UI updated** (`pages/04_Kontantinsats.py`) ✅
+   - `Pristyp` radio: "Småhus (villa)" / "Bostadsrätt"
+   - County name lookup dict (`_LAN_NAMES`) added to page
+   - `price_source_label` shows county: e.g. "Bostadsrätt — Stockholms län (SCB BO0501C)"
+   - Info banner updated: explains county-level data, references BO0501C not BO0701
+   - Pristyp help text updated to explain county-level fallback mechanism
 
-3. **Add housing type selector to page 04** (`pages/04_Kontantinsats.py`)
-   - New selectbox: "Pristyp" → ["Småhus (villa)", "Bostadsrätt"]
-   - When bostadsrätt selected: use `bostadsratt_price_sek` instead of `transaction_price_sek`
-   - Show availability warning for municipalities with county-level fallback
+4. **Data validation — observed values** ✅
+   - Stockholm: BR 4.21 MSEK vs villa 8.60 MSEK → ratio 2.04× (within expected range)
+   - Uppsala: BR 2.32 MSEK vs villa 4.76 MSEK → ratio 2.05×
+   - Kiruna: BR 1.45 MSEK vs villa 2.30 MSEK → ratio 1.58×
+   - All values plausible; 0 nulls in panel
 
-4. **Data validation**
-   - Bostadsrätt price should be 40–70% of villa price in major cities
-   - Stockholm bostadsrätt ~3.0–4.5 MSEK; rural ~0.5–1.5 MSEK
+### Phase B — Dual-price comparison card ✅ COMPLETE (already implemented prior session)
 
-### Phase B — Dual-price comparison chart (Medium Priority)
+- Villa vs. bostadsrätt side-by-side card on Sida 04 showing price, kontantinsats (10%),
+  years to save, and monthly cost for both property types
+- Caption now shows county name and notes that BR price is county-level (SCB BO0501C)
+- Uses `latt_2026` regime (10% down) as the reference regime for both comparisons
 
-**Effort:** Low (half day, after Phase A)
-
-- Add a small reference card on Kontantinsats page:
-  "Villa: {price_villa} SEK · Bostadsrätt: {price_br} SEK · Kvot: {ratio:.1f}×"
-- Show years-to-save comparison bar chart for both property types side-by-side
-
-### Phase C — Optional bostadsrätt series for SHAI indices (Low Priority)
+### Phase C — Optional bostadsrätt series for SHAI indices ⏸ DEFERRED
 
 **Effort:** Medium-High (2–3 days)
 
-- This would require running two parallel panel computations
+- Would require running two parallel panel computations
 - Create `affordability_municipal_br.parquet` alongside the villa-based panel
 - Add a "Pristyp" toggle to pages 01, 02, 03
 
-**Risk:** Reranking of municipalities would be significant and could confuse users who compare with older results. Requires a clear version note.
+**Risk:** Reranking of municipalities would be significant and could confuse users who compare with older results. Additionally, since bostadsrätt data is county-level only, all municipalities within a county would share the same BR price — urban/suburban differentiation within a county would be lost. Requires a clear version note.
+
+**Decision (unchanged):** Defer. The county-granularity limitation makes Phase C less compelling than originally assessed.
 
 ---
 
-## 5. Decision Matrix
+## 5. Decision Matrix (updated 2026-04-21)
 
-| Option | Effort | Impact | Data Quality | Recommendation |
-|--------|--------|--------|--------------|----------------|
-| Add BR prices to page 04 only | Medium | High for Kontantinsats | Good (SCB BO0701) | **Do this first** |
-| Dual-price comparison chart | Low | Medium | Derived from above | **Do after Phase A** |
-| BR prices for SHAI indices | High | High but controversial | Medium (county fallback heavy) | Defer; decide after seeing Phase A quality |
+| Option | Effort | Impact | Data Quality | Status |
+|--------|--------|--------|--------------|--------|
+| Add BR prices to page 04 only (Phase A) | Medium | High for Kontantinsats | Good (SCB BO0501C, county-level) | ✅ Done |
+| Dual-price comparison card (Phase B) | Low | Medium | Derived from above | ✅ Done |
+| BR prices for SHAI indices (Phase C) | High | High but controversial | Medium — county-only, no intra-county differentiation | ⏸ Deferred |
 | Mäklarstatistik API | High | High | Commercial | Out of scope |
 
 ---
 
-## 6. Next Steps
+## 6. Remaining Open Items
 
-1. **Immediate (Phase 3 complete):** Villa-only warning already on page 04 (F11). Household multiplier added.
-2. **Next sprint:** Investigate SCB BO0701 API availability and coverage
-   - Run: `python -c "from src.data.scb_client import list_tables; print([t for t in list_tables() if 'BO07' in t])"`
-   - Or check: https://api.scb.se/OV0104/v1/doris/sv/ssd/BO/BO0701/
-3. **Decision point:** If BO0701 provides municipal coverage for >150 municipalities, proceed with Phase A
-4. **If coverage is insufficient:** Use county-level bostadsrätt prices with prominent municipal-coverage caveat
+1. **Phase C decision:** County-level limitation makes BR SHAI indices less valuable than
+   originally assessed. Revisit if SCB adds municipal bostadsrätt statistics in a future release.
+2. **BO0501C update cadence:** SCB updates FastprisBRFRegionAr annually. Run
+   `python scripts/refresh_data.py` once per year to pick up the latest year's data.
+3. **Storstadsområden data excluded:** Codes 0010 (Stor-Stockholm), 0020 (Stor-Göteborg),
+   0030 (Stor-Malmö), 0060 (Riket exkl storstadsområden) are fetched but filtered out in
+   `_clean_bostadsratt_price()` to avoid duplication with the county codes. If a future
+   use case needs sub-county storstadsregion breakdowns, these codes are available in the
+   raw parquet `BO0501C_bostadsratt_price.parquet`.
 
 ---
 
-## 7. Summary Conclusion
+## 7. Summary Conclusion (updated 2026-04-21)
 
-**Do we have apartment data?** No — the current pipeline only fetches and uses small house (villa) prices.
+**Do we have apartment data?** Yes — `bostadsratt_price_sek` is now in
+`affordability_municipal.parquet` for all 290 municipalities (0% null) and exposed as
+the `Pristyp` toggle on Sida 04.
 
-**Should we add it?** Yes — adding SCB BO0701 bostadsrätt prices to page 04 would be a high-impact, medium-effort improvement that directly addresses the biggest user-facing accuracy issue (F11). The main SHAI indices should remain on villa prices for methodological consistency, but Kontantinsats should allow switching to bostadsrätt prices as these represent the typical first-time buyer reality in cities.
+**Data source:** SCB BO0501C (not BO0701 as originally planned — BO0701 does not exist).
+Coverage is **county-level only**. All municipalities in the same county share one BR price.
 
-**Impact if added:**
-- Stockholm first-time buyer picture: 24 yr → 4–10 yr depending on household type
-- Rural municipalities: minimal change (villa ≈ apartment prices)
-- SHAI rankings: unchanged (index remains villa-based)
-- User trust: significantly improved for urban users
+**Impact observed (Stockholm 2024, Lättnad 2026, 10% savings rate):**
+- Villa: 8.60 MSEK → kontantinsats 860k SEK → ~20 yr to save (singel)
+- Bostadsrätt (länsnivå): 4.21 MSEK → kontantinsats 421k SEK → ~10 yr to save (singel)
+- Par (bostadsrätt): ~5 yr to save → "Ansträngd" rather than "Otillgänglig"
+
+**SHAI rankings:** unchanged (indices remain villa-based)
+**User trust:** significantly improved for urban users who are told which county's BR data is shown
