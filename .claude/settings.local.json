@@ -29,7 +29,10 @@
       "Bash(python -c \"print\\(''hello''\\)\")",
       "Bash(py --version)",
       "Bash(grep:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "WebSearch",
+      "Bash(ls:*)",
+      "Bash(del:*)"
     ]
   }
 }
