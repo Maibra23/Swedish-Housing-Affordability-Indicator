@@ -83,18 +83,19 @@ git push
 
 ---
 
-## Bostadsrätt (apartment) price data — BO0701
+## Bostadsrätt (apartment) price data — BO0501C
 
 The Kontantinsats page (sida 04) supports a **Pristyp** toggle (Småhus / Bostadsrätt).
-The apartment price feature requires `data/raw/BO0701_bostadsratt_price.parquet` to exist.
+The apartment price feature requires `data/raw/BO0501C_bostadsratt_price.parquet` to exist.
 
 This file is created automatically by `python scripts/refresh_data.py` (step 1).
 
-Until the file is present, the app falls back to villa (småhus) prices for all
-municipalities with an inline note. This fallback is safe and documented.
+Until the file is present, the app falls back to villa (småhus) prices with an inline note.
+This fallback is safe and documented.
 
-Coverage once active: ~150–200 of 290 municipalities have native BO0701 data;
-remaining municipalities fall back to county-level apartment prices.
+Coverage once active: 21 counties (län) + national level. SCB publishes no
+municipality-level bostadsrätt prices. When Bostadsrätt is selected on sida 04,
+the analysis automatically switches to county level (21 län selector).
 
 ---
 
@@ -150,7 +151,7 @@ brings in new published income data.
 | `BO0501_price_index.parquet` | SCB BO0501 | Annual |
 | `BO0501_transaction_price.parquet` | SCB BO0501C2 | Annual |
 | `BO0501_kt_ratio.parquet` | SCB BO0501C4 | Annual |
-| `BO0701_bostadsratt_price.parquet` | SCB BO0701 | Annual (created on first refresh) |
+| `BO0501C_bostadsratt_price.parquet` | SCB BO0501C | Annual (created on first refresh) |
 | `BE0101_population.parquet` | SCB BE0101 | Annual |
 | `BO0101_construction.parquet` | SCB BO0101 | Annual |
 | `PR0101_cpi.parquet` | SCB PR0101 | Annual |
@@ -173,7 +174,7 @@ See `docs/METHODOLOGY_v2.md` section 7 for the full list (F1–F15). Key ones fo
 
 | ID | Description | Impact |
 |----|-------------|--------|
-| F11 | Apartment prices (BO0701) require a data refresh to activate | Sida 04 falls back to villa prices |
+| F11 | Apartment prices (BO0501C) require a data refresh to activate; county-level only | Sida 04 falls back to villa prices |
 | F12 | Policy rate used as mortgage base (+ bank margin slider) | Rate approximation, documented |
 | F13 | Version B uses national income variable | Less granular than A/C |
 | F14 | Individual income used, not household | Couple toggle on sida 04 mitigates |
@@ -193,6 +194,6 @@ Check that `data/geo/kommuner.geojson` is committed (binary tracked by git).
 `data/processed/forecast_arima.parquet` or `forecast_prophet.parquet` missing.
 Run `python scripts/refresh_data.py --no-fetch` to rebuild from existing raw data.
 
-**BO0701 bostadsrätt data missing:**
+**BO0501C bostadsrätt data missing:**
 Run `python scripts/refresh_data.py` (full refresh) to fetch from SCB API.
 The app functions correctly without it — sida 04 falls back to villa prices.

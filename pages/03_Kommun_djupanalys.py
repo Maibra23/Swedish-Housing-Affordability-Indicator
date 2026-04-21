@@ -214,6 +214,7 @@ with tab_prophet:
             unsafe_allow_html=True,
         )
         st.caption("Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.")
+        st.caption(f"Prognoserna beräknas på länsnivå ({kommun_data['lan_code'].iloc[0]}) — inte per kommun.")
         if len(forecast_prophet) > 0:
             fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
