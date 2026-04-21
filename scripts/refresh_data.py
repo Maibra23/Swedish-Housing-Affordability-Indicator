@@ -14,12 +14,12 @@ Usage:
     python scripts/refresh_data.py --no-fetch # skip API calls, rebuild from cached raw data
     python scripts/refresh_data.py --no-forecast  # skip forecast step (fastest)
 
-Note on BO0701 (bostadsrätt prices):
-    SCB BO0701 apartment price data is fetched as part of step 1 via
+Note on BO0501C (bostadsrätt prices):
+    SCB BO0501C apartment price data is fetched as part of step 1 via
     scb_client.fetch_bostadsratt_price(). The parquet is saved to
-    data/raw/BO0701_bostadsratt_price.parquet. Until this file is present,
-    the Kontantinsats page (sida 04) falls back to villa prices for all
-    municipalities. Run a full refresh to activate the apartment price feature.
+    data/raw/BO0501C_bostadsratt_price.parquet. Until this file is present,
+    the Kontantinsats page (sida 04) falls back to villa prices. Coverage is
+    county-level only (21 län + national). Run a full refresh to activate.
 """
 
 from __future__ import annotations

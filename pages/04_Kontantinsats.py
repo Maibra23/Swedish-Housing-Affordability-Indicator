@@ -1,6 +1,9 @@
 """Sida 04 — Kontantinsats analys.
 
-Jämförelse av kontantinsatskrav under fyra regelverk (pre-2010, bolånetak, amort 1, amort 2).
+Jämförelse av kontantinsatskrav under fem regelverk (pre-2010, bolånetak, amort 1, amort 2, lättnad 2026).
+
+When "Bostadsrätt" is selected the analysis switches to county level (21 län)
+because SCB only publishes apartment prices at the county level.
 """
 
 import streamlit as st
@@ -37,6 +40,7 @@ selections = render_sidebar(page_key="ki")
 try:
     with st.spinner("Laddar data..."):
         municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
+        county_data = pd.read_parquet("data/processed/panel_county.parquet")
 except Exception as e:
     st.error("Kunde inte hämta data. Försök igen senare.")
     st.caption(f"Detaljer: {e}")
@@ -44,6 +48,7 @@ except Exception as e:
 
 selected_year = selections["selected_year"]
 mun_year = municipal[municipal["year"] == selected_year]
+county_yr = county_data[county_data["year"] == selected_year]
 
 if len(mun_year) == 0:
     _available = sorted(municipal["year"].unique(), reverse=True)
@@ -57,16 +62,19 @@ if len(mun_year) == 0:
 page_title(
     eyebrow="Sida 04 · Kontantinsats",
     title="Kontantinsats analys",
-    subtitle="Historiska och nuvarande regelverk och insatskrav per kommun",
+    subtitle="Historiska och nuvarande regelverk och insatskrav",
     year=selected_year,
 )
 
-_has_br_column = "bostadsratt_price_sek" in municipal.columns
-_br_available_rows = (
-    int(mun_year["bostadsratt_price_sek"].notna().sum()) if _has_br_column else 0
+# ── Check bostadsrätt availability (county level) ────────────────────
+_has_br_column = "bostadsratt_price_sek" in county_data.columns
+_br_available = (
+    _has_br_column
+    and len(county_yr) > 0
+    and county_yr["bostadsratt_price_sek"].notna().any()
 )
 
-if not _has_br_column or _br_available_rows == 0:
+if not _br_available:
     st.warning(
         "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker "
         "permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. "
@@ -76,35 +84,25 @@ if not _has_br_column or _br_available_rows == 0:
     )
 else:
     st.info(
-        "**Välj Pristyp:** Panelen innehåller nu både småhuspriser (SCB BO0501C2, "
-        "Fastighetstyp 220) och bostadsrättspriser (SCB BO0501C). Använd `Pristyp` nedan för "
-        "att växla mellan villapris (systemisk vy) och bostadsrättspris "
-        "(realistisk vy för förstagångsköpare i städer). "
-        "**OBS:** SCB publicerar bostadsrättspriser enbart på länsnivå — alla kommuner i "
-        "samma län delar samma bostadsrättspris. Priset visas med länets namn för tydlighet."
+        "**Välj Pristyp:** Bostadsrättspriser (SCB BO0501C) analyseras på **länsnivå** "
+        "(21 län) — SCB publicerar inga kommunspecifika bostadsrättspriser. "
+        "Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** (290 kommuner). "
+        "När du väljer Bostadsrätt byter analysen automatiskt till länsnivå."
     )
 
 # ── 1 · Controls ──────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Välj analysenhet", "Kommun, hushållstyp och sparandeantagande", "URVAL"),
+        card_header("Välj analysenhet", "Region, pristyp, hushållstyp och sparandeantagande", "URVAL"),
         unsafe_allow_html=True,
     )
 
-    col_sel, col_pristyp, col_type, col_slider = st.columns([2, 1.1, 1, 1])
+    col_pristyp, col_sel, col_type, col_slider = st.columns([1.1, 2, 1, 1])
 
-    kommun_list = sorted(mun_year["region_name"].unique())
-    with col_sel:
-        selected_kommun = st.selectbox(
-            "Välj kommun",
-            kommun_list,
-            index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
-            key="ki_kommun_select",
-        )
-
+    # Pristyp FIRST — determines whether selector shows kommun or län
     with col_pristyp:
         _pristyp_options = ["Småhus (villa)"]
-        if _has_br_column and _br_available_rows > 0:
+        if _br_available:
             _pristyp_options.append("Bostadsrätt")
         pristyp = st.radio(
             "Pristyp",
@@ -112,15 +110,40 @@ with st.container(border=True):
             index=0,
             key="ki_pristyp",
             help=(
-                "Småhus = SCB BO0501C2 (Fastighetstyp 220), permanenta småhus/villor. "
-                "Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt på länsnivå. "
-                "SCB publicerar inga kommunspecifika bostadsrättspriser — "
-                "kommunen hämtar länets medelpris automatiskt. "
-                "För förstagångsköpare i städer är bostadsrätt mer representativt."
+                "Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå (290 kommuner). "
+                "Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt — **länsnivå** (21 län). "
+                "SCB publicerar inga kommunspecifika bostadsrättspriser."
             ),
             horizontal=False,
         )
         use_bostadsratt = (pristyp == "Bostadsrätt")
+
+    # Conditional selector: län for bostadsrätt, kommun for småhus
+    with col_sel:
+        if use_bostadsratt:
+            region_list = sorted(county_yr["region_name"].dropna().unique())
+            _default_lan = (
+                region_list.index("Stockholms län")
+                if "Stockholms län" in region_list else 0
+            )
+            selected_name = st.selectbox(
+                "Välj län",
+                region_list,
+                index=_default_lan,
+                key="ki_lan_select",
+            )
+        else:
+            region_list = sorted(mun_year["region_name"].unique())
+            _default_kommun = (
+                region_list.index("Stockholm")
+                if "Stockholm" in region_list else 0
+            )
+            selected_name = st.selectbox(
+                "Välj kommun",
+                region_list,
+                index=_default_kommun,
+                key="ki_kommun_select",
+            )
 
     with col_type:
         household_type = st.radio(
@@ -168,21 +191,20 @@ with st.container(border=True):
         )
         bank_margin = bank_margin_pct / 100.0
 
-kommun_row = mun_year[mun_year["region_name"] == selected_kommun]
-if len(kommun_row) == 0:
-    st.warning("Inga data tillgängliga för den valda kommunen.")
+# ── Get data row ─────────────────────────────────────────────────────
+if use_bostadsratt:
+    selected_row_df = county_yr[county_yr["region_name"] == selected_name]
+else:
+    selected_row_df = mun_year[mun_year["region_name"] == selected_name]
+
+if len(selected_row_df) == 0:
+    st.warning("Inga data tillgängliga för den valda regionen.")
     st.stop()
 
-kommun_row = kommun_row.iloc[0]
-_villa_price = kommun_row["transaction_price_sek"]
-_br_price = (
-    kommun_row["bostadsratt_price_sek"]
-    if _has_br_column and pd.notna(kommun_row.get("bostadsratt_price_sek", None))
-    else None
-)
+selected_row = selected_row_df.iloc[0]
 
-# County name lookup — SCB BO0501C only publishes county-level BR prices,
-# so we always show which county's data is being used.
+# ── Extract values ───────────────────────────────────────────────────
+# County name lookup — only needed in kommun mode for BR price provenance
 _LAN_NAMES = {
     "01": "Stockholms län", "03": "Uppsala län", "04": "Södermanlands län",
     "05": "Östergötlands län", "06": "Jönköpings län", "07": "Kronobergs län",
@@ -192,29 +214,42 @@ _LAN_NAMES = {
     "20": "Dalarnas län", "21": "Gävleborgs län", "22": "Västernorrlands län",
     "23": "Jämtlands län", "24": "Västerbottens län", "25": "Norrbottens län",
 }
-_lan_code = str(kommun_row.get("lan_code", "")).zfill(2)
-_lan_name = _LAN_NAMES.get(_lan_code, f"Län {_lan_code}")
 
-# Pristyp selection: BR is always county-level; fall back to villa if county has no data.
 pristyp_fallback_note: str | None = None
-if use_bostadsratt and _br_price is None:
-    price = _villa_price
-    pristyp_fallback_note = (
-        f"Bostadsrättspris saknas för {_lan_name} — "
-        "småhuspriset används som fallback."
-    )
-    price_source_label = "Småhus (fallback)"
-elif use_bostadsratt:
-    price = _br_price
-    price_source_label = f"Bostadsrätt — {_lan_name} (SCB BO0501C)"
+if use_bostadsratt:
+    # County mode — both prices come from the county panel
+    _br_price = selected_row.get("bostadsratt_price_sek")
+    _villa_price = selected_row.get("transaction_price_sek")
+    if pd.notna(_br_price):
+        price = _br_price
+        price_source_label = f"Bostadsrätt — {selected_name} (SCB BO0501C)"
+    else:
+        price = _villa_price
+        pristyp_fallback_note = (
+            f"Bostadsrättspris saknas för {selected_name} — "
+            "småhuspriset används som fallback."
+        )
+        price_source_label = "Småhus (fallback)"
+    _lan_code = str(selected_row.get("lan_code", "")).zfill(2)
+    _lan_name = selected_name  # Already at county level
 else:
+    # Municipality mode — villa price is municipal, BR price is county fallback
+    _villa_price = selected_row["transaction_price_sek"]
     price = _villa_price
+    _has_br_muni = "bostadsratt_price_sek" in municipal.columns
+    _br_price = (
+        selected_row["bostadsratt_price_sek"]
+        if _has_br_muni and pd.notna(selected_row.get("bostadsratt_price_sek"))
+        else None
+    )
     price_source_label = "Småhus (SCB BO0501C2)"
+    _lan_code = str(selected_row.get("lan_code", "")).zfill(2)
+    _lan_name = _LAN_NAMES.get(_lan_code, f"Län {_lan_code}")
 
-_individual_income = kommun_row["median_income"]
+_individual_income = selected_row["median_income"]
 income = _individual_income * household_multiplier   # household income
-rate = kommun_row["policy_rate"] / 100.0
-effective_rate_display_pct = kommun_row["policy_rate"] + bank_margin_pct
+rate = selected_row["policy_rate"] / 100.0
+effective_rate_display_pct = selected_row["policy_rate"] + bank_margin_pct
 
 _sparkvot_caption.caption(
     f"= {format_sek(income * savings_rate)} SEK/år "
@@ -276,8 +311,9 @@ render_kpi_row(
         ),
     ]
 )
+_level_label = "länsnivå" if use_bostadsratt else "kommunnivå"
 st.caption(
-    f"Nuläge · Lättnad 2026 · {selected_kommun} {selected_year} · "
+    f"Nuläge · Lättnad 2026 · {selected_name} ({_level_label}) · {selected_year} · "
     f"Sparkvot {savings_rate*100:.0f}% · Pristyp: {price_source_label}"
 )
 st.caption(
@@ -288,8 +324,12 @@ st.caption(
 if pristyp_fallback_note:
     st.caption(pristyp_fallback_note)
 
-# ── 2b · Villa vs. bostadsrätt side-by-side jämförelse (Phase B) ─────
-if _has_br_column and _br_price is not None and _villa_price is not None:
+# ── 2b · Villa vs. bostadsrätt side-by-side jämförelse ────────────────
+_show_comparison = (
+    _villa_price is not None and pd.notna(_villa_price)
+    and _br_price is not None and pd.notna(_br_price)
+)
+if _show_comparison:
     from src.kontantinsats.engine import apply_regime as _apply_regime
     _villa_res = _apply_regime(_villa_price, income, rate, "latt_2026",
                                savings_rate, bank_margin)
@@ -300,14 +340,15 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
         st.markdown(
             card_header(
                 "Villa vs. bostadsrätt",
-                f"{selected_kommun} · {selected_year} · Lättnad 2026",
+                f"{selected_name} · {selected_year} · Lättnad 2026",
                 "PRISTYPSJÄMFÖRELSE",
             ),
             unsafe_allow_html=True,
         )
         c_villa, c_br = st.columns(2)
         with c_villa:
-            st.markdown("**Småhus (villa)** — SCB BO0501C2")
+            _villa_level = "länsnivå" if use_bostadsratt else "kommunnivå"
+            st.markdown(f"**Småhus (villa)** — SCB BO0501C2 ({_villa_level})")
             st.metric("Pris", f"{format_sek(_villa_price)} SEK")
             st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_villa_res['required_cash'])} SEK")
@@ -316,7 +357,7 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
             st.metric("Månadskostnad",
                       f"{format_sek(_villa_res['monthly_total'])} SEK")
         with c_br:
-            st.markdown("**Bostadsrätt** — SCB BO0701")
+            st.markdown(f"**Bostadsrätt** — SCB BO0501C (länsnivå)")
             st.metric("Pris", f"{format_sek(_br_price)} SEK")
             st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_br_res['required_cash'])} SEK")
@@ -324,12 +365,19 @@ if _has_br_column and _br_price is not None and _villa_price is not None:
                       f"{_br_res['years_to_save']:.1f}".replace(".", ",") + " år")
             st.metric("Månadskostnad",
                       f"{format_sek(_br_res['monthly_total'])} SEK")
-        st.caption(
-            f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
-            "Samma hushållsinkomst, ränta och regelverk (Lättnad 2026). "
-            f"Bostadsrättspriset avser **{_lan_name}** (länsnivå, SCB BO0501C) — "
-            "SCB publicerar inga kommunspecifika bostadsrättspriser."
-        )
+        if use_bostadsratt:
+            st.caption(
+                f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
+                f"Båda priser avser **{selected_name}** (länsnivå). "
+                "Samma hushållsinkomst, ränta och regelverk (Lättnad 2026)."
+            )
+        else:
+            st.caption(
+                f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
+                f"Villapris avser **{selected_name}** (kommunnivå). "
+                f"Bostadsrättspris avser **{_lan_name}** (länsnivå, SCB BO0501C) — "
+                "SCB publicerar inga kommunspecifika bostadsrättspriser."
+            )
 
 # ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────
 render_kpi_row(
@@ -437,8 +485,8 @@ with st.container(border=True):
     st.markdown(
         card_header(
             "Kontantinsatskrav per regelverk",
-            f"{selected_kommun} · {selected_year}",
-            "FYRA REGIMER",
+            f"{selected_name} · {selected_year}",
+            "FEM REGIMER",
         ),
         unsafe_allow_html=True,
     )
@@ -565,7 +613,7 @@ with st.container(border=True):
         st.markdown(
             card_header(
                 "Månadskostnad per regelverk",
-                f"{selected_kommun} · {selected_year}",
+                f"{selected_name} · {selected_year}",
                 "JÄMFÖRELSE",
             ),
             unsafe_allow_html=True,
@@ -595,7 +643,7 @@ with st.container(border=True):
         st.markdown(
             card_header(
                 "År att spara kontantinsats",
-                f"{selected_kommun} · {selected_year}",
+                f"{selected_name} · {selected_year}",
                 "JÄMFÖRELSE",
             ),
             unsafe_allow_html=True,
@@ -636,7 +684,7 @@ with st.container(border=True):
         st.markdown(
             card_header(
                 "Kvarvarande inkomst per regelverk",
-                f"{selected_kommun} · {selected_year}",
+                f"{selected_name} · {selected_year}",
                 "JÄMFÖRELSE",
             ),
             unsafe_allow_html=True,
@@ -670,9 +718,9 @@ pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
 
 _hushall_label = "par" if household_multiplier == 2 else "singelhushåll"
 _rate_note = (
-    f"styrränta {kommun_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_display_pct:.2f}%"
+    f"styrränta {selected_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_display_pct:.2f}%"
     if bank_margin_pct > 0
-    else f"styrränta {kommun_row['policy_rate']:.2f}%"
+    else f"styrränta {selected_row['policy_rate']:.2f}%"
 )
 insight_html = f"""
 <div class="shai-card" style="border-left:3px solid {COLORS['accent']};">
@@ -699,27 +747,28 @@ st.markdown(_compact(insight_html), unsafe_allow_html=True)
 
 # ── 8 · Detaljer & antaganden ─────────────────────────────────────────
 with st.expander("Detaljer & antaganden"):
+    _region_label = "Län" if use_bostadsratt else "Kommun"
     st.markdown(
         f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;'>"
         "<strong>Indata</strong><br>"
-        f"- Kommun: <strong>{selected_kommun}</strong> (analysår {selected_year})<br>"
+        f"- {_region_label}: <strong>{selected_name}</strong> (analysår {selected_year})<br>"
         f"- Pristyp: <strong>{price_source_label}</strong><br>"
         f"- Pris (används): <strong>{format_sek(price)} SEK</strong><br>"
         + (
             f"- Småhuspris (referens): <strong>{format_sek(_villa_price)} SEK</strong><br>"
-            if _villa_price is not None and (use_bostadsratt or price_source_label.startswith("Bostadsrätt"))
+            if _villa_price is not None and pd.notna(_villa_price) and use_bostadsratt
             else ""
         )
         + (
-            f"- Bostadsrättspris (referens): <strong>{format_sek(_br_price)} SEK</strong><br>"
-            if _br_price is not None and not use_bostadsratt
+            f"- Bostadsrättspris (referens, {_lan_name}): <strong>{format_sek(_br_price)} SEK</strong><br>"
+            if _br_price is not None and pd.notna(_br_price) and not use_bostadsratt
             else ""
         ) +
         f"- Hushållstyp: <strong>{household_type}</strong><br>"
         f"- Individuell medianinkomst: <strong>{format_sek(_individual_income)} SEK</strong><br>"
         f"- Hushållsinkomst (används): <strong>{format_sek(income)} SEK</strong>"
         f"{' (2 × individuell)' if household_multiplier == 2 else ''}<br>"
-        f"- Styrränta: <strong>{kommun_row['policy_rate']:.2f}%</strong><br>"
+        f"- Styrränta: <strong>{selected_row['policy_rate']:.2f}%</strong><br>"
         f"- Bankens räntepåslag: <strong>{bank_margin_pct:.1f} pp</strong><br>"
         f"- Effektiv bolåneränta (används): <strong>{effective_rate_display_pct:.2f}%</strong><br>"
         f"- Sparkvot: <strong>{int(savings_rate*100)}%</strong><br><br>"
