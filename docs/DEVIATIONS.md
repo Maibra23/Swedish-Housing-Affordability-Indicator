@@ -3,7 +3,7 @@
 Documents where the implementation diverges from PLAYBOOK.md / prompts.md.
 Use this file to identify which future task prompts need adjusting before you run them.
 
-**Last updated:** 2026-04-14 after Day 2 (Tasks 2.1–2.4) completion.
+**Last updated:** 2026-04-21 after bostadsrätt integration + 2026 regime update.
 
 ---
 
@@ -148,9 +148,59 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 
 ---
 
+---
+
+## D15 — SCB BO0701 does not exist; actual bostadsrätt source is BO0501C ✅
+
+| | |
+|--|--|
+| **Planned** | Fetch bostadsrätt prices from `BO/BO0701/BO0701A/Bostprissh` |
+| **Actual** | `BO/BO0701` returns HTTP 400 — table does not exist in the SCB API. The correct table is `BO/BO0501/BO0501C/FastprisBRFRegionAr`, content code `BO0501R7` (Medelpris i tkr). This is in the same BO0501 family as villa prices. |
+| **Why** | BO0701 may have been a planned or discontinued SCB product line. The actual bostadsrätt statistics were published under BO0501C. |
+| **Resolution** | `scb_client.fetch_bostadsratt_price()` updated to use BO0501C path and fixed content code. Cache file renamed from `BO0701_bostadsratt_price.parquet` → `BO0501C_bostadsratt_price.parquet`. All doc references updated. |
+| **Tasks to adjust** | None downstream — parquet schema and column names are unchanged. |
+
+---
+
+## D16 — Bostadsrätt data is county-level only, not municipal ✅
+
+| | |
+|--|--|
+| **Planned** | Municipal bostadsrätt prices for ~150–200 of 290 municipalities, county fallback for the rest |
+| **Actual** | SCB BO0501C covers **only 26 regions**: 21 counties (01–25) + national (00) + 4 storstadsområden. **No municipality-level bostadsrätt prices exist anywhere in SCB.** All 290 municipalities use their county's mean price. |
+| **Impact** | `has_native_bostadsratt_price` flag was meaningless (always False). Removed from panel schema. The municipality-level merge step in `build_municipal_panel()` was dead code — removed. `_clean_bostadsratt_price()` now filters to 2-char codes only (county + national). |
+| **UI response** | Sida 04 Pristyp toggle now shows the county name alongside the price (e.g. "Bostadsrätt — Stockholms län (SCB BO0501C)") so users understand the granularity. Info banner explains county-level limitation explicitly. |
+| **Tasks to adjust** | None — the Pristyp feature still works; the caveat is just documented differently. |
+
+---
+
+## D17 — Kontantinsats regime engine extended from 4 to 5 regimes ✅
+
+| | |
+|--|--|
+| **Planned** | 4 regimes: pre_2010, bolanetak, amort_1, amort_2 (current) |
+| **Actual** | New Swedish mortgage law effective 1 April 2026 required adding a 5th regime: `latt_2026` ("Lättnad 2026"). Key changes: bolånetak raised from 85%→90% (down payment 10%), skärpt amorteringskrav (LTI>4.5×) removed. `amort_2` period closed at "Mar 2018 – mar 2026". |
+| **Sources** | Regeringen.se 2025-12, Riksdag vote 2026-03, Finansinspektionen 2026, Handelsbanken/SEB/Nordea April 2026 customer communications. |
+| **Resolution** | `engine.py` updated; `compare_regimes()` auto-includes new regime. Page 04 baseline switched from `amort_2` → `latt_2026`. Timeline updated to 5 segments. `REGIME_WHAT_CHANGED` and colors updated. All "nuvarande regler (Amorteringskrav 2.0)" UI text updated to "Lättnad 2026". |
+| **Tasks to adjust** | Any task prompt that references "four regimes" or "Amorteringskrav 2.0 as current" must be updated to "five regimes" / "Lättnad 2026 as current". |
+
+---
+
+## D18 — `refresh_data.py` had stale function import ✅
+
+| | |
+|--|--|
+| **Planned / Expected** | `from src.indices.affordability import compute_affordability` |
+| **Actual** | The function in `affordability.py` is named `compute_all`, not `compute_affordability`. The script crashed at Step 3 on every run. |
+| **Resolution** | Changed to `from src.indices.affordability import compute_all as compute_affordability` in `refresh_data.py`. |
+| **Root cause** | Function was renamed during a refactor but the call site in the refresh script was not updated. |
+| **Tasks to adjust** | None — fix is in place. |
+
+---
+
 ## Summary — Tasks requiring prompt changes
 
-Only **D2/D8** (annual vs quarterly) affects future prompts. D3 was the biggest risk but is now fully resolved.
+**D2/D8** (annual vs quarterly) is the only original deviation still requiring prompt awareness. D15–D18 are all resolved with no downstream prompt changes needed, except D17 if any future task prompt references the Kontantinsats regime count or names.
 
 | Task | Change needed | Reason |
 |------|--------------|--------|
@@ -166,3 +216,5 @@ Only **D2/D8** (annual vs quarterly) affects future prompts. D3 was the biggest 
 | **5.1** | No change — Version B tab now has full 2014–2024 data | D3 resolved |
 | **5.2–5.5** | No change | — |
 | **6.x** | No change | — |
+| **Any Kontantinsats task** | "four regimes" → "five regimes"; "Amorteringskrav 2.0 (current)" → "Lättnad 2026 (current)" | D17 |
+| **Any bostadsrätt task** | Source is BO0501C not BO0701; coverage is county-level only | D15, D16 |
