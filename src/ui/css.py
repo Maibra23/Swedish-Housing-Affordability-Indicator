@@ -206,30 +206,52 @@ section[data-testid="stSidebar"] .riskklass-rad span:not(.riskklass-punkt) {
 }
 
 /* ---- Sidebar pills/chips ---- */
+/* Broad selectors to cover st.pills across Streamlit versions */
 section[data-testid="stSidebar"] [data-testid="stPills"] button,
-section[data-testid="stSidebar"] button[role="tab"] {
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button,
+section[data-testid="stSidebar"] [role="tablist"] button,
+section[data-testid="stSidebar"] button[role="tab"],
+section[data-testid="stSidebar"] button[kind="pills"],
+section[data-testid="stSidebar"] button[data-baseweb="tab"] {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 11px !important;
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.7) !important;
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+    color: rgba(255,255,255,0.85) !important;
     border-radius: 4px !important;
     padding: 5px 10px !important;
     transition: background 0.15s !important;
 }
 section[data-testid="stSidebar"] [data-testid="stPills"] button:hover,
-section[data-testid="stSidebar"] button[role="tab"]:hover {
-    background: rgba(255,255,255,0.12) !important;
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button:hover,
+section[data-testid="stSidebar"] [role="tablist"] button:hover,
+section[data-testid="stSidebar"] button[role="tab"]:hover,
+section[data-testid="stSidebar"] button[kind="pills"]:hover,
+section[data-testid="stSidebar"] button[data-baseweb="tab"]:hover {
+    background: rgba(255,255,255,0.18) !important;
     color: #FFFFFF !important;
 }
 section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"],
 section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-selected="true"],
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-pressed="true"],
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-selected="true"],
+section[data-testid="stSidebar"] [role="tablist"] button[aria-pressed="true"],
+section[data-testid="stSidebar"] [role="tablist"] button[aria-selected="true"],
+section[data-testid="stSidebar"] [role="tablist"] button[aria-checked="true"],
 section[data-testid="stSidebar"] button[role="tab"][aria-pressed="true"],
-section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"] {
+section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"],
+section[data-testid="stSidebar"] button[data-baseweb="tab"][aria-selected="true"] {
     background: #C4A35A !important;
     border-color: #C4A35A !important;
     color: #0B1F3F !important;
     font-weight: 500 !important;
+}
+/* Catch-all: force any remaining button-like elements in the sidebar to dark theme */
+section[data-testid="stSidebar"] [data-testid="stPills"] [role="tablist"],
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tablist"] {
+    background: transparent !important;
+    border: none !important;
+    gap: 4px !important;
 }
 
 /* ---- Risk legend (sidebar) ---- */
