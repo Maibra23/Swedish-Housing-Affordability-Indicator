@@ -207,6 +207,11 @@ with st.expander("5. Kontantinsats — regimhistorik"):
                 <div style="font-size:11px;font-weight:700;">Mar 2018</div>
                 <div style="font-size:10px;color:{COLORS['text_secondary']};">Amorteringskrav 2.0</div>
             </div>
+            <div style="text-align:center;z-index:1;">
+                <div style="width:16px;height:16px;border-radius:50%;background:{COLORS['low_risk']};margin:32px auto 8px;border:2px solid {COLORS['accent']};"></div>
+                <div style="font-size:11px;font-weight:700;">Apr 2026</div>
+                <div style="font-size:10px;color:{COLORS['text_secondary']};">Lättnader 2026</div>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)

@@ -416,7 +416,7 @@ render_kpi_row(
 # ── 4 · Regelverkstidslinje ───────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Regelverksutveckling", "Fem regimer sedan 2010", "TIDSLINJE"),
+        card_header("Regelverksutveckling", "Fem milstolpar 2010–2026", "TIDSLINJE"),
         unsafe_allow_html=True,
     )
     timeline_html = f"""
@@ -425,24 +425,24 @@ with st.container(border=True):
     <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Före 2010</span>
   </div>
   <div style="flex:3;background:{COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Bolånetak 2010–2016</span>
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Bolånetak</span>
   </div>
   <div style="flex:1;background:{COLORS['medium_risk']};display:flex;align-items:center;justify-content:center;padding:0 2px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amort 1.0</span>
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amorteringskrav</span>
   </div>
   <div style="flex:3;background:{COLORS['high_risk']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amort 2.0 2018–2026</span>
+    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Skärpt amorteringskrav</span>
   </div>
   <div style="flex:2;background:{COLORS['low_risk']};border:2px solid {COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;">Lättnad 2026 →</span>
+    <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;">Lättnader i bolånereglerna</span>
   </div>
 </div>
 <div style="display:flex;width:100%;margin-top:4px;">
   <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_tertiary']};"></div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Okt 2010</div>
-  <div style="flex:1;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Jun 2016</div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Mar 2018</div>
-  <div style="flex:2;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">Apr 2026</div>
+  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2010</div>
+  <div style="flex:1;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2016</div>
+  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2018</div>
+  <div style="flex:2;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2026</div>
 </div>
 """
     st.markdown(_compact(timeline_html), unsafe_allow_html=True)

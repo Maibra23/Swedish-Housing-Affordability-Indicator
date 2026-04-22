@@ -151,7 +151,7 @@ def compare_regimes(
     savings_rate: float = 0.10,
     bank_margin: float = 0.0,
 ) -> dict[str, dict]:
-    """Compute all four regimes for a given price/income/rate combination.
+    """Compute all five regimes for a given price/income/rate combination.
 
     Args:
         price_sek: Mean transaction price in SEK.
