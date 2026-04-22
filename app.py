@@ -81,7 +81,7 @@ with col2:
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
         "Kontantinsats",
-        "Jämför insatskrav under fyra regulatoriska regimer sedan 2010.",
+        "Jämför insatskrav under fem regulatoriska regimer sedan 2010.",
         tag="SIDA 04",
     ), unsafe_allow_html=True)
 with col3:
