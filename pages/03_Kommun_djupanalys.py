@@ -10,6 +10,7 @@ st.set_page_config(
     page_title="SHAI · Kommun djupanalys",
     page_icon=None,
     layout="wide",
+    initial_sidebar_state="expanded",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 

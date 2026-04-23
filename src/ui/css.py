@@ -64,12 +64,46 @@ header[data-testid="stHeader"] {
     margin: 0;
     min-height: 0;
 }
-[data-testid="collapsedControl"] {
-    visibility: visible !important;
-    position: fixed;
-    top: 8px;
-    left: 8px;
-    z-index: 999;
+
+/* ════ SIDEBAR — always visible, responsive ════════════════════════════ */
+
+/* Desktop (≥ 769px): sidebar permanently open, all toggle buttons hidden */
+@media (min-width: 769px) {
+    /* Exterior button: the ">" that reopens a collapsed sidebar */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    /* Interior buttons: the close/collapse arrow inside the sidebar */
+    section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
+    section[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+    section[data-testid="stSidebar"] button[aria-label="Collapse sidebar"] {
+        display: none !important;
+    }
+    /* Keep sidebar on-screen even if Streamlit applies a hide transform */
+    section[data-testid="stSidebar"] {
+        transform: translateX(0) !important;
+        min-width: 260px !important;
+        width: 260px !important;
+    }
+}
+
+/* Mobile / tablet (≤ 768px): natural Streamlit overlay toggle */
+@media (max-width: 768px) {
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1000;
+    }
+    section[data-testid="stSidebar"] {
+        width: min(280px, 85vw) !important;
+        min-width: unset !important;
+    }
+    .main .block-container {
+        padding: 16px !important;
+    }
 }
 
 /* ---- App background ---- */
