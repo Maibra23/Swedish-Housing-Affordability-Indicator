@@ -59,7 +59,7 @@ def footer_html() -> str:
     asserted without a Streamlit runtime.
     """
     return f"""
-        <div class="sidebar-footer">
+        <div class="shai-sidebar-footer">
             <div style="margin-bottom:4px;"><strong>KÄLLA:</strong> SCB, Riksbanken, Kolada</div>
             <div>Data uppdaterad: {data_vintage()}</div>
             <div style="margin-top:4px;font-size:10px;color:#8A8FA8;">v{APP_VERSION}</div>
@@ -92,15 +92,15 @@ def render_sidebar(page_key: str = "main") -> dict:
     with st.sidebar:
         # ── Brand block ──────────────────────────────────────────
         st.markdown(f"""
-        <div class="sidebar-brand">
-            <div class="brand-mark">SHAI KONTROLLPANEL</div>
-            <div class="brand-title">Bostadsekonomisk<br>hållbarhet</div>
-            <div class="brand-sub">Sverige · {YEAR_RANGE[0]} till {YEAR_RANGE[-1]}</div>
+        <div class="shai-sidebar-brand">
+            <div class="shai-brand-mark">SHAI KONTROLLPANEL</div>
+            <div class="shai-brand-title">Bostadsekonomisk<br>hållbarhet</div>
+            <div class="shai-brand-sub">Sverige · {YEAR_RANGE[0]} till {YEAR_RANGE[-1]}</div>
         </div>
         """, unsafe_allow_html=True)
 
         # ── Navigation ───────────────────────────────────────────
-        st.markdown('<div class="nav-section">Navigation</div>', unsafe_allow_html=True)
+        st.markdown('<div class="shai-sidebar-section-label">Navigation</div>', unsafe_allow_html=True)
         for filepath, label in PAGES:
             st.page_link(filepath, label=label)
 
@@ -108,7 +108,7 @@ def render_sidebar(page_key: str = "main") -> dict:
 
         # ── Year pills ───────────────────────────────────────────
         st.markdown(
-            '<div class="control-label">Valt år</div>',
+            '<div class="shai-control-label">Valt år</div>',
             unsafe_allow_html=True,
         )
         _default_year = default_year()
@@ -127,18 +127,18 @@ def render_sidebar(page_key: str = "main") -> dict:
 
         # ── Risk filter with legend ──────────────────────────────
         st.markdown("""
-        <div class="control-label">Riskfilter</div>
-        <div class="riskklass-legend">
-            <div class="riskklass-rad">
-                <span class="riskklass-punkt" style="background:#2E7D5B;"></span>
+        <div class="shai-control-label">Riskfilter</div>
+        <div class="shai-risk-legend">
+            <div class="shai-risk-legend-row">
+                <span class="shai-risk-legend-dot" style="background:#2E7D5B;"></span>
                 <span>Låg risk</span>
             </div>
-            <div class="riskklass-rad">
-                <span class="riskklass-punkt" style="background:#D4A03C;"></span>
+            <div class="shai-risk-legend-row">
+                <span class="shai-risk-legend-dot" style="background:#D4A03C;"></span>
                 <span>Medel risk</span>
             </div>
-            <div class="riskklass-rad">
-                <span class="riskklass-punkt" style="background:#B94A48;"></span>
+            <div class="shai-risk-legend-row">
+                <span class="shai-risk-legend-dot" style="background:#B94A48;"></span>
                 <span>Hög risk</span>
             </div>
         </div>

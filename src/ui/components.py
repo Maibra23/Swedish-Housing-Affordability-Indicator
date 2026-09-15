@@ -124,7 +124,7 @@ def kpi_card(
 
     unit_html = f'<span class="shai-kpi-unit">{unit}</span>' if unit else ""
     tip_attr = f'title="{tooltip}"' if tooltip else ""
-    tip_class = " kpi-card--tipped" if tooltip else ""
+    tip_class = " shai-kpi-card--tipped" if tooltip else ""
 
     return f"""
     <div class="shai-kpi-card variant-{variant}{tip_class}" {tip_attr}>
@@ -222,11 +222,11 @@ def render_landing_hero(kommun_count: int | None = None) -> None:
     """
     kommuner, _, _ = _panel_facts(kommun_count)
     html = f"""
-    <div class="lp-hero">
-        <div class="lp-hero-inner">
-            <div class="lp-eyebrow">Bostadsekonomisk hållbarhetsanalys</div>
-            <h1 class="lp-headline">Swedish Housing<br>Affordability Indicator</h1>
-            <p class="lp-hero-lead">
+    <div class="shai-hero">
+        <div class="shai-hero-inner">
+            <div class="shai-hero-eyebrow">Bostadsekonomisk hållbarhetsanalys</div>
+            <h1 class="shai-headline">Swedish Housing<br>Affordability Indicator</h1>
+            <p class="shai-hero-lead">
                 Strukturell bostadsekonomisk hållbarhet i Sveriges {kommuner} kommuner
                 och 21 län &mdash; med tre ekonometriska formler, prognoser och scenariosimulering.
             </p>
@@ -245,13 +245,13 @@ def render_landing_stat_strip(stats: list[dict]) -> None:
     cells = ""
     for s in stats:
         cells += f"""
-        <div class="lp-stat-cell">
-            <div class="lp-stat-label">{s['label']}</div>
-            <div class="lp-stat-value">{s['value']}</div>
-            <div class="lp-stat-unit">{s.get('unit', '')}</div>
+        <div class="shai-stat-cell">
+            <div class="shai-stat-label">{s['label']}</div>
+            <div class="shai-stat-value">{s['value']}</div>
+            <div class="shai-stat-unit">{s.get('unit', '')}</div>
         </div>
         """
-    html = f'<div class="lp-stat-strip">{cells}</div>'
+    html = f'<div class="shai-stat-strip">{cells}</div>'
     st.markdown(_compact(html), unsafe_allow_html=True)
 
 
@@ -263,15 +263,15 @@ def render_landing_what_is_block(kommun_count: int | None = None) -> None:
     """
     kommuner, _, _ = _panel_facts(kommun_count)
     html = f"""
-    <div class="lp-section">
-        <div class="lp-section-title">Vad är SHAI?</div>
-        <div class="lp-card-light lp-explain-card">
-            <div class="lp-body">
+    <div class="shai-section">
+        <div class="shai-section-title">Vad är SHAI?</div>
+        <div class="shai-card-light">
+            <div class="shai-body">
                 SHAI (Swedish Housing Affordability Indicator) mäter strukturell
                 bostadsekonomisk hållbarhet genom tre ekonometriska formler som
                 kombinerar inkomst, bostadspriser, räntor och inflation.
             </div>
-            <div class="lp-body-secondary">
+            <div class="shai-body-secondary">
                 Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med data
                 från SCB, Riksbanken och Kolada. Utöver indexet erbjuds prognoser
                 (Prophet och ARIMA), kontantinsatsanalys under fyra regelverk,
@@ -296,18 +296,18 @@ def render_index_visual_block() -> None:
     bars_html = ""
     for name, pct, color in weights:
         bars_html += f"""
-        <div class="lp-weight-row">
-            <span class="lp-weight-name">{name}</span>
-            <div class="lp-weight-bar-wrap">
-                <div class="lp-weight-bar" style="width:{pct}%;background:{color};"></div>
+        <div class="shai-weight-row">
+            <span class="shai-weight-name">{name}</span>
+            <div class="shai-weight-bar-wrap">
+                <div class="shai-weight-bar" style="width:{pct}%;background:{color};"></div>
             </div>
-            <span class="lp-weight-pct">{pct}%</span>
+            <span class="shai-weight-pct">{pct}%</span>
         </div>
         """
 
     flow_svg = """
-    <div class="lp-flow-svg-wrap">
-        <svg viewBox="0 0 580 130" class="lp-flow-svg" aria-hidden="true">
+    <div class="shai-flow-svg-wrap">
+        <svg viewBox="0 0 580 130" class="shai-flow-svg" aria-hidden="true">
             <defs>
                 <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                     <path d="M 0 0 L 10 5 L 0 10 z" fill="#C4A35A"/>
@@ -362,9 +362,9 @@ def render_index_visual_block() -> None:
     """
 
     html = f"""
-    <div class="lp-section">
-        <div class="lp-section-title">Indexet i överblick</div>
-        <div class="lp-card-light lp-visual">
+    <div class="shai-section">
+        <div class="shai-section-title">Indexet i överblick</div>
+        <div class="shai-card-light">
             {bars_html}
             <div style="height:24px;"></div>
             {flow_svg}
@@ -413,29 +413,29 @@ def render_landing_steps(
         connector = ""
         if i < len(steps) - 1:
             connector = """
-            <div class="lp-step-connector">
-                <svg class="lp-step-arrow-svg" viewBox="0 0 40 24" aria-hidden="true">
+            <div class="shai-step-connector">
+                <svg class="shai-step-arrow-svg" viewBox="0 0 40 24" aria-hidden="true">
                     <path d="M0 12h30l-6-6M30 12l-6 6" fill="none" stroke="#C4A35A" stroke-width="2"/>
                 </svg>
             </div>
             """
         steps_html += f"""
-        <div class="lp-step">
-            <div class="lp-step-num">{num}</div>
-            <div class="lp-step-title">{title}</div>
-            <div class="lp-step-text">{text}</div>
+        <div class="shai-step">
+            <div class="shai-step-num">{num}</div>
+            <div class="shai-step-title">{title}</div>
+            <div class="shai-step-text">{text}</div>
         </div>
         {connector}
         """
 
     html = f"""
-    <div class="lp-section">
-        <div class="lp-section-title">Så fungerar det i korthet</div>
-        <div class="lp-steps">{steps_html}</div>
+    <div class="shai-section">
+        <div class="shai-section-title">Så fungerar det i korthet</div>
+        <div class="shai-steps">{steps_html}</div>
     </div>
     """
     # st.markdown parses as Markdown; indented HTML is treated as code blocks and
-    # the first step loses its tags (plain text inside .lp-steps). st.html is raw HTML.
+    # the first step loses its tags (plain text inside .shai-steps). st.html is raw HTML.
     st.html(_compact(html))
 
 
@@ -445,14 +445,14 @@ def render_landing_nav_card(
     tag: str = "",
 ) -> str:
     """Return HTML for a landing navigation card."""
-    tag_html = f'<span class="lp-nav-tag">{tag}</span>' if tag else ""
+    tag_html = f'<span class="shai-nav-tag">{tag}</span>' if tag else ""
     return f"""
-    <div class="lp-nav-card">
-        <div class="lp-nav-card-head">
+    <div class="shai-nav-card">
+        <div class="shai-nav-card-head">
             {tag_html}
         </div>
-        <div class="lp-nav-title">{title}</div>
-        <div class="lp-nav-desc">{desc}</div>
+        <div class="shai-nav-title">{title}</div>
+        <div class="shai-nav-desc">{desc}</div>
     </div>
     """
 
@@ -474,14 +474,14 @@ def render_landing_credibility(
     kommuner, start, end = _panel_facts(kommun_count, period_start, period_end)
     version_str = f"SHAI v{version} &middot; " if version else ""
     html = f"""
-    <div class="lp-cred">
-        <div class="lp-cred-pills">
-            <span class="lp-cred-pill">SCB</span>
-            <span class="lp-cred-pill">Riksbanken</span>
-            <span class="lp-cred-pill">Kolada</span>
-            <span class="lp-cred-pill">Finansinspektionen</span>
+    <div class="shai-cred">
+        <div class="shai-cred-pills">
+            <span class="shai-cred-pill">SCB</span>
+            <span class="shai-cred-pill">Riksbanken</span>
+            <span class="shai-cred-pill">Kolada</span>
+            <span class="shai-cred-pill">Finansinspektionen</span>
         </div>
-        <div class="lp-cred-meta">
+        <div class="shai-cred-meta">
             {version_str}Öppen data &middot; {kommuner} kommuner &middot; {start}&ndash;{end}
         </div>
     </div>

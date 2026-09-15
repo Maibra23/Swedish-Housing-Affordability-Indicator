@@ -248,10 +248,10 @@ def _build_ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
         pill = risk_pill(risk)
         rows_html += f"""
         <tr>
-            <td class="rank-cell">{i}</td>
-            <td class="kommun-name">{name}</td>
-            <td class="num">{z_val:.2f}</td>
-            <td class="num">{vc_val:.1f}</td>
+            <td class="shai-rank-cell">{i}</td>
+            <td class="shai-kommun-name">{name}</td>
+            <td class="shai-num">{z_val:.2f}</td>
+            <td class="shai-num">{vc_val:.1f}</td>
             <td>{pill}</td>
         </tr>"""
 

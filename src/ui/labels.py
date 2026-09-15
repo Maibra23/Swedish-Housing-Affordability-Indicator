@@ -56,8 +56,8 @@ SWEDISH_LABELS: dict[str, str] = {
     "landing.lan": "Län",
     "landing.jamforda": "jämförda",
     "landing.vad_hittar_du_har": """
-<div class="lp-section">
-    <div class="lp-section-title">Vad hittar du här?</div>
+<div class="shai-section">
+    <div class="shai-section-title">Vad hittar du här?</div>
 </div>
 """,
     "landing.riksoversikt": "Riksöversikt",
@@ -109,8 +109,8 @@ SWEDISH_LABELS: dict[str, str] = {
                 <tr>
                     <th>#</th>
                     <th>Kommun</th>
-                    <th class="num">Z-poäng</th>
-                    <th class="num">SHAI</th>
+                    <th class="shai-num">Z-poäng</th>
+                    <th class="shai-num">SHAI</th>
                     <th>Risk</th>
                 </tr>
             </thead>
@@ -151,7 +151,7 @@ SWEDISH_LABELS: dict[str, str] = {
                     </div>
                     <table class="shai-table">
                         <thead>
-                            <tr><th>#</th><th>Län</th><th class="num">Värde</th></tr>
+                            <tr><th>#</th><th>Län</th><th class="shai-num">Värde</th></tr>
                         </thead>
                         <tbody>{v2}</tbody>
                     </table>

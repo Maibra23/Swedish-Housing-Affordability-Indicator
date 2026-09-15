@@ -150,12 +150,12 @@ section[data-testid="stSidebar"] .stRadio label {
 }
 
 /* ---- Sidebar brand (KRI-style) ---- */
-.sidebar-brand {
+.shai-sidebar-brand {
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: 16px;
     margin-bottom: 16px;
 }
-.brand-mark {
+.shai-brand-mark {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 10px;
     text-transform: uppercase;
@@ -165,7 +165,7 @@ section[data-testid="stSidebar"] .stRadio label {
     padding-left: var(--shai-brand-bar-offset);
     position: relative;
 }
-.brand-mark::before {
+.shai-brand-mark::before {
     content: '';
     position: absolute;
     left: 0;
@@ -175,7 +175,7 @@ section[data-testid="stSidebar"] .stRadio label {
     background: #C4A35A;
     border-radius: 1px;
 }
-.brand-title {
+.shai-brand-title {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 17px;
     font-weight: 700;
@@ -183,12 +183,12 @@ section[data-testid="stSidebar"] .stRadio label {
     margin: 6px 0 2px 0;
     line-height: 1.3;
 }
-.brand-sub {
+.shai-brand-sub {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 12px;
     color: #9CA3AF;
 }
-.nav-section {
+.shai-sidebar-section-label {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 10px;
     text-transform: uppercase;
@@ -221,7 +221,7 @@ section[data-testid="stSidebarContent"] a[href][aria-current="page"] {
 }
 
 /* ---- Control label (sidebar) ---- */
-.control-label {
+.shai-control-label {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 10px;
     text-transform: uppercase;
@@ -231,11 +231,11 @@ section[data-testid="stSidebarContent"] a[href][aria-current="page"] {
     margin-bottom: 6px;
 }
 /* Streamlit wraps label copy in <span>; sidebar span { white } was overriding these */
-section[data-testid="stSidebar"] .control-label,
-section[data-testid="stSidebar"] .control-label span {
+section[data-testid="stSidebar"] .shai-control-label,
+section[data-testid="stSidebar"] .shai-control-label span {
     color: #C4A35A !important;
 }
-section[data-testid="stSidebar"] .riskklass-rad span:not(.riskklass-punkt) {
+section[data-testid="stSidebar"] .shai-risk-legend-row span:not(.shai-risk-legend-dot) {
     color: rgba(255, 255, 255, 0.92) !important;
 }
 
@@ -289,10 +289,10 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 }
 
 /* ---- Risk legend (sidebar) ---- */
-.riskklass-legend {
+.shai-risk-legend {
     margin: 8px 0 10px 0;
 }
-.riskklass-rad {
+.shai-risk-legend-row {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -300,7 +300,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     color: rgba(255,255,255,0.92);
     margin-bottom: 4px;
 }
-.riskklass-punkt {
+.shai-risk-legend-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -309,7 +309,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 }
 
 /* ---- Sidebar footer ---- */
-.sidebar-footer {
+.shai-sidebar-footer {
     font-size: 10px;
     color: #6B7280;
     margin-top: 32px;
@@ -424,7 +424,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 .shai-kpi-delta.up   { color: #B94A48; }
 .shai-kpi-delta.down { color: #2E7D5B; }
 .shai-kpi-delta.flat { color: #6B7280; }
-.kpi-card--tipped { cursor: help; }
+.shai-kpi-card--tipped { cursor: help; }
 
 /* ---- Generic card ---- */
 .shai-card {
@@ -514,7 +514,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     padding: 8px 12px;
     text-align: left;
 }
-.shai-table thead th.num {
+.shai-table thead th.shai-num {
     text-align: right;
 }
 .shai-table tbody td {
@@ -522,17 +522,17 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     border-bottom: 1px solid #EEF0F3;
     color: #1A1A2E;
 }
-.shai-table tbody td.num {
+.shai-table tbody td.shai-num {
     text-align: right;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
     font-variant-numeric: tabular-nums;
 }
-.shai-table tbody td.kommun-name {
+.shai-table tbody td.shai-kommun-name {
     font-weight: 600;
     color: #0B1F3F;
 }
-.shai-table tbody td.rank-cell {
+.shai-table tbody td.shai-rank-cell {
     width: 40px;
     text-align: center;
 }
@@ -564,16 +564,16 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 /* ==== LANDING PAGE COMPONENTS ==== */
 
 /* ---- Hero ---- */
-.lp-hero {
+.shai-hero {
     background: linear-gradient(135deg, #0B1F3F 0%, #1B2A4A 55%, #0F2847 100%);
     border: 1px solid #C4A35A;
     border-radius: 6px;
     padding: var(--shai-hero-pad-top) 2rem 2rem 2rem;
 }
-.lp-hero-inner {
+.shai-hero-inner {
     max-width: 720px;
 }
-.lp-hero .lp-eyebrow {
+.shai-hero .shai-hero-eyebrow {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 11px;
     font-weight: 600;
@@ -584,7 +584,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     margin-bottom: 12px;
     margin-top: 20px;
 }
-.lp-headline {
+.shai-headline {
     font-family: 'Source Sans 3', sans-serif;
     font-weight: 700;
     font-size: clamp(24px, 3vw, 36px);
@@ -592,7 +592,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     margin: 0 0 12px 0;
     line-height: 1.15;
 }
-.lp-hero-lead {
+.shai-hero-lead {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 15px;
     color: rgba(255, 255, 255, 0.75);
@@ -602,29 +602,29 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 }
 
 /* Hero: override stMain / Streamlit markdown h1+p colors on dark gradient */
-[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero,
-[data-testid="stMain"] .lp-hero {
+[data-testid="stMain"] [data-testid="stMarkdown"] .shai-hero,
+[data-testid="stMain"] .shai-hero {
     color: rgba(255, 255, 255, 0.92) !important;
 }
-[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero .lp-eyebrow,
-[data-testid="stMain"] .lp-hero .lp-eyebrow {
+[data-testid="stMain"] [data-testid="stMarkdown"] .shai-hero .shai-hero-eyebrow,
+[data-testid="stMain"] .shai-hero .shai-hero-eyebrow {
     color: #C4A35A !important;
 }
-[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero h1.lp-headline,
-[data-testid="stMain"] .lp-hero h1.lp-headline {
+[data-testid="stMain"] [data-testid="stMarkdown"] .shai-hero h1.shai-headline,
+[data-testid="stMain"] .shai-hero h1.shai-headline {
     color: #FFFFFF !important;
 }
-[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero .lp-hero-lead,
-[data-testid="stMain"] .lp-hero .lp-hero-lead {
+[data-testid="stMain"] [data-testid="stMarkdown"] .shai-hero .shai-hero-lead,
+[data-testid="stMain"] .shai-hero .shai-hero-lead {
     color: rgba(255, 255, 255, 0.85) !important;
 }
-[data-testid="stMain"] [data-testid="stMarkdown"] .lp-hero a,
-[data-testid="stMain"] .lp-hero a {
+[data-testid="stMain"] [data-testid="stMarkdown"] .shai-hero a,
+[data-testid="stMain"] .shai-hero a {
     color: #E8D5A0 !important;
 }
 
 /* ---- Stat strip ---- */
-.lp-stat-strip {
+.shai-stat-strip {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     border: 1px solid #EEF0F3;
@@ -634,12 +634,12 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     margin-top: -1px;
     margin-bottom: 32px;
 }
-.lp-stat-cell {
+.shai-stat-cell {
     padding: 20px 24px;
     border-right: 1px solid #EEF0F3;
 }
-.lp-stat-cell:last-child { border-right: none; }
-.lp-stat-label {
+.shai-stat-cell:last-child { border-right: none; }
+.shai-stat-label {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 10.5px;
     font-weight: 600;
@@ -648,14 +648,14 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     color: #6B7280;
     margin-bottom: 6px;
 }
-.lp-stat-value {
+.shai-stat-value {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 24px;
     font-weight: 700;
     color: #1A1A2E;
     line-height: 1.1;
 }
-.lp-stat-unit {
+.shai-stat-unit {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 12px;
     color: #9CA3AF;
@@ -663,10 +663,10 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 }
 
 /* ---- Landing sections ---- */
-.lp-section {
+.shai-section {
     margin-bottom: 32px;
 }
-.lp-section-title {
+.shai-section-title {
     font-family: 'Source Sans 3', sans-serif;
     font-size: var(--shai-label-upper);
     font-weight: 600;
@@ -675,20 +675,20 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     color: #C4A35A;
     margin-bottom: 12px;
 }
-.lp-card-light {
+.shai-card-light {
     background: #FFFFFF;
     border: 1px solid #EEF0F3;
     border-radius: 4px;
     padding: 24px 28px;
 }
-.lp-body {
+.shai-body {
     font-size: 15px;
     color: #1A1A2E;
     line-height: 1.65;
     max-width: 68ch;
     margin-bottom: 12px;
 }
-.lp-body-secondary {
+.shai-body-secondary {
     font-size: 14px;
     color: #6B7280;
     line-height: 1.6;
@@ -696,51 +696,51 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
 }
 
 /* ---- Weight bars ---- */
-.lp-weight-row {
+.shai-weight-row {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 8px;
 }
-.lp-weight-name {
+.shai-weight-name {
     font-size: 13px;
     color: #1A1A2E;
     min-width: 180px;
     font-weight: 500;
 }
-.lp-weight-bar-wrap {
+.shai-weight-bar-wrap {
     flex: 1;
     height: 10px;
     background: #EEF0F3;
     border-radius: 3px;
     overflow: hidden;
 }
-.lp-weight-bar {
+.shai-weight-bar {
     height: 100%;
     border-radius: 3px;
     transition: width 0.4s ease;
 }
-.lp-weight-pct {
+.shai-weight-pct {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
     color: #6B7280;
     min-width: 36px;
     text-align: right;
 }
-.lp-flow-svg-wrap {
+.shai-flow-svg-wrap {
     text-align: center;
     max-width: 620px;
     margin: 0 auto;
 }
-.lp-flow-svg { width: 100%; height: auto; }
+.shai-flow-svg { width: 100%; height: auto; }
 
 /* ---- Pipeline steps ---- */
-.lp-steps {
+.shai-steps {
     display: flex;
     align-items: flex-start;
     gap: 0;
 }
-.lp-step {
+.shai-step {
     flex: 1;
     background: #FFFFFF;
     border: 1px solid #EEF0F3;
@@ -749,40 +749,40 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     padding: 20px;
     transition: box-shadow 0.2s;
 }
-.lp-step:hover {
+.shai-step:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
-.lp-step-num {
+.shai-step-num {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10px;
     color: #C4A35A;
     font-weight: 600;
     margin-bottom: 8px;
 }
-.lp-step-title {
+.shai-step-title {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 15px;
     font-weight: 700;
     color: #1A1A2E;
     margin-bottom: 8px;
 }
-.lp-step-text {
+.shai-step-text {
     font-size: 13px;
     color: #6B7280;
     line-height: 1.5;
 }
-.lp-step-connector {
+.shai-step-connector {
     display: flex;
     align-items: center;
     padding: 0 8px;
 }
-.lp-step-arrow-svg {
+.shai-step-arrow-svg {
     width: 40px;
     height: 24px;
 }
 
 /* ---- Navigation cards (landing) ---- */
-.lp-nav-card {
+.shai-nav-card {
     background: #FFFFFF;
     border: 1px solid #EEF0F3;
     border-left: 3px solid #C4A35A;
@@ -793,17 +793,17 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     cursor: default;
     margin-bottom: 12px;
 }
-.lp-nav-card:hover {
+.shai-nav-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     transform: translateY(-1px);
 }
-.lp-nav-card-head {
+.shai-nav-card-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
 }
-.lp-nav-icon {
+.shai-nav-icon {
     width: 40px;
     height: 40px;
     display: flex;
@@ -813,28 +813,28 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     background: #F7F8FA;
     border-radius: 6px;
 }
-.lp-nav-tag {
+.shai-nav-tag {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 9px;
     text-transform: uppercase;
     color: #9CA3AF;
     letter-spacing: 0.5px;
 }
-.lp-nav-title {
+.shai-nav-title {
     font-family: 'Source Sans 3', sans-serif;
     font-size: 15px;
     font-weight: 700;
     color: #1A1A2E;
     margin-bottom: 6px;
 }
-.lp-nav-desc {
+.shai-nav-desc {
     font-size: 13px;
     color: #6B7280;
     line-height: 1.5;
 }
 
 /* ---- Credibility block ---- */
-.lp-cred {
+.shai-cred {
     border: 1px solid #EEF0F3;
     border-radius: 4px;
     padding: 24px;
@@ -842,14 +842,14 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     margin: 32px 0;
     background: #FFFFFF;
 }
-.lp-cred-pills {
+.shai-cred-pills {
     display: flex;
     justify-content: center;
     gap: 10px;
     margin-bottom: 12px;
     flex-wrap: wrap;
 }
-.lp-cred-pill {
+.shai-cred-pill {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     background: #F7F8FA;
@@ -859,37 +859,37 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tabli
     color: #6B7280;
     letter-spacing: 0.3px;
 }
-.lp-cred-meta {
+.shai-cred-meta {
     font-size: 12px;
     color: #9CA3AF;
 }
 
 /* ==== RESPONSIVE ==== */
 @media (max-width: 900px) {
-    .lp-stat-strip { grid-template-columns: repeat(2, 1fr); }
-    .lp-steps { flex-direction: column; gap: 12px; }
-    .lp-step-connector {
+    .shai-stat-strip { grid-template-columns: repeat(2, 1fr); }
+    .shai-steps { flex-direction: column; gap: 12px; }
+    .shai-step-connector {
         transform: rotate(90deg);
         padding: 4px 0;
         justify-content: center;
     }
 }
 @media (max-width: 520px) {
-    .lp-stat-strip { grid-template-columns: 1fr; }
-    .lp-stat-cell {
+    .shai-stat-strip { grid-template-columns: 1fr; }
+    .shai-stat-cell {
         border-right: none;
         border-bottom: 1px solid #EEF0F3;
     }
-    .lp-stat-cell:last-child { border-bottom: none; }
-    .lp-hero { padding-left: 1rem; padding-right: 1rem; }
+    .shai-stat-cell:last-child { border-bottom: none; }
+    .shai-hero { padding-left: 1rem; padding-right: 1rem; }
 }
 
 /* ==== ACCESSIBILITY ==== */
 @media (prefers-reduced-motion: reduce) {
-    .lp-step,
-    .lp-nav-card,
-    .lp-step-arrow-svg,
-    .lp-weight-bar {
+    .shai-step,
+    .shai-nav-card,
+    .shai-step-arrow-svg,
+    .shai-weight-bar {
         transition: none !important;
     }
 }
