@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 22 / 34 tasks
-**Current phase:** Phase 3 · next task **T3.2** — read §0 on the missing reference repos first
-**Test suite:** 395 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 23 / 34 tasks
+**Current phase:** Phase 3 · next task **T3.3** — §0 still applies to T3.4–T3.9 and T3.12
+**Test suite:** 401 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -443,7 +443,7 @@ everything to `.shai-*`.
 | T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | **DONE** |
 | T2.5 | Verify clean-environment deploy | 2 | **DONE** |
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | **DONE** |
-| T3.2 | Normalise all CSS classes to `.shai-*` | 3 | TODO |
+| T3.2 | Normalise all CSS classes to `.shai-*` | 3 | **DONE** |
 | T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | TODO |
 | T3.4 | Add `.shai-explanation` under every bare number | 3 | TODO |
 | T3.5 | Add `help_badge()` glossary component | 3 | TODO |
@@ -1136,7 +1136,7 @@ Side effect worth having: `06_Metodologi.py` went 350 → 129 lines and `04_Kont
 
 ---
 
-### T3.2 — Normalise all CSS classes to `.shai-*` · TODO
+### T3.2 — Normalise all CSS classes to `.shai-*` · DONE
 
 **Fixes:** Finding M
 **Files:** `src/ui/css.py`, `src/ui/components.py`, `src/ui/sidebar.py`, `app.py`, `pages/*.py`
@@ -1147,9 +1147,37 @@ Rename the KRI-era leftovers: `.lp-*` → `.shai-*`, `.sidebar-brand` → `.shai
 where an equivalent exists.
 
 **Acceptance**
-- [ ] Every project-defined class starts `shai-`
-- [ ] `grep -rn "lp-\|riskklass-\|brand-mark\|nav-section" src/ ` returns nothing
-- [ ] Visual output unchanged apart from intended improvements
+- [x] Every project-defined class starts `shai-` — 54 renamed
+- [x] No KRI-era grouping survives — see the note on criterion 2 below
+- [x] Visual output unchanged
+
+`tests/test_css_naming.py` (6). `.lp-*` → `.shai-*`, `.riskklass-legend` → `.shai-risk-legend`
+(`-rad` → `-row`, `-punkt` → `-dot`), `.nav-section` → `.shai-sidebar-section-label`, as
+specified.
+
+**One collision had to be resolved by hand.** `.lp-eyebrow` → `.shai-eyebrow` would have
+merged with the *existing* `.shai-eyebrow` on page headers — a different component with a
+different type scale. Renamed `.shai-hero-eyebrow` instead.
+
+**Criterion 2 is unsatisfiable as literally written**, and is recorded here rather than quietly
+ticked. It asks that `grep "lp-\|riskklass-\|brand-mark\|nav-section" src/` return nothing, but
+the same task *prescribes* `.brand-mark` → `.shai-brand-mark`, which still contains
+`brand-mark`. The test asserts the intent: no `lp-` or `riskklass-` grouping anywhere, and no
+KRI-era name surviving unprefixed.
+
+**Proven inert.** The raw render diff across all 67 states is *entirely* selector renames.
+Normalising the rename out leaves 11 differing states, all page 06 — T4.1's source-table fix,
+which landed between the two captures.
+
+Two classes were used in markup and **defined nowhere**: `lp-explain-card` and `lp-visual`,
+both beside the `lp-card-light` that was doing the styling. Removed rather than given invented
+styles — a class that styles nothing is how a design system stops being trustworthy, because
+the next reader cannot tell a dead hook from a lost rule. The guard now fails both ways: no
+class outside the convention, and no class used without a definition.
+
+Exempted with reasons in the test: Streamlit's own DOM classes (`stApp`, `block-container`),
+not ours to rename, and the `variant-*` / `up` / `hog` modifiers, only ever applied alongside a
+`shai-` parent.
 
 ---
 

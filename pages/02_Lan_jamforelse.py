@@ -198,9 +198,9 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 for _, row in year_data.iterrows():
                     rows_html += f"""
                     <tr>
-                        <td class="rank-cell">{row['rank']}</td>
-                        <td class="kommun-name">{row['region_name']}</td>
-                        <td class="num">{f"{row[vcol]:.2f}".replace(".", ",")}</td>
+                        <td class="shai-rank-cell">{row['rank']}</td>
+                        <td class="shai-kommun-name">{row['region_name']}</td>
+                        <td class="shai-num">{f"{row[vcol]:.2f}".replace(".", ",")}</td>
                     </tr>"""
 
                 st.markdown(L("lj.lansranking_v0_v1_ranking_lan_varde_v2", v0=selected_year, v1=tab_name, v2=rows_html), unsafe_allow_html=True)
