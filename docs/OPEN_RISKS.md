@@ -21,6 +21,7 @@ These outlive it.
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | OPEN |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
+| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN |
 
 ---
 
@@ -311,6 +312,32 @@ a separate `TEMPLATES` mapping (or component functions) for markup. T3.10 splits
 `components.py` and is the natural moment: markup that lives in a component does not need to
 live in a label at all. Low priority because nothing is broken and the guard tests pin the
 current behaviour; worth doing before the dict grows past the point where anyone reads it.
+
+---
+
+## R10 — Two `src/data/` modules exceed the line limit and have no tests
+
+**Severity: Medium.** Two problems that make each other harder to fix.
+
+T3.3, T3.10 and T3.11 brought every module under 400 lines except two, both outside Phase
+3's scope:
+
+| Module | Lines | Coverage |
+|---|---|---|
+| `src/data/build_panel.py` | 641 | 0 % |
+| `src/data/scb_client.py` | 474 | 0 % |
+
+`tests/test_file_sizes.py` exempts them **with their current lengths as ceilings**, so the
+exemption covers the size they already are and not further growth.
+
+They are left deliberately. Splitting a 641-line module with no tests is the riskiest
+refactor available: `build_panel.py` is where income imputation, the ragged-panel joins and
+the forward-fill live — the machinery behind D1, F9 and the `complete_case()` rule — and
+nothing in the suite would catch a mistake in moving it.
+
+**Recommendation:** tests before splitting, in that order. This is R5 wearing a second hat:
+the modules that most need to be broken up are the ones it is least safe to touch, and the
+way out is coverage, not courage.
 
 ---
 

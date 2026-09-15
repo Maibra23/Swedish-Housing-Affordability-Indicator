@@ -94,11 +94,11 @@ def test_no_label_is_empty() -> None:
 def test_no_label_is_orphaned() -> None:
     """Copy nobody displays is copy nobody reviews.
 
-    `src/ui/` is scanned too: some keys are consumed by components rather than
-    directly by a page.
+    All of `src/` is scanned: keys are consumed by `src/ui/` components and, since
+    T3.11, by `src/kontantinsats/` as well.
     """
     referenced: set[str] = set()
-    for path in _page_files() + sorted((ROOT / "src" / "ui").glob("*.py")):
+    for path in _page_files() + sorted((ROOT / "src").rglob("*.py")):
         if path.name == "labels.py":
             continue
         referenced |= _referenced_keys(path)
@@ -122,7 +122,7 @@ def _call_sites() -> tuple[set[str], set[str]]:
     """Split label keys by how they are called: with format values, or bare."""
     templated: set[str] = set()
     bare: set[str] = set()
-    for path in _page_files() + sorted((ROOT / "src" / "ui").glob("*.py")):
+    for path in _page_files() + sorted((ROOT / "src").rglob("*.py")):
         if path.name == "labels.py":
             continue
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -172,7 +172,7 @@ def test_every_template_supplies_every_placeholder_it_declares() -> None:
 
     supplied: dict[str, set[str]] = {}
     dynamic: set[str] = set()
-    for path in _page_files() + sorted((ROOT / "src" / "ui").glob("*.py")):
+    for path in _page_files() + sorted((ROOT / "src").rglob("*.py")):
         if path.name == "labels.py":
             continue
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):

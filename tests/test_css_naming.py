@@ -29,7 +29,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-CSS = ROOT / "src" / "ui" / "css.py"
+
+# The composed stylesheet, not one file: T3.3 split it into tokens/layout/
+# components/landing, and `css.py` is now only the composer.
+from src.ui.css import GLOBAL_CSS
 
 SOURCES = (
     [ROOT / "app.py"]
@@ -71,8 +74,7 @@ def _defined_classes() -> set[str]:
     `url(https://fonts.googleapis.com/...)` contains dot-separated hostnames that
     a naive selector regex reads as `.com` and `.googleapis`.
     """
-    css = CSS.read_text(encoding="utf-8")
-    css = re.sub(r"https?://\S+", " ", css)
+    css = re.sub(r"https?://\S+", " ", GLOBAL_CSS)
     return set(re.findall(r"\.([a-zA-Z][\w-]*)", css))
 
 
@@ -89,7 +91,7 @@ def test_every_class_uses_the_shai_prefix() -> None:
 
 
 def test_no_stylesheet_selector_uses_another_convention() -> None:
-    """The CSS side of the same rule."""
+    """The CSS side of the same rule, across every composed sheet."""
     legacy = sorted(
         name
         for name in _defined_classes()
