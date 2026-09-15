@@ -5,8 +5,9 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
-**Status:** IN PROGRESS — 9 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.9** (T1.8 is `BLOCKED` on O2 + O4)
+**Status:** IN PROGRESS — 10 / 34 tasks complete
+**Current phase:** Phase 1 · next task **T1.9**
+**Test suite:** 117 passed, 0 failed, 1 skipped — green for the first time since the audit
 
 ---
 
@@ -37,6 +38,8 @@ criteria demands.
 | D2 | UI design target | **Converge on Skattekraftspanelen** | It already uses SHAI's own `shai-` class prefix and `src/ui/` layout — it is the next generation of this design system, not a different one. Keeps Plotly. Borrow selected patterns from KRI. |
 | D3 | Sequencing | **Correctness → deployment → UI → tests/docs** | Each phase independently shippable. The app stops serving wrong numbers before it gets re-skinned. |
 | D4 | Shared design system package | **No — copy into SHAI, repos stay independent** | Zero Streamlit Cloud deployment risk, no cross-repo release coupling. Structure `src/ui/` so later extraction stays easy. |
+| D5 | Normalisation **window** (answers O2) | **Within year for `z_*`; Version B's own construction stays pooled** | A and C ask "where does this kommun stand among its peers this year"; B asks "how much macro pressure is there now versus history". B's pooled level is the only time trend in the index — its panel mean runs −0.37 (2015) to +0.86 (2023), tracking the rate cycle. Within-year normalisation would pin that at zero every year and delete the signal B exists to measure. Finding G is resolved by documenting the difference as deliberate, not by erasing it. |
+| D6 | Normalisation **transform** (answers O4) | **Log-transform A and C before z-scoring; B stays raw** | A and C are ratios of positive quantities, so log-normal. Z-scoring them raw put the ±0.67σ cut — quartiles *of a normal distribution* — on a variable whose normality is rejected at p < 6e-15 in every year, yielding a ≈19/51/30 split nobody chose. Under the log the variable is normal in all eleven years (p = 0.34–0.83) and the split is ≈23/48/28. B is a weighted sum of z-scores and goes negative in 1919 of 3190 rows, so a log is undefined for it. Monotonic, so **no rank changes**. See Finding Q. |
 
 ### Reference repositories
 
@@ -52,8 +55,8 @@ criteria demands.
 | # | Question | Blocks | Default if unanswered |
 |---|----------|--------|----------------------|
 | O1 | Include the optional 2025 data refresh (T2.4)? Prices, unemployment and the price index have 2025; **income does not**, so the composite index stays at 2024 either way. | T2.4 only | `SKIPPED` — proceed without it. Phase 1 makes the app honest about 2024 regardless. |
-| O2 | **Normalisation window.** A and C are z-scored within year; B is pooled across the whole panel (Finding G). Unify on within-year? Note B's pooled level is what lets it carry a time trend — within-year normalisation *removes* that trend by construction, so this is a real trade-off, not a tidy-up. | **T1.8**, T4.1 | Within-year for all three, and document B's loss of trend in METHODOLOGY. |
-| O4 | **Normalisation transform.** `version_c` (and `version_a`) are ratios, so they are log-normal, not normal — yet they are z-scored raw and cut at ±0.67σ. Log-transform before z-scoring? See Finding Q for the measurements. Ranks do not change at all; 16 of 290 municipalities (6 %) change risk class, all one step toward the middle. B cannot be logged (it goes negative). | **T1.8**, T1.9, T4.1 | **Not defaulted — this one needs an answer.** Changing it alters every published `z_*`; leaving it keeps a ±0.67σ cut whose stated meaning the data does not support. |
+| ~~O2~~ | **ANSWERED → D5.** **Normalisation window.** A and C are z-scored within year; B is pooled across the whole panel (Finding G). Unify on within-year? Note B's pooled level is what lets it carry a time trend — within-year normalisation *removes* that trend by construction, so this is a real trade-off, not a tidy-up. | **T1.8**, T4.1 | Within-year for all three, and document B's loss of trend in METHODOLOGY. |
+| ~~O4~~ | **ANSWERED → D6.** **Normalisation transform.** `version_c` (and `version_a`) are ratios, so they are log-normal, not normal — yet they are z-scored raw and cut at ±0.67σ. Log-transform before z-scoring? See Finding Q for the measurements. Ranks do not change at all; 16 of 290 municipalities (6 %) change risk class, all one step toward the middle. B cannot be logged (it goes negative). | **T1.8**, T1.9, T4.1 | **Not defaulted — this one needs an answer.** Changing it alters every published `z_*`; leaving it keeps a ±0.67σ cut whose stated meaning the data does not support. |
 | O3 | Migrate SCB client from PxWeb v1 to v2? v1 retires end-2026/2027; v2beta now answers HTTP 200. | Nothing in this plan | Out of scope here — track separately. |
 
 ---
@@ -115,14 +118,19 @@ municipality. The colours were already correct, so the chart rendered right whil
 legend told the reader to read it the other way round. This is precisely the class of defect
 T4.1 (`test_copy_matches_artifacts.py`) exists to catch.
 
-### O. `test_skane_worst_v_c` fails on data, not code — PRE-EXISTING
+### O. `test_skane_worst_v_c` fails on data, not code — PRE-EXISTING (RESOLVED in T1.8)
 
 `tests/test_validation.py:102` asserts Skåne (`12`) is among the five least affordable
 counties under Version C. It is not: the five are `01, 09, 13, 04, 03`. Verified failing
 against the pre-T1.1 artifact as well, so it is a stale expectation, not a regression.
-Resolve alongside T1.8 when the normalisation convention is settled.
+**Resolved in T1.8.** The transform did not move it — a log is monotonic and this test compares
+medians of the raw `version_c`. The expectation was drawn too tight: Skåne is the **6th** least
+affordable of 21 counties, 0.7 index points behind Uppsala (36.5 vs 35.8) in a distribution
+spanning 20.8 to 102.8. Rank 5 versus rank 6 at that margin is noise, not a claim about Swedish
+housing. Renamed `test_skane_among_least_affordable_v_c`, asserting the least-affordable third —
+the substantive claim worth defending.
 
-### P. Metodologi page documents the superseded imputation rule — MEDIUM (found during T1.5)
+### P. Metodologi page documents the superseded imputation rule — MEDIUM (found during T1.5, RESOLVED in T1.8)
 
 `pages/06_Metodologi.py:247` records audit finding F9 as *"`is_imputed_income`-flagga;
 **nolltillväxt** antagen"* — zero growth assumed. The pipeline does the opposite:
@@ -131,10 +139,11 @@ Resolve alongside T1.8 when the normalisation convention is settled.
 i.e. zero growth is the rule that F9 **replaced**. The methodology page documents the
 behaviour that was removed.
 
-Not fixed here: it is outside T1.4/T1.5 and belongs with the methodology copy work. Resolve in
-T1.8 (which already edits METHODOLOGY) or T4.1, whichever lands first. Low user impact — the
-rows it describes are no longer reachable from the UI — but it is a false statement about
-method, which is the one place the app must be exact.
+**Resolved in T1.8.** Corrected in both places it appeared — `pages/06_Metodologi.py` and
+`docs/METHODOLOGY_v2.md` — to state the 3 %/yr rule and note that imputed years are no longer
+reachable from the UI at all. `docs/AUDIT_methodology_assumptions.md` still describes zero
+growth, correctly: it is a dated audit record of the state that prompted the change, and
+rewriting it would falsify the record.
 
 ### B. Two of seven selectable years have no data — CRITICAL
 
@@ -341,7 +350,7 @@ everything to `.shai-*`.
 | T1.5 | Replace `date.today()` with real data vintage | 1 | **DONE** |
 | T1.6 | Fix map basemap (CARTO → Esri) | 1 | **DONE** |
 | T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | **DONE** |
-| T1.8 | Unify normalisation convention across A/B/C (window **and** transform) | 1 | **BLOCKED** — O2, O4 |
+| T1.8 | Unify normalisation convention across A/B/C (window **and** transform) | 1 | **DONE** |
 | T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | TODO |
 | T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | TODO |
 | T2.1 | Add runtime-only `requirements.txt` | 2 | TODO |
@@ -648,12 +657,12 @@ checked: restoring the fixed ±2.5 domain makes `test_no_municipality_is_clipped
 
 ---
 
-### T1.8 — Unify the normalisation convention · BLOCKED
+### T1.8 — Unify the normalisation convention · DONE
 
 **Fixes:** Findings G, Q, O — and settles the premise T1.9 rests on
 **Files:** `src/indices/affordability.py:22-30,51-68`, `src/indices/normalize.py`,
 `data/processed/affordability_*.parquet`, `tests/test_validation.py`, METHODOLOGY
-**Blocked by:** **O2 and O4 — both unanswered. Do not start.**
+**Unblocked 2026-09-15:** O2 → **D5**, O4 → **D6**.
 
 Scope widened 2026-09-15 after Finding Q. There are **two** independent axes here, and they
 were conflated as one:
@@ -692,13 +701,37 @@ independent and can proceed first.
   Independent of O2/O4, but it lives in the methodology copy this task rewrites.
 
 **Acceptance**
-- [ ] O2 and O4 both answered and recorded in §1 as locked decisions
-- [ ] One documented convention on both axes, applied to A, B and C
-- [ ] METHODOLOGY states it, and states what B loses if the window changes
-- [ ] Artifacts regenerated; `rank_*` verified unchanged if only the transform moved
-- [ ] `test_skane_worst_v_c` (Finding O) passes or its expectation is updated with the reason
-- [ ] Finding P corrected
-- [ ] `tests/test_ranked_artifact.py` still passes, or its expectations are updated with reasons
+- [x] O2 and O4 both answered and recorded in §1 as locked decisions (**D5**, **D6**)
+- [x] One documented convention on both axes, applied to A, B and C
+- [x] METHODOLOGY states it, and states what B loses if the window changes
+- [x] Artifacts regenerated; `rank_*` verified unchanged — asserted per version per year
+- [x] Finding O resolved — `test_skane_among_least_affordable_v_c`, with the reason recorded
+- [x] Finding P corrected in both `06_Metodologi.py` and `METHODOLOGY_v2.md`
+- [x] `tests/test_ranked_artifact.py` still passes unchanged — all 15
+
+**Outcome:** `LOG_TRANSFORMED = ("a", "c")` in `normalize.py`; `_log_for_scoring()` raises rather
+than silently falling back if a version ever admits a non-positive value — a quiet fallback would
+hide a formula change behind a slightly different class split.
+
+Verified on the regenerated artifact:
+
+| | before | after |
+|---|---|---|
+| `z_c` normality (D'Agostino–Pearson) | rejected, p < 6e-15 every year | not rejected, p = 0.34–0.83 every year |
+| 2024 class split | 19.7 / 50.3 / 30.0 | **23.4 / 48.3 / 28.3** |
+| 2024 class counts | 57 / 146 / 87 | **68 / 140 / 82** |
+| `rank_a`, `rank_b`, `rank_c` | — | **identical, all versions, all years** |
+
+`tests/test_normalization_convention.py` (16 tests) pins both axes. It asserts the transform by
+**re-deriving** `z` from the artifact's own raw values rather than trusting a flag, includes a
+guard-the-guard test that raw `version_c` really is non-normal so the premise cannot go stale
+silently, and asserts B still carries a pooled trend so a future "tidy-up" cannot quietly
+flatten it.
+
+**Copy followed the convention.** The histogram caption read "Z-poäng = standardavvikelser från
+riksgenomsnittet. Noll = rikssnitt." On a log scale `z = 0` is the geometric mean — 26.26 in
+2024, which for a log-normal is the median (26.84), not the arithmetic mean (30.08). Updated to
+say so: the Finding N3 lesson applied prospectively.
 
 ---
 
@@ -1156,6 +1189,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.8, Findings O + P | **DONE.** O2 → D5 (within-year `z_*`; B's construction stays pooled), O4 → D6 (log-transform A and C). Implemented in `normalize.py`, artifacts regenerated, `rank_*` verified identical across all versions and years. `z_c` normality now holds every year (p = 0.34–0.83); 2024 split 19.7/50.3/30.0 → 23.4/48.3/28.3. METHODOLOGY §4 rewritten into window/transform/class subsections stating what B would lose under within-year. Finding O resolved (a near-tie boundary — Skåne is 6th by 0.7 points); Finding P corrected in both files. Histogram caption updated: on a log scale z = 0 is the median, not the mean. `tests/test_normalization_convention.py` (16). **Suite: 117 passed, 0 failed, 1 skipped — green for the first time.** 67/67 renders clean. | Next: **T1.9** — drop the YoY delta on the high-risk count; its labels must not quote a split figure, since D6 moved it. Then **T1.10**. Phase 1 has no blocked tasks left. |
 | 2026-09-15 | T1.8 (analysis only) | **BLOCKED, no code changed.** Investigating T1.7's colour domain exposed a larger issue: `version_c` is a ratio and therefore log-normal, but is z-scored raw and cut at ±0.67σ. Normality is rejected at p < 6e-15 in every year; under a log it passes in all eleven (p = 0.34–0.83). Recorded as **Finding Q**. This also proved **Finding F's own arithmetic wrong** — the split is ≈19/51/30 with 83–89 high-risk, not the "25/50/25, near 72" it claimed; F corrected in place. Split the normalisation question into two axes, window (**O2**) and transform (**O4**), widened T1.8 to own both, and marked it `BLOCKED`. Blast radius measured for the decision: ranks unchanged, 16 of 290 municipalities (6 %) change class. | **Answer O2 and O4 to unblock T1.8.** Until then the next workable task is **T1.9** (unblocked), then **T1.10**. Do not change the transform piecemeal — the numbers are currently self-consistent and a partial change is worse than either endpoint. |
 | 2026-09-15 | T1.6, T1.7, T4.5 | **All DONE.** Basemap moved to Esri `World_Light_Gray_Base` with attribution and a background fallback. Colour domain now built from the data: ends at min/max, neutral at the median, steps at the quartiles. Fixes a fault worse than KRI's — SHAI's `z_c` is left-skewed, so ±2.5 clipped 104 municipality-years off the green end *and* left the top 43 % of the red ramp unused. Clipping now zero. `tests/test_choropleth.py` (21) satisfies T4.5; extracted `tests/sourcetools.py` so the prose-vs-code stripper is shared. Suite: **100 passed, 1 failed, 1 skipped**; all 67 page renders still clean. | Next: **T1.8**, which is **blocked on O2** — confirm within-year normalisation for A/B/C. If O2 stays unanswered the documented default is within-year. T1.8 also owns two loose ends: Finding O (`test_skane_worst_v_c`, failing since before this work) and Finding P (`06_Metodologi.py:247` documents the imputation rule F9 replaced). T1.9 and T1.10 are unblocked if you would rather not wait on O2. |
 | 2026-09-15 | T1.4, T1.5 | **Both DONE.** Selector now spans 2014–2024 from provenance — drops the two dead years and gains 2014–2019, which the index always covered. Footer shows the artifact's `generated_at`, proven independent of the clock. Removed the sidebar forward-fill note and the unreachable imputed-income banner on page 01. `tests/test_year_range.py` (16), mutation-checked. Verified all 6 pages × 11 years render via `AppTest` (67 renders, clean). Suite: **79 passed, 1 failed, 1 skipped** — failure is Finding O, unchanged. | Next: **T1.6** (map basemap, no dependencies) then **T1.7**. New **Finding P**: `06_Metodologi.py:247` documents the imputation rule that F9 replaced — fix during T1.8 or T4.1. Note the repo's tests must run under **python3.11**; the system `python3` is 3.9 and cannot import `tomllib`. |

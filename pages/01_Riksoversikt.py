@@ -172,7 +172,7 @@ with col_hist:
             card_header("Fördelning av SHAI poäng", f"Version C · {selected_year}", "HISTOGRAM"),
             unsafe_allow_html=True,
         )
-        st.caption("Z-poäng = standardavvikelser från riksgenomsnittet. Noll = rikssnitt. Lägre z = bättre överkomlighet.")
+        st.caption("Z-poäng = standardavvikelser på logaritmisk skala. Noll = den typiska kommunen (riksmedianen). Lägre z = bättre överkomlighet.")
         if "z_c" in df_ranked.columns and len(df_ranked) > 0:
             z_vals = df_ranked["z_c"].dropna()
 

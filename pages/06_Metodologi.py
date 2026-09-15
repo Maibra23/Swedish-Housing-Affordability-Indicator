@@ -134,6 +134,56 @@ with st.container(border=True):
     reduceras till ett rent pris/inkomst-mått med en konstant faktor. Se Begränsningar F11–F15 nedan.
     """)
 
+    st.markdown("### Normalisering, rangordning och riskklass")
+    st.markdown("""
+    Formlerna ger ett *nivåvärde* per kommun och år. För att kunna jämföra kommuner
+    omvandlas nivån till en **z-poäng**, som i sin tur ger rang och riskklass. Två val styr
+    den omvandlingen.
+
+    **1. Fönster — inom år.** Varje års kommuner poängsätts mot just det årets nationella
+    fördelning. Riskklassen är alltså ett uttalande om kommunens läge *relativt sina
+    jämnåriga*, inte om Sveriges överkomlighet över tid.
+
+    Undantag, medvetet: Version B:s egen konstruktion (z-poängen *inuti* formeln ovan)
+    beräknas över hela panelen. B är ett makrotrycksmått, och det är just poolningen som gör
+    att dess nivå kan bära en tidstrend — panelmedelvärdet går från −0,37 (2015) till +0,86
+    (2023) och följer ränteuppgången. Att normalisera B inom år skulle nolla den signalen
+    varje år och ta bort det B är byggt för att mäta.
+
+    **2. Transform — logaritm för A och C.** Version A och C är *kvoter* mellan positiva
+    storheter, och är därför lognormalfördelade, inte normalfördelade. Z-poängen beräknas
+    därför på `ln(värdet)`. Utan logaritmen förkastas normalitetsantagandet i samtliga år
+    (p < 6·10⁻¹⁵); med logaritmen gör det inte det i något år (p = 0,34–0,83).
+
+    Detta har betydelse eftersom klassgränserna nedan är kvartiler i en *normalfördelning*.
+    På den otransformerade kvoten gav de en skev fördelning som ingen valt — cirka 19 / 51 / 30
+    i stället för 25 / 50 / 25.
+
+    Version B logaritmeras inte: den är en viktad *summa* av z-poäng och antar negativa
+    värden, så logaritmen är odefinierad.
+
+    Eftersom logaritmen är monoton påverkar transformen **inte rangordningen** — `rank` är
+    identisk med och utan den. Endast z-poängen och, för 16 av 290 kommuner, riskklassen ändras.
+
+    **3. Riskklass.** Klassgränserna ligger vid ±0,67 standardavvikelser, kvartilerna i en
+    normalfördelning:
+
+    | z-poäng | Klass |
+    |---|---|
+    | ≤ −0,67 | Låg risk |
+    | −0,67 … +0,67 | Medel risk |
+    | > +0,67 | Hög risk |
+
+    Orienteringen är gemensam för alla tre versionerna: **högre z = sämre överkomlighet**,
+    rang 1 = bäst. Version A och C teckenvänds därför före klassificeringen, eftersom deras
+    råvärde går åt motsatt håll.
+
+    **Obs (Begränsning F16):** Eftersom gränserna är fasta kvantiler hamnar ungefär en fjärdedel
+    av kommunerna i varje ytterklass *varje år, per konstruktion*. Det nationella **antalet**
+    kommuner i en klass kan därför inte tolkas som en trend — bara fördelningens form och
+    enskilda kommuners förflyttning mellan klasser bär information.
+    """)
+
     st.markdown("### Varför transaktionspris i SEK, inte K/T eller prisindex?")
     st.markdown("""
     Tre alternativa prismått övervägdes:
@@ -244,12 +294,13 @@ with st.expander("6. Begränsningar (F1–F15)"):
     | **F6** | Lång horisont vilseleder. | Max 8 steg; varningstext. |
     | **F7** | SCB API-gränser (30 anrop/10 s, 150k celler/fråga). | All data cachad som parquet. |
     | **F8** | Översättning tappar nyanser i bankterminologi. | Ordlista i dokumentation. |
-    | **F9** | Imputering av inkomstdata 2025–2026. | `is_imputed_income`-flagga; nolltillväxt antagen. |
+    | **F9** | Imputering av inkomstdata efter senaste publicerade år. | `is_imputed_income`-flagga; framskrivning med 3 % nominell tillväxt per år. Dessa år är inte längre valbara i årsväljaren — indexet stannar vid senaste kompletta år. |
     | **F10** | Arbetslöshetsdefinition (Af, inte AKU/ILO). | Fotnot på relevanta sidor. |
     | **F11** | SHAI-indexformlerna (A, B, C) beräknas fortfarande enbart på villapriser (SCB BO0501C2, Fastighetstyp 220) — systemisk vy, bevarad för metodologisk kontinuitet. Bostadsrättspriser (SCB BO0501C) ingår nu i panelen och exponeras som valbar Pristyp på Sida 04 (Kontantinsats). SCB publicerar bostadsrättspriser enbart på länsnivå (21 län) — inga kommunspecifika data finns. Sida 04 byter automatiskt till länsnivå vid Bostadsrätt-val. | Pristyp-väljare + automatisk nivåbyte på Sida 04. |
     | **F12** | Styrräntan används direkt som bolåneränta. Faktisk bolåneränta ≈ styrränta + bankens marginal (ca 1,5–2,5 pp). Månadskostnad och affordability-formler är optimistiska. | Notering i Detaljer på Sida 04. |
     | **F13** | Version B: R och π är nationella variabler (samma för alla kommuner ett givet år). Z-poäng för dessa bär ingen kommunspecifik information inom ett enskilt år — 45% av vikterna diskriminerar enbart i tid, inte i rum. | Dokumenterat i formelbeskriving ovan. |
     | **F14** | Inkomst är individuell bruttoinkomst. Bostad köps typiskt av ett hushåll (par). Spartiden för singelhushåll är 2× hushållssiffran. | Notering under "År att spara" KPI på Sida 04. |
+    | **F16** | Riskklassens gränser (±0,67 σ) är fasta kvantiler, så andelen kommuner per klass är nära konstant varje år per konstruktion. Antalet högriskkommuner kan inte bära en nationell trend. | Dokumenterat under "Normalisering" ovan; ingen förändringspil visas på antalet. |
     | **F15** | Scenariosimulatorn håller KPI-inflationen (π) konstant när räntan chockas. Realränteförändringen är därmed identisk med den nominella räntechochen. | Notering i Förklaring på Sida 05. |
     """)
 
