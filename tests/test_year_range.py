@@ -15,15 +15,14 @@ and failing to add one cannot leave a dead year on screen.
 
 from __future__ import annotations
 
-import ast
-import io
 import re
-import tokenize
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import pytest
+
+from sourcetools import executable_source
 
 from src import provenance
 from src.ui import sidebar
@@ -34,39 +33,7 @@ SIDEBAR_PATH = PROJECT_ROOT / "src" / "ui" / "sidebar.py"
 SIDEBAR_SOURCE = SIDEBAR_PATH.read_text(encoding="utf-8")
 
 
-def _executable_source(source: str) -> str:
-    """Return `source` with comments and docstrings removed.
-
-    These assertions are about what the module *does*. A comment recording that
-    the range once ran to `date.today().year`, or a docstring naming the year
-    the bug was found, cannot put a dead year in the selector — only code can.
-    Ordinary string literals are kept, so a year hardcoded into displayed markup
-    is still caught.
-    """
-    without_comments = tokenize.untokenize(
-        tok
-        for tok in tokenize.generate_tokens(io.StringIO(source).readline)
-        if tok.type != tokenize.COMMENT
-    )
-
-    tree = ast.parse(without_comments)
-    docstrings = {
-        node.body[0].value
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        and node.body
-        and isinstance(node.body[0], ast.Expr)
-        and isinstance(node.body[0].value, ast.Constant)
-        and isinstance(node.body[0].value.value, str)
-    }
-    lines = without_comments.splitlines()
-    for node in docstrings:
-        for lineno in range(node.lineno, node.end_lineno + 1):
-            lines[lineno - 1] = ""
-    return "\n".join(lines)
-
-
-SIDEBAR_CODE = _executable_source(SIDEBAR_SOURCE)
+SIDEBAR_CODE = executable_source(SIDEBAR_SOURCE)
 
 #: Artifacts a page filters by the selected year. If any lacks the year, that
 #: page renders empty or stops.

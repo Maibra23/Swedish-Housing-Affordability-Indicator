@@ -5,8 +5,8 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
-**Status:** IN PROGRESS — 6 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.6**
+**Status:** IN PROGRESS — 9 / 34 tasks complete
+**Current phase:** Phase 1 · next task **T1.8**
 
 ---
 
@@ -157,6 +157,17 @@ vintage. A visitor today reads "updated 2026-09-15" over 2024 data.
   domain is wrong… it compressed all 290 municipalities into one shade."* KRI replaced it
   with empirical 25th/75th-percentile stops.
 
+  Measured on SHAI during T1.7, the fault is **worse than KRI's and differently shaped**.
+  SHAI's `z_c` is strongly left-skewed — across the eleven years it reaches −6.10 but never
+  exceeds +1.47 — so the fixed domain fails at both ends at once:
+
+  | | Effect |
+  |---|---|
+  | Green end | **clips** 104 municipality-years. In 2024 the ten most affordable municipalities all render `#2e7d5b`: Åsele (−3.76) and Överkalix (−3.08) are the same pixel colour. |
+  | Red end | **wastes** the top 43 % of the ramp. Solna, the least affordable municipality in Sweden, renders mid-amber `#daa94f` because +1.42 is only 57 % of the way to `vmax=2.5`. |
+
+  So the map understated the extremes in both directions simultaneously.
+
 ### E. Upstream data availability — probed live 2026-09-15
 
 All APIs answer. The panel is **ragged**: income is the binding constraint.
@@ -266,8 +277,8 @@ everything to `.shai-*`.
 | T1.3 | Add `src/provenance.py` + provenance artifact | 1 | **DONE** |
 | T1.4 | Drive `YEAR_RANGE` from provenance; kill dead years | 1 | **DONE** |
 | T1.5 | Replace `date.today()` with real data vintage | 1 | **DONE** |
-| T1.6 | Fix map basemap (CARTO → Esri) | 1 | TODO |
-| T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | TODO |
+| T1.6 | Fix map basemap (CARTO → Esri) | 1 | **DONE** |
+| T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | **DONE** |
 | T1.8 | Unify normalisation convention across A/B/C | 1 | TODO |
 | T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | TODO |
 | T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | TODO |
@@ -292,7 +303,7 @@ everything to `.shai-*`.
 | T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
 | T4.3 | `test_labels.py` | 4 | TODO |
 | T4.4 | `test_pages_render.py` | 4 | TODO |
-| T4.5 | `test_choropleth.py` | 4 | TODO |
+| T4.5 | `test_choropleth.py` | 4 | **DONE** (landed early, with T1.6/T1.7) |
 | T4.6 | Delete superseded docs; consolidate | 4 | TODO |
 | T4.7 | Rewrite `DESIGN_SYSTEM.md` to match shipped code | 4 | TODO |
 
@@ -499,7 +510,7 @@ than widening this change into pages these tasks do not name. Sweep them in Phas
 
 ---
 
-### T1.6 — Fix the map basemap · TODO
+### T1.6 — Fix the map basemap · DONE
 
 **Fixes:** Finding D
 **Files:** `src/ui/choropleth.py:211`
@@ -509,13 +520,29 @@ Replace `tiles="CartoDB.PositronNoLabels"` with the Esri `World_Light_Gray_Base`
 plus its required attribution, matching KRI's `MAP_TILES` constant.
 
 **Acceptance**
-- [ ] No request to `basemaps.cartocdn.com`
-- [ ] Map renders without an "API KEY REQUIRED" watermark
-- [ ] Attribution string present
+- [x] No request to `basemaps.cartocdn.com` — confirmed in the rendered map HTML
+- [x] Map renders without an "API KEY REQUIRED" watermark
+- [x] Attribution string present
+
+**Outcome:** added a `MAP_TILES` constant mirroring KRI's, pointing at Esri
+`World_Light_Gray_Base` with its required attribution, plus `name`, `max_zoom` and a
+`background` fill injected behind the tiles so an unreachable host degrades to a clean canvas
+rather than a black void. Rendered map HTML contains `arcgisonline.com` and `Esri`, and no
+`cartocdn` anywhere.
+
+**On the watermark, honestly:** the CARTO tile still answers `HTTP 200 image/png`, so the
+response status cannot confirm or refute the claim — a watermark is painted into the pixels,
+not signalled in the headers. Comparing the two tiles at the same location: the CARTO tile
+carries **121 dark pixels** (<120 avg luminance) across an otherwise flat light basemap and
+only 23 distinct colours, while the Esri tile has **0** dark pixels. Consistent with a small
+text overlay, but it was not OCR'd, so treat this as corroboration rather than proof. The
+change stands on its own regardless — it is what D2 convergence with KRI calls for, the Esri
+tile serves `HTTP 200` over Sweden, and attribution is now explicit instead of implicit in a
+folium shorthand.
 
 ---
 
-### T1.7 — Fix the map colour domain · TODO
+### T1.7 — Fix the map colour domain · DONE
 
 **Fixes:** Finding D
 **Files:** `src/ui/choropleth.py:199-205`
@@ -527,9 +554,35 @@ red breakpoints at the selected year's 25th and 75th percentiles, domain spannin
 year's actual spread.
 
 **Acceptance**
-- [ ] Colormap domain derives from the selected year's data, not constants
-- [ ] Visible differentiation across municipalities, not one flat shade
-- [ ] Legend caption states direction (which end is better)
+- [x] Colormap domain derives from the selected year's data, not constants
+- [x] Visible differentiation across municipalities, not one flat shade
+- [x] Legend caption states direction (which end is better)
+
+**Outcome:** extracted `build_colormap(scores)`. Stops are placed on the data — ends at the
+actual min and max, neutral at the median, green and red steps at the 25th and 75th
+percentiles, the same quartiles that set `risk_c`, so the map and the ranking tables tell one
+story. Seven stops, one per colour in `DIVERGING_SCALE`.
+
+2024 domain is `[-3.76, +1.42]` against the old `[-2.5, +2.5]`. What changes on screen:
+
+| Kommun | z_c | before | after |
+|--------|-----|--------|-------|
+| Åsele | −3.76 | `#2e7d5b` | `#2e7d5b` |
+| Överkalix | −3.08 | `#2e7d5b` — *identical to Åsele* | `#408a67` |
+| Stockholm | +1.33 | `#dcac56` | `#c16244` |
+| Solna | +1.42 | `#daa94f` | `#b94a48` |
+
+Clipping goes from 10 municipalities in 2024 (104 municipality-years overall) to **zero**, and
+the deepest red is now actually reached by the least affordable municipality.
+
+A degenerate spread — one municipality selected, or every score equal — produces repeated
+stops, which branca rejects outright. `build_colormap` detects the non-monotonic case and falls
+back to an evenly spaced domain instead of crashing the page; empty, single-value, all-equal
+and NaN-bearing inputs are each covered by a test.
+
+`tests/test_choropleth.py` (21 tests) satisfies **T4.5** in full and is marked there. Mutation-
+checked: restoring the fixed ±2.5 domain makes `test_no_municipality_is_clipped` fail with the
+10 clipped municipalities named.
 
 ---
 
@@ -937,14 +990,23 @@ against it, so it landed early. 18 tests.
 
 ---
 
-### T4.5 — `tests/test_choropleth.py` · TODO
+### T4.5 — `tests/test_choropleth.py` · DONE
 
 **Depends on:** T1.6, T1.7
 
+Written as the TDD artifact for T1.6/T1.7 rather than deferred to Phase 4 — the module was
+built against it, so it landed early. 21 tests, 20 of which failed first.
+
 **Acceptance**
-- [ ] Colormap domain derives from data, not constants
-- [ ] Tile URL is not `cartocdn.com`
-- [ ] Missing GeoJSON degrades to a warning, not a crash
+- [x] Colormap domain derives from data, not constants — asserted by *varying*: the eleven
+      years must not share one domain, and the old ±2.5 bounds must not appear
+- [x] Tile URL is not `cartocdn.com`
+- [x] Missing GeoJSON degrades to a warning, not a crash
+
+Source-level assertions run against **executable source** via the shared
+`tests/sourcetools.py` helper, which blanks comments and docstrings. A comment naming the tile
+host that had to be abandoned cannot reintroduce it, and a guard that cannot tell prose from
+code punishes the explanation. The same helper now backs `tests/test_year_range.py`.
 
 ---
 
@@ -992,6 +1054,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.6, T1.7, T4.5 | **All DONE.** Basemap moved to Esri `World_Light_Gray_Base` with attribution and a background fallback. Colour domain now built from the data: ends at min/max, neutral at the median, steps at the quartiles. Fixes a fault worse than KRI's — SHAI's `z_c` is left-skewed, so ±2.5 clipped 104 municipality-years off the green end *and* left the top 43 % of the red ramp unused. Clipping now zero. `tests/test_choropleth.py` (21) satisfies T4.5; extracted `tests/sourcetools.py` so the prose-vs-code stripper is shared. Suite: **100 passed, 1 failed, 1 skipped**; all 67 page renders still clean. | Next: **T1.8**, which is **blocked on O2** — confirm within-year normalisation for A/B/C. If O2 stays unanswered the documented default is within-year. T1.8 also owns two loose ends: Finding O (`test_skane_worst_v_c`, failing since before this work) and Finding P (`06_Metodologi.py:247` documents the imputation rule F9 replaced). T1.9 and T1.10 are unblocked if you would rather not wait on O2. |
 | 2026-09-15 | T1.4, T1.5 | **Both DONE.** Selector now spans 2014–2024 from provenance — drops the two dead years and gains 2014–2019, which the index always covered. Footer shows the artifact's `generated_at`, proven independent of the clock. Removed the sidebar forward-fill note and the unreachable imputed-income banner on page 01. `tests/test_year_range.py` (16), mutation-checked. Verified all 6 pages × 11 years render via `AppTest` (67 renders, clean). Suite: **79 passed, 1 failed, 1 skipped** — failure is Finding O, unchanged. | Next: **T1.6** (map basemap, no dependencies) then **T1.7**. New **Finding P**: `06_Metodologi.py:247` documents the imputation rule that F9 replaced — fix during T1.8 or T4.1. Note the repo's tests must run under **python3.11**; the system `python3` is 3.9 and cannot import `tomllib`. |
 | 2026-09-15 | T1.2, T1.3, T4.2 | **All DONE.** T1.2: removed both inline recomputes, repointed the page at the ranked artifact only, recoloured the histogram from `risk_c`, fixed Finding N3 (caption stated the orientation backwards), added `tests/test_pages_no_recompute.py` (14). T1.3: added `src/provenance.py` + committed `data/processed/data_provenance.json`, wired into `step_compute_indices()`; income's imputed tail is excluded so the complete case lands on 2024. T4.2 satisfied by `tests/test_provenance.py` (18). Suite: **63 passed, 1 failed, 1 skipped** — the failure is Finding O, unchanged. | Next: **T1.4** — `YEAR_RANGE` from `complete_case_max_year()`. Note T1.2's 2014 criterion is verified at the data layer only; it becomes reachable in the UI once T1.4 lands. `generated_at()` is already in place for T1.5. |
 | 2026-09-15 | T1.1 | **DONE.** Rewrote `normalize.py` (per-year scoring, documented orientation contract); routed `refresh_data.py` through it; regenerated the artifact; added `tests/test_ranked_artifact.py` (15 tests, 11 were failing). Uncovered and fixed Finding N — risk classes were inverted on the live app. | Next: **T1.2**, delete the inline recompute at `01_Riksoversikt.py:58-80`. Note pre-existing failure `test_skane_worst_v_c` (Finding O) — not a regression, defer to T1.8. |

@@ -25,6 +25,23 @@ from src.ui.css import DIVERGING_SCALE
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 GEOJSON_PATH = PROJECT_ROOT / "data" / "geo" / "kommuner.geojson"
 
+# Basemap. Was ``tiles="CartoDB.PositronNoLabels"`` until basemaps.cartocdn.com
+# began stamping "API KEY REQUIRED" across anonymous requests — the watermark
+# renders on top of the choropleth. KRI hit this first and moved to Esri's
+# light-grey canvas; this matches its MAP_TILES constant.
+MAP_TILES = {
+    "url": (
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+        "World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+    ),
+    "attribution": "Tiles &copy; Esri: Esri, DeLorme, NAVTEQ",
+    "name": "Ljus gråskala",
+    "max_zoom": 16,
+    # Drawn behind the tiles so an unreachable host degrades to a clean canvas
+    # rather than a black void.
+    "background": "#F2F3F5",
+}
+
 # Initial map zoom; labels appear only after this many zoom-in steps from here.
 _MAP_ZOOM_START = 5
 _LABEL_ZOOM_STEPS = 1  # show labels one zoom step earlier for better UX
@@ -124,6 +141,60 @@ def _municipality_label_div(name: str) -> str:
     )
 
 
+def build_colormap(scores: pd.Series) -> cm.LinearColormap:
+    """Diverging colour scale anchored on the spread of the scores being drawn.
+
+    The domain used to be a fixed ``vmin=-2.5, vmax=2.5``. SHAI's ``z_c`` is
+    strongly left-skewed — across the eleven years it reaches -6.10 but never
+    exceeds +1.47 — so that domain was wrong at both ends at once. It clipped
+    104 municipality-years off the green end, rendering Åsele (-3.76) and
+    Överkalix (-3.08) as the same flat shade, while the top 43 % of the red ramp
+    went unused because no municipality ever got there.
+
+    Stops are placed on the data instead: the ends at the actual minimum and
+    maximum, the neutral colour at the median, and the green and red steps at
+    the 25th and 75th percentiles — the same quartiles that set ``risk_c``, so
+    the map and the ranking tables tell one story.
+
+    Orientation follows ``indices/normalize.py``: lower z is more affordable, so
+    the low end is green.
+
+    Args:
+        scores: The values about to be drawn. NaNs are ignored.
+
+    Returns:
+        A colormap whose domain covers every score passed in.
+    """
+    clean = pd.Series(scores, dtype=float).dropna()
+    if clean.empty:
+        clean = pd.Series([-1.0, 1.0])
+
+    low = float(clean.min())
+    high = float(clean.max())
+    q25 = float(clean.quantile(0.25))
+    median = float(clean.median())
+    q75 = float(clean.quantile(0.75))
+
+    stops = [low, (low + q25) / 2, q25, median, q75, (q75 + high) / 2, high]
+
+    # A degenerate spread — one municipality selected, or every score equal —
+    # yields repeated stops, which branca rejects. Fall back to an evenly spaced
+    # domain around the value rather than crashing the page.
+    if any(b <= a for a, b in zip(stops, stops[1:])):
+        centre = median
+        extent = max(high - low, abs(centre), 1.0) / 2
+        step = 2 * extent / (len(DIVERGING_SCALE) - 1)
+        stops = [centre - extent + i * step for i in range(len(DIVERGING_SCALE))]
+
+    return cm.LinearColormap(
+        colors=list(DIVERGING_SCALE),
+        index=stops,
+        vmin=stops[0],
+        vmax=stops[-1],
+        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
+    )
+
+
 def render_choropleth(
     data: pd.DataFrame,
     value_col: str = "z_c",
@@ -195,23 +266,25 @@ def render_choropleth(
         feat["properties"]["Arbetslöshet"] = d.get("unemp_fmt", "Saknas")
         feat["properties"]["_z"] = d.get("z_score", 0.0)
 
-    # Color scale — diverging green→neutral→red, matching KRI design
-    colormap = cm.LinearColormap(
-        colors=list(DIVERGING_SCALE),
-        vmin=-2.5,
-        vmax=2.5,
-        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
-    )
+    colormap = build_colormap(sub[value_col].astype(float))
 
-    # Basemap — light polygons only (no OSM placenames: Positron "with labels"
-    # shows cities worldwide and reads as unrelated to SHAI).
+    # Basemap — light polygons only (no OSM placenames: a labelled basemap shows
+    # cities worldwide and reads as unrelated to SHAI).
     m = folium.Map(
         location=[63.0, 17.5],
         zoom_start=_MAP_ZOOM_START,
-        tiles="CartoDB.PositronNoLabels",
+        tiles=MAP_TILES["url"],
+        attr=MAP_TILES["attribution"],
+        name=MAP_TILES["name"],
+        max_zoom=MAP_TILES["max_zoom"],
         prefer_canvas=True,
         zoom_control=True,
         scrollWheelZoom=False,
+    )
+    m.get_root().header.add_child(
+        folium.Element(
+            f"<style>.folium-map {{ background: {MAP_TILES['background']}; }}</style>"
+        )
     )
 
     def _style(feature: dict) -> dict:
