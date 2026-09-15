@@ -25,10 +25,10 @@ through 2024. The panel is ragged: several component series already have 2025.
 | Source | Max year upstream | SHAI ships |
 |--------|-------------------|-----------|
 | Median income (SCB HE0110) | **2024** | 2024 |
-| Småhus price (SCB BO0501B) | 2025 | 2024 |
+| Småhus price (SCB BO0501B) | 2025 | **2025** |
 | Bostadsrätt price (SCB BO0501C) | 2025 | 2024 |
-| Price index (SCB BO0501A) | 2025 | 2024 |
-| Unemployment (Kolada N03937) | 2025 | 2024 |
+| Price index (SCB BO0501A) | 2025 | **2025** |
+| Unemployment (Kolada N03937) | 2025 | **2025** |
 | CPI (SCB PR0101) | 2026M08 | 2026 |
 | Policy rate (Riksbanken SWEA) | live | 2026 |
 
@@ -36,6 +36,15 @@ through 2024. The panel is ragged: several component series already have 2025.
 for the component series and `complete_case_max_year` for the index — and the UI reads
 its vintage from that artifact rather than from the system clock. A refresh therefore
 moves `panel_max_year` and leaves the years offered in the sidebar unchanged.
+
+**The index is scored on observed rows only.** `step_compute_indices` passes each panel
+through `complete_case()` before computing, dropping the forward-filled income tail.
+This is not cosmetic: `compute_version_b` z-scores its components *pooled across every
+row it is handed*, so a single imputed year shifts the pooled mean and standard
+deviation and re-bases `version_b` for every historical year. Versions A and C are
+within-year (D5) and are immune. Measured when the 2025 component data first landed:
+`z_b` moved on all 3190 rows and 19 changed risk class — published numbers altered by a
+year no page can render.
 
 ---
 
@@ -125,7 +134,8 @@ python scripts/refresh_data.py --no-fetch --no-forecast
 Commit the updated parquet files and push to trigger a Streamlit Cloud redeploy:
 
 ```bash
-git add data/processed/ data/raw/
+# data/raw/ is a local cache and is gitignored — only data/processed/ deploys
+git add data/processed/
 git commit -m "chore: refresh SHAI data — <YYYY-MM-DD>"
 git push
 ```
@@ -173,6 +183,9 @@ The sidebar displays a warning banner `⚠ Inkomst 2025–<year> är modellberä
 when imputed years are active. This disappears automatically once a data refresh
 brings in new published income data.
 
+Imputed rows stay in the **panels** — they keep the frame rectangular and the component
+charts continuous — but they never reach the **index**. See the complete-case note above.
+
 ---
 
 ## File inventory (must be committed for deploy)
@@ -192,7 +205,12 @@ brings in new published income data.
 | `forecast_prophet.parquet` | Prophet 6-year county forecasts |
 | `arima_metadata.parquet` | ARIMA model orders and AIC |
 
-### `data/raw/` — cached API responses
+### `data/raw/` — cached API responses (**not committed**)
+
+`.gitignore` excludes `data/raw/*`. These are a local fetch cache that lets
+`--no-fetch` rebuild without hitting the APIs; the deployed app never reads them.
+A fresh clone has an empty `data/raw/` and runs correctly, because everything the
+app needs is already in `data/processed/`.
 
 | File | Source | Refresh frequency |
 |------|--------|-------------------|

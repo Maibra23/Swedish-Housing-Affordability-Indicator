@@ -19,6 +19,36 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def complete_case(panel: pd.DataFrame) -> pd.DataFrame:
+    """Return only the rows whose index inputs are observed rather than imputed.
+
+    Income ends a year before prices, unemployment and the policy rate, so
+    `build_panel` forward-fills it to keep the panel rectangular and flags every
+    filled row with `is_imputed_income`. Those rows are never displayed — the
+    sidebar stops at `complete_case_max_year()`.
+
+    They must not be *scored* either. :func:`compute_version_b` z-scores its
+    components pooled across whatever frame it is handed, so one imputed year
+    shifts the pooled mean and standard deviation and moves `version_b` for every
+    historical year. When the 2025 component data first landed this moved `z_b`
+    on all 3190 rows and changed 19 risk classes — published numbers re-based by
+    a year that cannot be rendered. Versions A and C are within-year (D5) and
+    were unaffected, which is why it went unnoticed.
+
+    A frame without the flag is returned unchanged: the county and national
+    panels do not all carry it.
+
+    Args:
+        panel: A panel frame, with or without `is_imputed_income`.
+
+    Returns:
+        The subset with observed income, or the input if the flag is absent.
+    """
+    if "is_imputed_income" not in panel.columns:
+        return panel
+    return panel[~panel["is_imputed_income"].fillna(False).astype(bool)].copy()
+
+
 def _zscore(series: pd.Series) -> pd.Series:
     """Z-score normalize a series (across the full panel)."""
     mean = series.mean()
