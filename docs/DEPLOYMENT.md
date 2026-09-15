@@ -2,15 +2,40 @@
 
 **Version:** 1.3.0
 **Target:** Streamlit Community Cloud
-**Last updated:** 2026-04-18
+**Last updated:** 2026-09-15
 
 ---
 
 ## Prerequisites
 
-- Python 3.11 (Streamlit Cloud default; pinned in `pyproject.toml`)
+- Python **3.11 or newer** (`src/ui/sidebar.py` needs stdlib `tomllib`; the floor is
+  declared as `requires-python = ">=3.11"` in `pyproject.toml`). Verified on 3.11 and 3.12.
 - A GitHub repository connected to Streamlit Cloud
 - No secrets or API keys required — all data is pre-built and committed
+
+---
+
+## Data vintage — what the deployed app is serving
+
+The composite index covers **2014–2024** and **cannot currently advance past 2024**.
+
+All three formulas require **median income** (SCB HE0110), which is published only
+through 2024. The panel is ragged: several component series already have 2025.
+
+| Source | Max year upstream | SHAI ships |
+|--------|-------------------|-----------|
+| Median income (SCB HE0110) | **2024** | 2024 |
+| Småhus price (SCB BO0501B) | 2025 | 2024 |
+| Bostadsrätt price (SCB BO0501C) | 2025 | 2024 |
+| Price index (SCB BO0501A) | 2025 | 2024 |
+| Unemployment (Kolada N03937) | 2025 | 2024 |
+| CPI (SCB PR0101) | 2026M08 | 2026 |
+| Policy rate (Riksbanken SWEA) | live | 2026 |
+
+`data/processed/data_provenance.json` records both bounds separately — `panel_max_year`
+for the component series and `complete_case_max_year` for the index — and the UI reads
+its vintage from that artifact rather than from the system clock. A refresh therefore
+moves `panel_max_year` and leaves the years offered in the sidebar unchanged.
 
 ---
 
@@ -28,13 +53,37 @@ during normal operation.
 
 ## Local development setup
 
+Two installs, for two audiences. The runtime set is the one that gets deployed.
+
+**Running the app** — what Streamlit Community Cloud performs:
+
 ```bash
 python -m venv .venv
 # Windows:  .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -r requirements.txt
 streamlit run app.py
+```
+
+Eight packages, no compilers, no API calls at startup.
+
+**Refreshing the data** — adds the API clients and the forecast toolchain:
+
+```bash
+pip install -e ".[pipeline]"
+```
+
+`prophet` and `pmdarima` build from source. That cost belongs on a developer's machine,
+never on the serving host, which is why `requirements.txt` and
+`[project.optional-dependencies] pipeline` are kept apart. `tests/test_packaging.py`
+and `tests/test_runtime_dependencies.py` fail if the two ever drift.
+
+**Running the tests:**
+
+```bash
+pip install -e ".[dev]"
+pytest tests/
 ```
 
 ---

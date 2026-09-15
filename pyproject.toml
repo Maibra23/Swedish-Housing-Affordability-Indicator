@@ -7,29 +7,63 @@ name = "shai"
 version = "1.3.0"
 description = "Swedish Housing Affordability Indicator (SHAI) — Streamlit dashboard"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+
+# 3.11 is a floor, not a preference: `src/ui/sidebar.py` reads this file with
+# `tomllib`, which is stdlib only from 3.11. The previous `<3.12` ceiling was
+# not a compatibility statement — the suite and all 67 page renders pass on
+# 3.12 — and it made `pip install -e .` refuse on the interpreter the app is
+# verified against.
+requires-python = ">=3.11"
+
+# Runtime only. Mirrors requirements.txt, which Streamlit Community Cloud
+# installs; tests/test_packaging.py fails if the two drift apart, and
+# tests/test_runtime_dependencies.py fails if either drifts from what the pages
+# actually import.
 dependencies = [
-    "streamlit",
-    "pandas",
-    "numpy",
-    "requests",
-    "prophet",
-    "pmdarima",
-    "statsmodels",
-    "plotly",
-    "folium",
-    "streamlit-folium",
-    "branca",
-    "pyarrow",
-    "pytest",
+    "streamlit>=1.55.0",
+    "pandas>=2.3.3",
+    "numpy>=1.26.2",
+    "plotly>=6.6.0",
+    "folium>=0.20.0",
+    "streamlit-folium>=0.27.1",
+    "branca>=0.8.2",
+    "pyarrow>=23.0.1",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+# The refresh toolchain: SCB/Riksbanken/Kolada clients and the forecast
+# pipelines. Runs on a developer's machine and commits parquet artifacts; the
+# serving host only reads them. prophet and pmdarima compile from source, which
+# is precisely why they must not reach the deploy environment.
+#     pip install -e ".[pipeline]"
+pipeline = [
+    "requests>=2.31.0",
+    "prophet>=1.1.5",
+    "pmdarima>=2.0.4",
+    "statsmodels>=0.14.0",
+]
 
-[tool.poetry]
-package-mode = false
+# Test suite. scipy backs the normality tests behind decision D6.
+#     pip install -e ".[dev]"
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "scipy>=1.11.0",
+]
+
+# `src` is a namespace package imported as `src.*` from the repository root,
+# which is how every page and test spells it. The previous `where = ["src"]`
+# described a src-layout this project does not use: it would have installed
+# `ui`, `data` and `indices` as top-level packages that nothing imports.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+namespaces = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# The repo root resolves `src.provenance` and `tests.sourcetools`; `src`
+# resolves `indices.real_rate`. Without the root, the suite collected only
+# under `python -m pytest`, which injects the working directory — bare `pytest`,
+# which editors and CI runners call, failed on six files.
+pythonpath = [".", "src"]
