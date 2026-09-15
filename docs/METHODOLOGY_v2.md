@@ -5,7 +5,30 @@
 **App version:** 1.3.0
 **Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
 **Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
-**Last updated:** 2026-04-21
+**Last updated:** 2026-09-15
+
+### Changelog v2.2 → v2.3 (2026-09-15)
+- **Normalization convention settled on both axes (§4 rewritten).** Versions A and C are
+  now **log-transformed before z-scoring**; Version B is not. Version B's own construction
+  remains **pooled across the panel**, deliberately. Recorded as decisions D5 and D6 in
+  `REVITALIZATION_PLAN.md`.
+- **Why:** A and C are ratios of positive quantities and so are log-normal. Z-scoring them
+  raw put the ±0.67σ class boundaries — quartiles *of a normal distribution* — on a variable
+  whose normality is rejected at p < 6e-15 in every year 2014–2024. The resulting class split
+  was ≈19/51/30, an asymmetry that was an artifact rather than a choice. Under the log the
+  variable is normal in all eleven years independently (p = 0.34–0.83) and the split is
+  ≈23/48/28.
+- **Effect on published numbers:** a log is monotonic, so **all ranks are unchanged**. Only
+  z-scores and, for 16 of 290 municipalities (6%), risk classes move — every one of them a
+  single step toward the middle (5 hog→medel, 11 medel→lag).
+- **Correction:** earlier material described the class split as "25/50/25 by construction".
+  That holds only under normality, which did not obtain. Measured, it was ≈19/51/30 with
+  83–89 high-risk municipalities, not ~72.
+- **F9 corrected:** the limitation register stated that income imputation assumed zero
+  growth. The pipeline applies 3% nominal growth per year; zero growth was the assumption F9
+  *replaced*. Those years are no longer selectable in the UI in any case.
+- **F16 added:** the fixed-quantile class boundaries mean the national count per risk class
+  is near-constant by construction and cannot carry a trend.
 
 ### Changelog v2.1 → v2.2 (2026-04-21)
 - **Bostadsrätt data source corrected:** SCB BO0701 does not exist in the API. The
@@ -122,9 +145,72 @@ K/T remains in the panel as a descriptive market indicator but does not enter an
 
 ## 4. Index normalization and ranking
 
-For comparison across formulas, each index is z score normalized within its own distribution. Higher z score equals worse affordability for Version B (risk index). Versions A and C are inverted so all three display "higher equals worse" for visual consistency, with explicit labeling.
+Each formula yields a *level* per municipality-year. Converting that level into a z-score,
+a rank and a risk class involves two independent choices. Both are locked decisions.
 
-Rankings are computed on the latest complete year (2024). 290 municipalities for municipal panel, 21 counties for county panel.
+### 4.1 Window — within year (D5)
+
+Each year's municipalities are scored against that year's national distribution. A risk class
+is therefore a statement about a municipality's standing *relative to its contemporaries*, not
+about Sweden's affordability over time.
+
+**Deliberate exception — Version B stays pooled.** The z-scores *inside* B's own formula
+(§3, Version B) are computed across the whole panel, not within year. B is a macro-pressure
+measure, and that pooling is precisely what allows its level to carry a time trend: B's panel
+mean runs from −0.37 (2015) to +0.86 (2023), tracking the policy-rate cycle.
+
+*What within-year normalization would cost.* Applying the within-year window to B's
+construction would set its mean to ~0 in every year by definition. The 2022–2023 rate shock —
+currently B's clearest signal — would become invisible, and B would degenerate into a third
+cross-sectional ranking rather than a distinct measure. The two conventions are kept, and
+documented as different on purpose, because the two measures answer different questions:
+A and C ask "where does this municipality stand among its peers this year", B asks "how much
+macro pressure is there now compared with history".
+
+### 4.2 Transform — log for A and C (D6)
+
+Versions A and C are **ratios of positive quantities** (`income / (price × rate)`) and are
+therefore log-normally distributed. Their z-scores are computed on `ln(value)`.
+
+| | raw `version_c` | `log(version_c)` |
+|---|---|---|
+| Skewness, 2014–2024 | +1.26 … +1.92 | −0.17 … +0.15 |
+| D'Agostino–Pearson normality | rejected, p < 6e-15 every year | not rejected, p = 0.34 … 0.83 every year |
+
+This matters because the class boundaries in §4.3 are quantiles of a normal distribution.
+Applied to the untransformed ratio they produced a ≈19/51/30 split — an asymmetry nobody
+chose, arising from the left tail of the inverted ratio.
+
+**Version B is not log-transformed.** It is a weighted *sum* of z-scores and takes negative
+values in 1919 of 3190 rows, so the log is undefined for it.
+
+Because the log is monotonic, this transform **does not change any ranking**. `rank_a`,
+`rank_b` and `rank_c` are identical with and without it. Only z-scores and risk classes move.
+
+### 4.3 Risk class
+
+Boundaries at ±0.67σ, the quartiles of a normal distribution:
+
+| z-score | Class |
+|---|---|
+| ≤ −0.67 | `lag` (low risk) |
+| −0.67 … +0.67 | `medel` (medium) |
+| > +0.67 | `hog` (high risk) |
+
+Orientation is common to all three versions: **higher z = worse affordability**, rank 1 =
+best. Versions A and C are sign-inverted before classification because their raw values run
+the opposite way.
+
+Because the boundaries are fixed quantiles, roughly a quarter of municipalities fall in each
+outer class every year *by construction* (F16). The national **count** per class therefore
+carries no trend information; only the shape of the distribution and individual
+municipalities' movement between classes are informative.
+
+### 4.4 Coverage
+
+All years 2014–2024 are scored, not only the latest. 290 municipalities in the municipal
+panel, 21 counties in the county panel. `src/indices/normalize.py` is the sole producer of
+every `z_*`, `rank_*` and `risk_*` column.
 
 ## 5. Forecasting approach
 
@@ -197,7 +283,7 @@ Output: recalculated Version C affordability for selected county, with delta fro
 
 **Scope note:** the simulator recomputes Version C only. Versions A and B depend on additional inputs (unemployment for B) that are not exposed as sliders to keep the interface manageable. Users seeking to stress test B should adjust assumptions in the Metodologi section and rerun.
 
-## 8. Structural limitations (F1 to F15)
+## 8. Structural limitations (F1 to F16)
 
 | ID | Limitation | Mitigation | Severity |
 |----|------------|------------|----------|
@@ -209,10 +295,11 @@ Output: recalculated Version C affordability for selected county, with delta fro
 | F6 | Short forecast history (11 annual observations) limits horizon | Hard cap at 6 annual steps; persistent UI caveat | Medium |
 | F7 | SCB API rate limits (30 calls/10s, 150k cells/query) | All data cached as parquet at build time; no live API calls from Streamlit | Low |
 | F8 | Translation loses banking terminology nuance | Glossary file in swedish-translation skill; banking terms curated | Low |
-| F9 | Income for 2025 and 2026 is forward filled from 2024 with zero nominal growth | `is_imputed_income` flag; UI renders imputed values with disclosure. Pessimistic for 2025–2026 (actual wage growth ~3–4%/yr). | Low–Medium |
+| F9 | Income beyond the last published year is forward filled with **3% nominal growth per year** (`IMPUTED_INCOME_GROWTH_RATE`, build_panel.py). Zero growth was the earlier, pessimistic assumption that F9 replaced. | `is_imputed_income` flag. Imputed years are no longer reachable from the UI: the year selector stops at `complete_case_max_year()`, so no displayed index value rests on a forward-filled income. | Low |
 | F10 | Unemployment is Arbetsförmedlingen registered rate, not AKU/ILO survey rate | Documented on every page where U enters a computation; definition footnote in Swedish | Low |
 | F11 | SHAI formulas (A, B, C) still use only small-house prices (SCB BO0501C2, Fastighetstyp 220) for methodological continuity and a systemic-risk perspective. Bostadsrätt prices (SCB BO0501C, `FastprisBRFRegionAr`, content code BO0501R7) are now part of the panel (`bostadsratt_price_sek`) and are exposed as a user-selectable `Pristyp` toggle on Sida 04 (Kontantinsats), together with a side-by-side villa vs. bostadsrätt comparison card. **Important:** SCB publishes bostadsrätt prices at county level only — no municipal granularity exists. All 290 municipalities inherit their county's mean bostadsrätt price. The UI displays the county name (e.g. "Bostadsrätt — Stockholms län") to make this clear. The `has_native_bostadsratt_price` flag has been removed from the panel schema as it was always False. | Pristyp selector + county-name display + comparison card on Sida 04; F11 retained to document the index-scope and county-granularity limitation. | Medium |
 | F12 | Policy rate used directly as mortgage rate. Actual mortgage rate ≈ policy rate + bank margin (~1.5–2.5 pp, typically ~1.7 pp for 3-month fixed). Monthly housing cost and affordability formula values are optimistic by ~30%. Municipal rankings are unaffected (all use the same national rate). | Documented in Detaljer on Sida 04; noted in formula descriptions. | Medium |
+| F16 | Risk class boundaries (±0.67σ) are fixed quantiles, so the share of municipalities in each class is near-constant every year by construction. The national count of high-risk municipalities cannot carry a trend. | Documented in §4.3; no year-over-year delta is displayed on the count. | Medium |
 | F13 | Version B: R and π are national variables (same value for all municipalities in a given year). Their z-scores carry no cross-municipal information within a single year — 45% of Version B weights (R: 25%, π: 20%) are time-only signals. Within-year municipal rankings are determined almost entirely by z(P_SEK/I) (35%) and z(U) (20%). | Documented in Version B formula description on Sida 02 and Sida 06. | Medium |
 | F14 | Income is individual gross earned income (sammanräknad förvärvsinkomst). Housing is typically purchased as a couple. Single-income years-to-save is 2× the household figure. | Caption below "År att spara" KPI on Sida 04 advises dividing by 2 for couples. | Medium |
 | F15 | Scenario simulator holds CPI inflation (π) constant when the rate is shocked. Real rate changes therefore equal nominal rate changes, not genuine real rate shocks. A +3 pp rate shock with unchanged inflation implies a +3 pp real rate increase, which differs from the 2022–2023 experience where real rates barely changed. | Documented in Förklaring expander on Sida 05. | Low–Medium |

@@ -17,19 +17,47 @@ that afterwards, for all three versions:
     rank 1    =  best affordability   =  lowest risk
     lag < medel < hog  in order of decreasing affordability
 
-Normalization is **within year**: each year's municipalities are scored against
-that year's national distribution.  A consequence worth stating plainly is that
-the ±0.67σ class boundaries put roughly 25 % / 50 % / 25 % of municipalities in
-lag / medel / hog every year by construction, so the national *count* in each
-class is close to constant and carries no trend information.  The class is a
-statement about a municipality's position relative to its peers in that year,
-not about the country's affordability over time.
+Normalization convention
+------------------------
+Two independent choices decide how a raw index value becomes a z-score. Both are
+locked decisions in ``docs/REVITALIZATION_PLAN.md`` §1.
+
+**Window (D5, decision O2) — within year.** Each year's municipalities are
+scored against that year's national distribution. The class is a statement about
+a municipality's position relative to its peers *in that year*, not about the
+country's affordability over time.
+
+Note this applies to ``z_*`` only. Version B's own construction in
+``affordability.py`` stays **pooled across the whole panel**, deliberately: B is
+a macro-pressure measure and the pooling is what lets its level carry a time
+trend (its panel mean runs −0.37 in 2015 to +0.86 in 2023, tracking the rate
+shock). Normalising B within year would pin that at zero every year and delete
+the signal B exists to measure.
+
+**Transform (D6, decision O4) — log for A and C.** Versions A and C are *ratios*
+of positive quantities — ``income / (price × rate)`` — and are therefore
+log-normal, not normal. They were z-scored raw, which put the ±0.67σ cut on a
+variable whose normality is rejected at p < 6e-15 in every year, and produced a
+≈19 / 51 / 30 class split nobody chose. Taking logs first makes the variable
+normal in all eleven years independently (p = 0.34 … 0.83) and moves the split to
+≈23 / 48 / 28.
+
+Version B is a weighted *sum* of z-scores, not a ratio: it is negative in 1919 of
+3190 rows, so a log is undefined for it. B is z-scored raw.
+
+Because a log is monotonic, the transform leaves every ``rank_*`` untouched — it
+changes only ``z_*`` and, for 16 of 290 municipalities, ``risk_*``.
+
+A consequence worth stating plainly: the ±0.67σ boundaries put a near-fixed
+share of municipalities in each class every year by construction, so the national
+*count* in each class carries no trend information.
 """
 
 from __future__ import annotations
 
 import logging
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -39,10 +67,42 @@ VERSIONS = ("a", "b", "c")
 # Versions whose raw value runs opposite to risk and therefore need inverting.
 _HIGHER_IS_BETTER = ("a", "c")
 
+#: Versions that are ratios, and so are log-normal rather than normal. These are
+#: log-transformed before z-scoring (D6). Version B is a weighted sum of
+#: z-scores and takes negative values, so a log is undefined for it.
+LOG_TRANSFORMED = ("a", "c")
+
 # Class boundaries in standard deviations. ±0.67σ are the quartiles of a normal
 # distribution, so the split is approximately 25 / 50 / 25 by construction.
 _CLASS_BOUNDS = [-float("inf"), -0.67, 0.67, float("inf")]
 _CLASS_LABELS = ["lag", "medel", "hog"]
+
+
+def _log_for_scoring(values: pd.Series, version: str) -> pd.Series:
+    """Return ``log(values)`` for z-scoring a ratio-valued version.
+
+    Args:
+        values: Raw index values for one year.
+        version: Version letter, used only for the error message.
+
+    Returns:
+        The natural log of the values.
+
+    Raises:
+        ValueError: If any value is non-positive. A and C are quotients of
+            positive quantities with a floored denominator, so this cannot happen
+            with the shipped formulas — it would mean the formula changed, and
+            silently falling back to a raw z-score would hide that behind a
+            slightly different class split.
+    """
+    if (values <= 0).any():
+        bad = int((values <= 0).sum())
+        raise ValueError(
+            f"version_{version} has {bad} non-positive value(s); it is treated as "
+            f"log-normal (see LOG_TRANSFORMED) and cannot be log-transformed. "
+            f"If the formula now admits non-positive values, revisit decision O4."
+        )
+    return np.log(values)
 
 
 def _score_one_year(group: pd.DataFrame) -> pd.DataFrame:
@@ -53,7 +113,11 @@ def _score_one_year(group: pd.DataFrame) -> pd.DataFrame:
     computed: dict[str, pd.Series] = {}
 
     for version in VERSIONS:
-        values = group[f"version_{version}"]
+        values = group[f"version_{version}"].astype(float)
+
+        if version in LOG_TRANSFORMED:
+            values = _log_for_scoring(values, version)
+
         std = values.std()
 
         if std and std > 0:
