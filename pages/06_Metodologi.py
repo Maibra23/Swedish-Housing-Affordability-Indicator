@@ -24,7 +24,7 @@ from src.provenance import (
 )
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
-from src.ui.components import page_title, card_header, footer_note
+from src.ui.components import card_header, footer_note, page_title, vintage_badge
 
 inject_css()
 selections = render_sidebar(page_key="mt")
@@ -121,13 +121,13 @@ with st.container(border=True):
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 4 — Prognoser (expander)
 # ══════════════════════════════════════════════════════════════════════
-with st.expander("4. Prognoser (Prophet vs ARIMA)"):
+with st.expander(L("mt.expander_4_prognoser_prophet_vs_arima")):
     st.markdown(L("mt.prophet_standard_i_granssnittet_bibliotek", v0=N_YEARS, v1=PERIOD))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 5 — Kontantinsats (expander)
 # ══════════════════════════════════════════════════════════════════════
-with st.expander("5. Kontantinsats — regimhistorik"):
+with st.expander(L("mt.expander_5_kontantinsats_regimhistorik")):
     st.markdown("Fem regulatoriska regimer modelleras:")
 
     # Timeline visual
@@ -144,13 +144,14 @@ with st.expander(L("mt.6_begransningar_f1f15")):
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 7 — Datavalidering (expander)
 # ══════════════════════════════════════════════════════════════════════
-with st.expander("7. Datavalidering"):
+with st.expander(L("mt.expander_7_datavalidering")):
     st.markdown(L("mt.foljande_valideringskontroller_kors_innan", income_max=SOURCE_MAX["income_max"]))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 8 — Referenser (expander)
 # ══════════════════════════════════════════════════════════════════════
-with st.expander("8. Referenser"):
+with st.expander(L("mt.expander_8_referenser")):
     st.markdown(L("mt.scb_bo0501_fastighetspriser_och_lagfarter"))
 
+vintage_badge()
 footer_note(version=L("mt.shai_v_v0_metodologi_baserad_pa_methodology", v0=APP_VERSION))

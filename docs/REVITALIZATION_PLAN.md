@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 27 / 34 tasks
-**Current phase:** Phase 3 · next task **T3.4** — §0 still applies to T3.4–T3.9
-**Test suite:** 497 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · **Phase 3 complete** · 33 / 34 tasks
+**Current phase:** Phase 4 · last task **T4.7**
+**Test suite:** 556 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -445,12 +445,12 @@ everything to `.shai-*`.
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | **DONE** |
 | T3.2 | Normalise all CSS classes to `.shai-*` | 3 | **DONE** |
 | T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | **DONE** |
-| T3.4 | Add `.shai-explanation` under every bare number | 3 | TODO |
-| T3.5 | Add `help_badge()` glossary component | 3 | TODO |
-| T3.6 | Add `.shai-vintage` badge component | 3 | TODO |
-| T3.7 | Add `src/ui/filters.py`; de-duplicate page filter logic | 3 | TODO |
-| T3.8 | Add shared `src/ui/data_table.py` (KRI pattern) | 3 | TODO |
-| T3.9 | Add "Om kartan / Om grafen" contextual expanders | 3 | TODO |
+| T3.4 | Add `.shai-explanation` under every bare number | 3 | **DONE** |
+| T3.5 | Add `help_badge()` glossary component | 3 | **DONE** |
+| T3.6 | Add `.shai-vintage` badge component | 3 | **DONE** |
+| T3.7 | Add `src/ui/filters.py`; de-duplicate page filter logic | 3 | **DONE** |
+| T3.8 | Add shared `src/ui/data_table.py` (KRI pattern) | 3 | **DONE** |
+| T3.9 | Add "Om kartan / Om grafen" contextual expanders | 3 | **DONE** |
 | T3.10 | Split `components.py`; extract landing components | 3 | **DONE** |
 | T3.11 | Split `04_Kontantinsats.py` (880 lines) | 3 | **DONE** |
 | T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | **DONE** |
@@ -1081,7 +1081,11 @@ correct — T2.1's criterion is absence from `requirements.txt`, not from the en
 
 **Goal:** SHAI reads as the same product family as Skattekraftspanelen and KRI.
 **Exit criterion:** one CSS naming convention, all copy centralised, every bare number
-explained, no file over the project limits.
+explained, no file over the project limits. — **MET, with one caveat stated in §0:** the
+reference repository is not on this machine, so T3.4–T3.9 were built from this plan's
+descriptions rather than matched against Skattekraftspanelen's markup. The *capabilities*
+are present and guarded by `tests/test_ui_affordances.py` (31); **visual equivalence is
+unverified** and should be re-checked if the reference becomes available.
 **Shippable:** yes, but best delivered as one visual release.
 
 Primary reference for every task: `/Users/Brook/Downloads/kommun-skattekraft-stress/src/ui/`.
@@ -1196,7 +1200,7 @@ separate from component CSS. `inject_css()` composes them.
 
 ---
 
-### T3.4 — Add `.shai-explanation` under every bare number · TODO
+### T3.4 — Add `.shai-explanation` under every bare number · DONE
 
 **Fixes:** Finding M
 **Files:** `src/ui/components.py`, `src/ui/css_components.py`, `app.py`, `pages/*.py`
@@ -1212,7 +1216,7 @@ each KPI row, and each chart.
 
 ---
 
-### T3.5 — Add the `help_badge()` glossary component · TODO
+### T3.5 — Add the `help_badge()` glossary component · DONE
 
 **Fixes:** Finding M
 **Files:** `src/ui/components.py`, `src/ui/css_components.py`, `src/ui/labels.py`
@@ -1229,7 +1233,7 @@ replacing bare `title=` attribute tooltips. Include `help_aria` labelling.
 
 ---
 
-### T3.6 — Add the `.shai-vintage` badge · TODO
+### T3.6 — Add the `.shai-vintage` badge · DONE
 
 **Fixes:** Findings C, M
 **Files:** `src/ui/components.py`, `src/ui/css_components.py`
@@ -1245,7 +1249,7 @@ does. `footer_note()` gains an `updated` parameter to match its signature there.
 
 ---
 
-### T3.7 — Add `src/ui/filters.py` · TODO
+### T3.7 — Add `src/ui/filters.py` · DONE
 
 **Fixes:** Finding M
 **Files:** NEW `src/ui/filters.py`; `pages/01-05`
@@ -1260,7 +1264,7 @@ Year and risk filtering is currently written out in each page. Extract it.
 
 ---
 
-### T3.8 — Add shared `src/ui/data_table.py` · TODO
+### T3.8 — Add shared `src/ui/data_table.py` · DONE
 
 **Fixes:** Finding M
 **Files:** NEW `src/ui/data_table.py`; `pages/01-03`
@@ -1276,7 +1280,7 @@ per-page HTML table strings.
 
 ---
 
-### T3.9 — Add contextual "Om …" expanders · TODO
+### T3.9 — Add contextual "Om …" expanders · DONE
 
 **Fixes:** Finding M
 **Files:** `pages/01_Riksoversikt.py`, `pages/02_Lan_jamforelse.py`, `pages/03_Kommun_djupanalys.py`
@@ -1534,6 +1538,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T3.4–T3.9 | **All DONE — Phase 3 complete.** `explanation()`, `help_badge()` and `vintage_badge()` added with CSS and 32 new labels; `src/ui/filters.py` and `src/ui/data_table.py` now own risk filtering and every `.shai-table`; contextual expanders on pages 01–03. The glossary popover is a real `<button>` with an aria-label and opens on focus, not only hover — the `title=` tooltips it replaces were reachable by neither keyboard nor touch. `filters.py` is the single source of the risk labels *and* the sidebar reads them from it, so the pills a user picks and the labels the filter understands cannot drift. Two dead labels fell out (the old inline risk map) and two inline table templates were retired. **Suite: 556 passed, 0 failed, 1 skipped.** | Next: **T4.7**, the last task. Note for a reviewer: T3.4–T3.9 are *behaviourally* verified, not visually — no reference repo on this machine (§0). Also: I mangled `01_Riksoversikt.py` twice with index-based splices before restoring it from the last commit and re-applying the edits with exact anchors. If something on that page looks wrong, that is where to look first. |
 | 2026-09-16 | T4.3, T4.6 | **Both DONE. Phase 4 complete except T4.7**, which depends on all of Phase 3. T4.3: orientation contract asserted verbatim and its inversions banned. Found the limitation register heading off by one (F1–F15 introducing F1–F16). F16's "ungefär en fjärdedel" recomputed from the artifact. One test I wrote was wrong and got reframed — banning every exact split would have deleted D6's own evidence. T4.6: 19 docs → 9 maintained plus a 6-file archive; renaming broke references in eight files including three `src/` docstrings, now guarded. **Suite: 395 passed, 0 failed, 1 skipped.** | Next: **T3.2** onward. §0 still applies: no reference repo on this machine, so T3.4–T3.9 and T3.12 will be built from the plan's descriptions rather than matched against Skattekraftspanelen. Re-check them if that repo becomes available. |
 | 2026-09-16 | T4.1 | **DONE, and it caught real drift immediately.** The methodology source table still claimed four series end 2024 after T2.4 moved them to 2025 — invisible to 345 other tests because none of them read prose. Those seven rows now interpolate `source_coverage()`, which turned the test from *compare copy to data* into *guard that copy stays derived*; drift is now impossible rather than detected. Also re-derives the D5 panel-mean extremes (−0,37/2015, +0,86/2023 — exact today) because R1 makes that the sentence most likely to go stale. Narrowed the coverage criterion on purpose: 96 labels contain digits, almost all domain parameters, so the guard polices bare four-digit years and classifies the rest. **Suite: 345 passed, 0 failed, 1 skipped.** | Next: **T4.3** then **T4.6**, both independent of the reference repo. Then the Phase 3 remainder — §0 lists which five are self-contained. |
 | 2026-09-16 | T3.1 | **DONE, no reference repo needed.** 269 keys in `src/ui/labels.py`; **0 Swedish literals left** in `app.py` or `pages/*.py`, down from 332. Verified by fingerprinting all 5709 rendered strings across 67 page/year states before and after — **0 states differ**, so the extraction is provably inert rather than hopefully so. Two silent traps: `ast.col_offset` is a UTF-8 **byte** offset, so character slicing shifted every extracted expression (`APP_VERSION` → `P_VERSION}"`) — caught by reading the plan before applying it; and literal braces must be doubled for `str.format`, or the Plotly hover template and the inline-CSS blocks raise `KeyError` on render. `tests/test_no_inline_copy.py` (20) guards all of it. Also fixed an existing test weakness: `test_risk_kpi.py` matched the substring `risk_`, which `rv.hogrisk_kommuner` contains, and its copy assertions were reading key *names* rather than copy. **Suite: 323 passed, 0 failed, 1 skipped.** | Next: **T4.1**, now unblocked and described in this plan as its highest-value test — re-derive every number in the copy from the artifacts. T4.3 is also unblocked. Then the remaining Phase 3 work, which still needs the reference repo (§0). New **R9**: `labels.py` now holds HTML and LaTeX blocks as well as copy — correct per the acceptance, wrong as a long-term home. |

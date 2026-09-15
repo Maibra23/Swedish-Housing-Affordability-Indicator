@@ -32,9 +32,14 @@ from src.ui.components import (
     risk_pill,
     card,
     card_header,
+    explanation,
     footer_note,
+    help_badge,
+    vintage_badge,
 )
 from src.ui.choropleth import render_choropleth
+from src.ui.data_table import Column, render_table
+from src.ui.filters import by_risk
 from src.ui.chart_theme import get_chart_layout
 
 inject_css()
@@ -72,11 +77,7 @@ if mun_year.empty:
 
 # Apply risk filter from the multi-select pills. An empty selection is
 # normalised to "all three" by the sidebar, so len < 3 means a real filter.
-RISK_LABEL_MAP = {L("rv.hog"): "hog", "Medel": "medel", L("rv.lag"): "lag"}
-df_ranked = mun_year
-if len(selected_risks) < 3:
-    allowed = [RISK_LABEL_MAP[r] for r in selected_risks if r in RISK_LABEL_MAP]
-    df_ranked = df_ranked[df_ranked["risk_c"].isin(allowed)]
+df_ranked = by_risk(mun_year, selected_risks)
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
@@ -148,6 +149,9 @@ render_kpi_row([
     ),
 ])
 
+explanation(L("rv.forklaring_kpi", v0=N_KOMMUNER, v1=selected_year))
+vintage_badge()
+
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
 # ── Chart row: Choropleth + Distribution histogram ───────────────────
@@ -156,15 +160,20 @@ col_map, col_hist = st.columns([3, 2])
 with col_map:
     with st.container(border=True):
         st.markdown(
-            card_header(L("rv.geografisk_fordelning"), f"Version C · {selected_year}", "KOROPLETKARTA"),
+            card_header(
+                L("rv.geografisk_fordelning") + help_badge("zpoang", "riskklass"),
+                f"Version C · {selected_year}",
+                "KOROPLETKARTA",
+            ),
             unsafe_allow_html=True,
         )
         if len(df_ranked) > 0:
             render_choropleth(df_ranked, key="rv_choropleth")
             st.caption(L("rv.fargskala_gron_lag_risk_z_0_67_gul_medel"))
+            explanation(L("rv.forklaring_karta"))
         else:
             st.info(L("rv.ingen_data_tillganglig_for_kartvisning"))
-        with st.expander("Om kartan"):
+        with st.expander(L("rv.om_kartan")):
             st.markdown(
                 L("rv.varje_kommun_visas_som_ett_ifyllt_polygon"),
             )
@@ -172,10 +181,15 @@ with col_map:
 with col_hist:
     with st.container(border=True):
         st.markdown(
-            card_header(L("rv.fordelning_av_shai_poang"), f"Version C · {selected_year}", "HISTOGRAM"),
+            card_header(
+                L("rv.fordelning_av_shai_poang") + help_badge("zpoang", "version_c"),
+                f"Version C · {selected_year}",
+                "HISTOGRAM",
+            ),
             unsafe_allow_html=True,
         )
         st.caption(L("rv.z_poang_standardavvikelser_pa_logaritmisk"))
+        explanation(L("rv.forklaring_histogram", v0=N_KOMMUNER))
         if "z_c" in df_ranked.columns and len(df_ranked) > 0:
             z_vals = df_ranked["z_c"].dropna()
 
@@ -232,30 +246,34 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 # ── Table row: Top 15 worst + Top 15 best ────────────────────────────
 
 
-def _build_ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
-    """Build HTML table for top/bottom municipalities."""
-    if ascending:
-        subset = df.nsmallest(15, "z_c")
-    else:
-        subset = df.nlargest(15, "z_c")
+def _ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
+    """Render the top or bottom fifteen municipalities by Version C.
 
-    rows_html = ""
-    for i, (_, row) in enumerate(subset.iterrows(), 1):
-        name = row.get("region_name", "")
-        z_val = row.get("z_c", 0)
-        vc_val = row.get("version_c", 0)
-        risk = row.get("risk_c", "medel")
-        pill = risk_pill(risk)
-        rows_html += f"""
-        <tr>
-            <td class="shai-rank-cell">{i}</td>
-            <td class="shai-kommun-name">{name}</td>
-            <td class="shai-num">{z_val:.2f}</td>
-            <td class="shai-num">{vc_val:.1f}</td>
-            <td>{pill}</td>
-        </tr>"""
+    Args:
+        df: The filtered year frame.
+        ascending: True for the most affordable end, False for the least.
+        title: Card title.
 
-    return L("rv.v0_version_c_v1_ranking_kommun_z_poang_shai", v0=title, v1=selected_year, v2=rows_html)
+    Returns:
+        HTML for one `.shai-table` card, built by the shared renderer so the
+        rank cell, name cell, numeric alignment and risk pill are decided in one
+        place rather than per page. See T3.8.
+    """
+    subset = (df.nsmallest(15, "z_c") if ascending else df.nlargest(15, "z_c")).copy()
+    subset["_rank"] = range(1, len(subset) + 1)
+    return render_table(
+        subset,
+        [
+            Column("#", lambda row: str(row["_rank"]), kind="rank"),
+            Column(L("rv.kommun"), lambda row: str(row.get("region_name", "")), kind="name"),
+            Column(L("rv.z_poang"), lambda row: f"{row.get('z_c', 0):.2f}", numeric=True),
+            Column(L("rv.shai"), lambda row: f"{row.get('version_c', 0):.1f}", numeric=True),
+            Column(L("rv.risk"), lambda row: risk_pill(row.get("risk_c", "medel")), kind="pill"),
+        ],
+        title=title,
+        subtitle=f"Version C · {selected_year}",
+        tag=L("rv.ranking"),
+    )
 
 
 if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
@@ -263,21 +281,23 @@ if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
 
     with col_worst:
         st.markdown(
-            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
+            _ranking_table(
                 df_ranked, ascending=False, title=L("rv.samst_overkomlighet_topp_15")
-            )),
+            ),
             unsafe_allow_html=True,
         )
 
     with col_best:
         st.markdown(
-            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
+            _ranking_table(
                 df_ranked, ascending=True, title=L("rv.bast_overkomlighet_topp_15")
-            )),
+            ),
             unsafe_allow_html=True,
         )
 
-    with st.expander("Om rankningstabellerna"):
+    explanation(L("rv.forklaring_tabell", v0=selected_year))
+
+    with st.expander(L("rv.om_rankningstabellerna")):
         st.markdown(
             L("rv.tabellerna_visar_de_15_kommuner_med_samst")
         )

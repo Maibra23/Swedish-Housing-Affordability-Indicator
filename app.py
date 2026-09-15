@@ -23,7 +23,7 @@ st.set_page_config(
 from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css
 from src.ui.sidebar import render_sidebar, APP_VERSION
-from src.ui.components import footer_note
+from src.ui.components import explanation, footer_note, vintage_badge
 from src.ui.landing import (
     render_landing_hero,
     render_landing_stat_strip,
@@ -57,6 +57,9 @@ render_landing_stat_strip([
     {"label": L("landing.lan"), "value": "21", "unit": L("landing.jamforda")},
     {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},
 ])
+
+explanation(L("landing.forklaring_statistik", v0=N_KOMMUNER, v1=N_YEARS, v2=PERIOD_END))
+vintage_badge()
 
 # ── What is SHAI? ────────────────────────────────────────────────────
 render_landing_what_is_block()

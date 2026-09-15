@@ -23,7 +23,16 @@ import plotly.graph_objects as go
 from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, card_header, footer_note, kpi_card, render_kpi_row, format_pct
+from src.ui.components import (
+    card_header,
+    explanation,
+    footer_note,
+    format_pct,
+    kpi_card,
+    page_title,
+    render_kpi_row,
+    vintage_badge,
+)
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
 
 inject_css()
@@ -304,4 +313,12 @@ with st.container(border=True):
             unsafe_allow_html=True,
         )
 
+explanation(L("kd.forklaring_prognos", v0=N_YEARS))
+with st.expander(L("kd.om_prognosen")):
+    st.markdown(L("kd.om_prognosen_text", v0=N_YEARS))
+
+with st.expander(L("kd.om_komponenterna")):
+    st.markdown(L("kd.om_komponenterna_text"))
+
+vintage_badge()
 footer_note()

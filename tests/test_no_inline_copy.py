@@ -65,6 +65,30 @@ def test_no_inline_swedish_copy(page: Path) -> None:
 # ── Every key a page asks for must exist ─────────────────────────────
 
 
+def _dynamic_key_prefixes(path: Path) -> set[str]:
+    """Namespaces whose keys are assembled at runtime.
+
+    `help_badge` builds `f"glossary.{term}.term"`, so no static scan can enumerate
+    the keys it reaches. The literal head of such an f-string is returned instead,
+    and `test_no_label_is_orphaned` treats that whole namespace as used.
+    `tests/test_labels.py` checks each glossary entry is reachable from a real
+    `help_badge` call, which is the assertion that actually matters.
+    """
+    prefixes: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "L"
+            and node.args
+            and isinstance(node.args[0], ast.JoinedStr)
+        ):
+            head = node.args[0].values[0]
+            if isinstance(head, ast.Constant) and isinstance(head.value, str):
+                prefixes.add(head.value)
+    return prefixes
+
+
 def _referenced_keys(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     return {
@@ -98,12 +122,18 @@ def test_no_label_is_orphaned() -> None:
     T3.11, by `src/kontantinsats/` as well.
     """
     referenced: set[str] = set()
+    dynamic: set[str] = set()
     for path in _page_files() + sorted((ROOT / "src").rglob("*.py")):
         if path.name == "labels.py":
             continue
         referenced |= _referenced_keys(path)
+        dynamic |= _dynamic_key_prefixes(path)
 
-    orphans = sorted(set(SWEDISH_LABELS) - referenced)
+    orphans = sorted(
+        key
+        for key in set(SWEDISH_LABELS) - referenced
+        if not any(key.startswith(prefix) for prefix in dynamic)
+    )
     assert not orphans, (
         f"{len(orphans)} labels are defined but never used: {orphans[:8]}"
     )

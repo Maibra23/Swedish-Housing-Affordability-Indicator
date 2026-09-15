@@ -31,6 +31,7 @@ from src.ui.components import (
     format_pct,
     card_header,
     footer_note,
+    vintage_badge,
     kpi_card,
     render_kpi_row,
 )
@@ -368,4 +369,5 @@ st.markdown(_compact(insight_html), unsafe_allow_html=True)
 render_assumptions(_ctx)
 
 # ── 9 · Footer ────────────────────────────────────────────────────────
+vintage_badge()
 footer_note(source="SCB, Riksbanken, Finansinspektionen")

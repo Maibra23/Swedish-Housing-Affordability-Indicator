@@ -125,9 +125,11 @@ def test_no_kri_era_infix_survives() -> None:
     that the `lp-` / `riskklass-` groupings are gone, which is what is asserted.
     """
     defined = _defined_classes()
-    for infix in ("lp-", "riskklass-"):
-        offenders = sorted(n for n in defined if infix in n)
-        assert not offenders, f"{infix!r} still appears in class names: {offenders}"
+    # A name *group*, not a substring: `shai-help-pop` contains the letters "lp-"
+    # in the middle of "help-pop" and is perfectly well named.
+    for group in ("lp", "riskklass"):
+        offenders = sorted(n for n in defined if n.split("-")[1:2] == [group])
+        assert not offenders, f"the {group!r} group still appears: {offenders}"
     for legacy in ("brand-mark", "nav-section", "sidebar-brand"):
         assert legacy not in defined, f"{legacy} survives unprefixed"
 

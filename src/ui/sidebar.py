@@ -12,6 +12,7 @@ from pathlib import Path
 import streamlit as st
 
 from src.provenance import complete_case_max_year, first_year, generated_at
+from src.ui.filters import RISK_LABELS
 
 PAGES = [
     ("app.py", "Startsida"),
@@ -146,14 +147,14 @@ def render_sidebar(page_key: str = "main") -> dict:
 
         selected_risks = st.pills(
             "Riskfilter",
-            options=["Hög", "Medel", "Låg"],
+            options=list(RISK_LABELS),
             selection_mode="multi",
             label_visibility="collapsed",
             key=f"{page_key}_risk_pills",
         )
         # Empty selection = show all
         if not selected_risks:
-            selected_risks = ["Hög", "Medel", "Låg"]
+            selected_risks = list(RISK_LABELS)
 
         # Map to filter key for backward compat
         risk_map_rev = {"Hög": "Hög risk", "Medel": "Medel risk", "Låg": "Låg risk"}

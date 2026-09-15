@@ -22,8 +22,16 @@ import plotly.graph_objects as go
 from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, card, card_header, footer_note
+from src.ui.components import (
+    card,
+    card_header,
+    explanation,
+    footer_note,
+    page_title,
+    vintage_badge,
+)
 from src.ui.chart_theme import get_chart_layout
+from src.ui.data_table import Column, render_table
 
 inject_css()
 selections = render_sidebar(page_key="lj")
@@ -194,16 +202,28 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 year_data = year_data.sort_values(vcol, ascending=ascending)
                 year_data["rank"] = range(1, len(year_data) + 1)
 
-                rows_html = ""
-                for _, row in year_data.iterrows():
-                    rows_html += f"""
-                    <tr>
-                        <td class="shai-rank-cell">{row['rank']}</td>
-                        <td class="shai-kommun-name">{row['region_name']}</td>
-                        <td class="shai-num">{f"{row[vcol]:.2f}".replace(".", ",")}</td>
-                    </tr>"""
-
-                st.markdown(L("lj.lansranking_v0_v1_ranking_lan_varde_v2", v0=selected_year, v1=tab_name, v2=rows_html), unsafe_allow_html=True)
+                st.markdown(
+                    render_table(
+                        year_data,
+                        [
+                            Column("#", lambda row: str(row["rank"]), kind="rank"),
+                            Column(
+                                L("lj.lan"),
+                                lambda row: str(row["region_name"]),
+                                kind="name",
+                            ),
+                            Column(
+                                L("lj.varde"),
+                                lambda row, c=vcol: f"{row[c]:.2f}".replace(".", ","),
+                                numeric=True,
+                            ),
+                        ],
+                        title=L("lj.lansranking_v0", v0=selected_year),
+                        subtitle=tab_name,
+                        tag=L("lj.ranking"),
+                    ),
+                    unsafe_allow_html=True,
+                )
 
 # ── Cross-formula comparison ─────────────────────────────────────────
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
@@ -243,4 +263,9 @@ with st.container(border=True):
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
 
+explanation(L("lj.forklaring_kpi"))
+with st.expander(L("lj.om_lansjamforelsen")):
+    st.markdown(L("lj.om_lansjamforelsen_text"))
+
+vintage_badge()
 footer_note()

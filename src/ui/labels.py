@@ -49,6 +49,48 @@ def L(key: str, **values: object) -> str:
 
 
 SWEDISH_LABELS: dict[str, str] = {
+    "mt.expander_4_prognoser_prophet_vs_arima": "4. Prognoser (Prophet vs ARIMA)",
+    "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats — regimhistorik",
+    "mt.expander_7_datavalidering": "7. Datavalidering",
+    "mt.expander_8_referenser": "8. Referenser",
+    "lj.lan": "Län",
+    "lj.varde": "Värde",
+    "lj.ranking": "RANKING",
+    "lj.lansranking_v0": "Länsranking {v0}",
+    # ── Chrome, glossary, explanations, expanders, table headers ─────────
+    "ui.forklaring_av_begrepp": "Förklaring av begrepp",
+    "ui.data_uppdaterad_v0": "Data uppdaterad {v0}",
+    "glossary.zpoang.term": "Z-poäng",
+    "glossary.zpoang.def": "Antal standardavvikelser från årets riksmedian, på logaritmisk skala. Beräknas inom varje år, så en kommuns z-poäng säger var den står bland sina jämnåriga — inte om Sverige som helhet blivit dyrare.",
+    "glossary.riskklass.term": "Riskklass",
+    "glossary.riskklass.def": "Låg, medel eller hög, satt vid ±0,67 standardavvikelser. Gränserna är kvantiler inom året, så ungefär lika stor andel hamnar i varje klass varje år. Antalet i en klass kan därför inte läsas som en trend.",
+    "glossary.version_c.term": "Version C",
+    "glossary.version_c.def": "Den rekommenderade formeln: inkomst delat med pris gånger realränta. Ett nivåvärde, inte ett 0–100-index — högre värde betyder bättre överkomlighet.",
+    "glossary.rang.term": "Rang",
+    "glossary.rang.def": "Placering inom året, där rang 1 är bäst överkomlighet. Rangen är densamma oavsett logaritmering, eftersom transformen är monoton.",
+    "glossary.kt_kvot.term": "K/T-kvot",
+    "glossary.kt_kvot.def": "Köpeskilling delat med taxeringsvärde. Deskriptiv — den ingår inte i någon av formlerna; transaktionspriset i SEK används.",
+    "rv.forklaring_kpi": "Talen ovan beskriver {v0} kommuner för {v1}. Genomsnittligt SHAI är en nivåserie och kan jämföras mellan år; antalet högriskkommuner är en relativ position inom året och kan inte det.",
+    "rv.forklaring_karta": "Färgskalan går från årets lägsta till årets högsta z-poäng, med brytpunkter vid kvartilerna. Skalan sätts om varje år, så en färg betyder ”bland årets mest ansträngda”, inte ett fast pris.",
+    "rv.forklaring_histogram": "Fördelningen visar hur {v0} kommuner ligger i förhållande till varandra detta år. Eftersom z-poängen är centrerad inom året ligger tyngdpunkten alltid nära noll — formen säger något, läget gör det inte.",
+    "rv.forklaring_tabell": "Topplistorna är sorterade på Version C inom {v0}. De visar ytterkanterna av årets fördelning, inte kommuner som förändrats mest över tid.",
+    "landing.forklaring_statistik": "Indexet täcker {v0} kommuner över {v1} år. Perioden slutar {v2} eftersom medianinkomsten gör det — övriga serier sträcker sig längre.",
+    "lj.forklaring_kpi": "Länsvärden är ovägda medelvärden av kommunerna i länet. Ett län med många små kommuner väger därför lika tungt som ett med få stora.",
+    "kd.forklaring_prognos": "Prognosen bygger på {v0} årliga observationer. Det är en mycket kort serie: konfidensintervallen vidgas snabbt och allt bortom tre år bör läsas som riktning, inte nivå.",
+    "rv.om_kartan": "Om kartan",
+    "rv.om_rankningstabellerna": "Om rankningstabellerna",
+    "lj.om_lansjamforelsen": "Om länsjämförelsen",
+    "lj.om_lansjamforelsen_text": "Varje län visas som ett ovägt medelvärde av sina kommuner, så Gotland (en kommun) väger lika tungt som Västra Götaland (49). Jämförelsen säger något om länens *typiska* kommun — inte om var flest människor bor. Kurvorna kan jämföras mellan år eftersom de bygger på nivåvärden, men rangordningen inom ett år bygger på z-poäng och kan inte det.",
+    "kd.om_prognosen": "Om prognosen",
+    "kd.om_prognosen_text": "Prognosen framskrivs från det sista året med observerad inkomst, inte från dagens datum. Den bygger på {v0} årliga observationer, vilket är kort för statistisk framskrivning: konfidensintervallen vidgas snabbt och bortom tre år bör kurvan läsas som riktning, inte som nivå. Den säger ingenting om enskilda bostadsaffärer.",
+    "kd.om_komponenterna": "Om komponentuppdelningen",
+    "kd.om_komponenterna_text": "Staplarna visar hur mycket varje ingående variabel varierat över perioden för just denna kommun, mätt som variationskoefficient. En hög stapel betyder att variabeln rört sig mycket — inte att den bidrar mest till kommunens nivå.",
+    "rv.kommun": "Kommun",
+    "rv.z_poang": "Z-poäng",
+    "rv.shai": "SHAI",
+    "rv.risk": "Risk",
+    "rv.ranking": "RANKING",
+
     # ── Landing page (app.py) ─────────────────────────────────────
     "landing.shai_bostadsekonomisk_hallbarhet": "SHAI — Bostadsekonomisk hållbarhet",
     "landing.shai_bostadsekonomisk_hallbarhet_data_scb": "SHAI — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
@@ -72,8 +114,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.shai_riksoversikt": "SHAI · Riksöversikt",
     "rv.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "rv.inga_data_tillgangliga_for_den_valda": "Inga data tillgängliga för den valda perioden.",
-    "rv.hog": "Hög",
-    "rv.lag": "Låg",
     "rv.sida_01_nationell_oversikt": "Sida 01 · Nationell översikt",
     "rv.riksoversikt": "Riksöversikt",
     "rv.strukturell_bostadsekonomisk_hallbarhet_i": "Strukturell bostadsekonomisk hållbarhet i Sveriges {v0} kommuner · {v1}",
@@ -95,32 +135,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.shai_poang_z_poang": "SHAI poäng (z-poäng)",
     "rv.om_fordelningsgrafen": "Om fördelningsgrafen",
     "rv.histogrammet_visar_hur_shai_poangen_z_poang": "Histogrammet visar hur SHAI-poängen (z-poäng) fördelar sig bland kommunerna. Skalan är vänd så att ett lägre z betyder bättre överkomlighet: grön stapel = låg risk, gul = medel, röd = hög risk. Färgen kommer från riskklassen i datafilen, inte från en gräns som räknas om här. Den streckade linjen visar medianen. Klassgränserna placerar ungefär 25 % av kommunerna i varje ytterklass varje år, så fördelningens form säger mer än antalet i en klass.",
-    "rv.v0_version_c_v1_ranking_kommun_z_poang_shai": """
-    <div class="shai-card">
-        <div class="shai-card-header">
-            <div>
-                <div class="shai-card-title">{v0}</div>
-                <div class="shai-card-subtitle">Version C · {v1}</div>
-            </div>
-            <span class="shai-card-tag">RANKING</span>
-        </div>
-        <table class="shai-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Kommun</th>
-                    <th class="shai-num">Z-poäng</th>
-                    <th class="shai-num">SHAI</th>
-                    <th>Risk</th>
-                </tr>
-            </thead>
-            <tbody>
-                {v2}
-            </tbody>
-        </table>
-    </div>
-    """,
-    "rv.samst_overkomlighet_topp_15": "Sämst överkomlighet (topp 15)",
+        "rv.samst_overkomlighet_topp_15": "Sämst överkomlighet (topp 15)",
     "rv.bast_overkomlighet_topp_15": "Bäst överkomlighet (topp 15)",
     "rv.tabellerna_visar_de_15_kommuner_med_samst": "Tabellerna visar de 15 kommuner med sämst respektive bäst överkomlighet enligt Version C (realversion). Z-poängen anger hur långt kommunen avviker från riksgenomsnittet i standardavvikelser.",
 
@@ -140,24 +155,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.v0_lansutveckling_v1": "{v0} — Länsutveckling {v1}",
     "lj.ar": "År",
     "lj.indexvarde": "Indexvärde",
-    "lj.lansranking_v0_v1_ranking_lan_varde_v2": """
-                <div class="shai-card">
-                    <div class="shai-card-header">
-                        <div>
-                            <div class="shai-card-title">Länsranking {v0}</div>
-                            <div class="shai-card-subtitle">{v1}</div>
-                        </div>
-                        <span class="shai-card-tag">RANKING</span>
-                    </div>
-                    <table class="shai-table">
-                        <thead>
-                            <tr><th>#</th><th>Län</th><th class="shai-num">Värde</th></tr>
-                        </thead>
-                        <tbody>{v2}</tbody>
-                    </table>
-                </div>
-                """,
-    "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
+        "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
     "lj.topp_5_och_botten_5_lan_under_varje_formel": "Topp 5 och botten 5 län under varje formel",
     "lj.jamforelse": "JÄMFÖRELSE",
     "lj.samst_overkomlighet": "*Sämst överkomlighet:*",
