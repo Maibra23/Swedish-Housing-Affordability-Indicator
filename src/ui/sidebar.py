@@ -6,10 +6,12 @@ Renders brand block, page_link navigation, year pills, risk filter, and footer.
 from __future__ import annotations
 
 import tomllib
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+
+from src.provenance import complete_case_max_year, first_year, generated_at
 
 PAGES = [
     ("app.py", "Startsida"),
@@ -21,13 +23,48 @@ PAGES = [
     ("pages/06_Metodologi.py", "Metodologi och källor"),
 ]
 
-# Dynamic year range: always includes up to the current calendar year so that
-# forward-filled panel rows (is_imputed_income=True) are selectable in the UI.
-_DATA_START_YEAR = 2020
-YEAR_RANGE = list(range(_DATA_START_YEAR, date.today().year + 1))
+# The selector offers exactly the years the affordability index covers, both
+# ends read from the provenance artifact.
+#
+# It used to run to the current calendar year on the theory that forward-filled
+# income rows made 2025 and 2026 worth selecting. They were not: the panel
+# forward-fills income but leaves transaction_price_sek and unemployment_rate
+# null, so no formula can evaluate and every page hit st.stop() with "Inga data
+# tillgängliga". Two of the seven offered years were dead ends (Finding B).
+#
+# complete_case_max_year() is the year income was last actually published, which
+# is the real ceiling — see src/provenance.py.
+YEAR_RANGE = list(range(first_year(), complete_case_max_year() + 1))
 
-# Last year with actual (non-imputed) SCB income data
-_LAST_ACTUAL_DATA_YEAR = 2024
+
+def default_year() -> int:
+    """Year selected on first load: the most recent the index can compute."""
+    return YEAR_RANGE[-1]
+
+
+def data_vintage() -> str:
+    """Date the data artifacts were built, as YYYY-MM-DD.
+
+    This is the pipeline's run date, never the render date. The footer used to
+    print the current date instead, so a visitor read "Senast uppdaterad" above
+    an index whose newest input was two years older than that (Finding C).
+    """
+    return datetime.fromisoformat(generated_at()).strftime("%Y-%m-%d")
+
+
+def footer_html() -> str:
+    """Build the sidebar footer markup.
+
+    Separated from :func:`render_sidebar` so the vintage it reports can be
+    asserted without a Streamlit runtime.
+    """
+    return f"""
+        <div class="sidebar-footer">
+            <div style="margin-bottom:4px;"><strong>KÄLLA:</strong> SCB, Riksbanken, Kolada</div>
+            <div>Data uppdaterad: {data_vintage()}</div>
+            <div style="margin-top:4px;font-size:10px;color:#8A8FA8;">v{APP_VERSION}</div>
+        </div>
+    """
 
 
 def _app_version() -> str:
@@ -58,7 +95,7 @@ def render_sidebar(page_key: str = "main") -> dict:
         <div class="sidebar-brand">
             <div class="brand-mark">SHAI KONTROLLPANEL</div>
             <div class="brand-title">Bostadsekonomisk<br>hållbarhet</div>
-            <div class="brand-sub">Sverige · 2014 till {YEAR_RANGE[-1]}</div>
+            <div class="brand-sub">Sverige · {YEAR_RANGE[0]} till {YEAR_RANGE[-1]}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -74,9 +111,7 @@ def render_sidebar(page_key: str = "main") -> dict:
             '<div class="control-label">Valt år</div>',
             unsafe_allow_html=True,
         )
-        # Default to last actual data year so pages render correctly on first load.
-        # Years beyond _LAST_ACTUAL_DATA_YEAR contain forward-filled imputed data.
-        _default_year = min(YEAR_RANGE[-1], _LAST_ACTUAL_DATA_YEAR)
+        _default_year = default_year()
         selected_year = st.pills(
             "Välj år",
             options=YEAR_RANGE,
@@ -132,20 +167,10 @@ def render_sidebar(page_key: str = "main") -> dict:
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
         # ── Footer ───────────────────────────────────────────────
-        _imputed_years = date.today().year - _LAST_ACTUAL_DATA_YEAR
-        _imputed_note = (
-            f"<div style='color:#D4A03C;margin-top:4px;font-size:10px;'>"
-            f"Inkomst 2025–{date.today().year}: modellberäknad (+3%/år)</div>"
-            if _imputed_years > 0 else ""
-        )
-        st.markdown(f"""
-        <div class="sidebar-footer">
-            <div style="margin-bottom:4px;"><strong>KÄLLA:</strong> SCB, Riksbanken, Kolada</div>
-            <div>Senast uppdaterad: {date.today().strftime('%Y-%m-%d')}</div>
-            {_imputed_note}
-            <div style="margin-top:4px;font-size:10px;color:#8A8FA8;">v{APP_VERSION}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        # The forward-fill note that used to sit here is gone: the years it
+        # warned about are no longer selectable, so it described a state the UI
+        # cannot enter.
+        st.markdown(footer_html(), unsafe_allow_html=True)
 
     # Persist to session state
     st.session_state["selected_year"] = selected_year
