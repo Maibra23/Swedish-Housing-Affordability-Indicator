@@ -99,6 +99,7 @@ def step_compute_indices() -> None:
 
     import pandas as pd
     from src.indices.affordability import compute_all as compute_affordability
+    from src.indices.normalize import normalize_and_rank
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()
@@ -110,16 +111,19 @@ def step_compute_indices() -> None:
         aff.to_parquet(out, index=False)
         logger.info("  Saved %s  (%d rows)", out.name, len(aff))
 
-    # Also produce affordability_ranked (municipal with rank columns)
+    # Also produce affordability_ranked (municipal with z, rank and risk columns).
+    # This must go through indices.normalize, which owns the orientation contract
+    # (rank 1 = best, hog = least affordable). An inline ranking here once ranked
+    # version B the wrong way round and omitted z and risk entirely, which forced
+    # the pages to recompute them — incorrectly. See tests/test_ranked_artifact.py.
     muni_aff = pd.read_parquet(DATA_DIR / "affordability_municipal.parquet")
-    for col in ("version_a", "version_b", "version_c"):
-        if col in muni_aff.columns:
-            rank_col = col.replace("version", "rank")
-            muni_aff[rank_col] = muni_aff.groupby("year")[col].rank(
-                ascending=False, method="min"
-            ).astype("Int64")
-    muni_aff.to_parquet(DATA_DIR / "affordability_ranked.parquet", index=False)
-    logger.info("  Saved affordability_ranked.parquet  (%d rows)", len(muni_aff))
+    ranked = normalize_and_rank(muni_aff)
+    ranked.to_parquet(DATA_DIR / "affordability_ranked.parquet", index=False)
+    logger.info(
+        "  Saved affordability_ranked.parquet  (%d rows, %d years)",
+        len(ranked),
+        ranked["year"].nunique(),
+    )
 
     logger.info("Step 3 done in %.1f s", time.time() - t0)
 

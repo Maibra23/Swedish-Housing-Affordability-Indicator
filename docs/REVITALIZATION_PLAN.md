@@ -5,8 +5,8 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
-**Status:** NOT STARTED — 0 / 34 tasks complete
-**Current phase:** Phase 1 (not begun)
+**Status:** IN PROGRESS — 1 / 34 tasks complete
+**Current phase:** Phase 1 · next task **T1.2**
 
 ---
 
@@ -78,6 +78,39 @@ if selected_year == ranked["year"].iloc[0]:   # iloc[0] == 2014
 Selecting 2014 silently no-ops the risk filter, forces `n_hog = 0`, and renders the
 "Högrisk kommuner" KPI as 0 with a fabricated delta. Every other year takes the `else`
 branch, which **re-implements normalize.py inline in the page** (`01_Riksoversikt.py:62-80`).
+
+### N. Risk classes were inverted on the live app — CRITICAL (found during T1.1, FIXED)
+
+Two further defects surfaced while fixing Finding A.
+
+**N1 — inverted risk classes.** `src/indices/normalize.py` inverts the z-score for versions
+A and C (`z = -z`) so that "higher z = worse" before cutting at ±0.67σ. The inline copy at
+`pages/01_Riksoversikt.py:62-77` **omitted that inversion but reused the same bin labels.**
+Because 2014 was the only year that read the artifact, every other year — including the
+2024 default — rendered inverted:
+
+| Kommun | version_c (higher = more affordable) | class before | class after |
+|--------|--------------------------------------|--------------|-------------|
+| Solna | 6,5 — among the least affordable | `lag` (green) | `hog` (red) |
+| Sundbyberg | 7,0 | `lag` | `hog` |
+| Stockholm | 8,1 | `lag` | `hog` |
+| Åsele | 92,2 — the most affordable | `hog` (red) | `lag` (green) |
+| Ragunda | 91,9 | `hog` | `lag` |
+
+Class means before the fix: `lag` = 14,6 and `hog` = 56,9 — exactly reversed. The national
+map was green over Stockholm and red over inland Norrland.
+
+**N2 — inverted rank for version B.** `scripts/refresh_data.py` ranked the raw version value
+`ascending=False` without inverting B, so rank 1 meant "most affordable" for A and C but
+"least affordable" for B. Latent rather than user-visible: only `_c` columns reach the UI.
+Fixed by the same change.
+
+### O. `test_skane_worst_v_c` fails on data, not code — PRE-EXISTING
+
+`tests/test_validation.py:102` asserts Skåne (`12`) is among the five least affordable
+counties under Version C. It is not: the five are `01, 09, 13, 04, 03`. Verified failing
+against the pre-T1.1 artifact as well, so it is a stale expectation, not a regression.
+Resolve alongside T1.8 when the normalisation convention is settled.
 
 ### B. Two of seven selectable years have no data — CRITICAL
 
@@ -205,7 +238,7 @@ everything to `.shai-*`.
 
 | Task | Title | Phase | Status |
 |------|-------|-------|--------|
-| T1.1 | Regenerate ranked artifact through `normalize.py` | 1 | TODO |
+| T1.1 | Regenerate ranked artifact through `normalize.py` | 1 | **DONE** |
 | T1.2 | Remove inline z/rank/risk recomputation from pages | 1 | TODO |
 | T1.3 | Add `src/provenance.py` + provenance artifact | 1 | TODO |
 | T1.4 | Drive `YEAR_RANGE` from provenance; kill dead years | 1 | TODO |
@@ -254,7 +287,7 @@ tree, then implement.
 
 ---
 
-### T1.1 — Regenerate the ranked artifact through `normalize.py` · TODO
+### T1.1 — Regenerate the ranked artifact through `normalize.py` · DONE
 
 **Fixes:** Finding A
 **Files:** `src/indices/normalize.py`, `data/processed/affordability_ranked.parquet`, `scripts/refresh_data.py`
@@ -272,9 +305,14 @@ rather than collapsing to a single year.
 4. Confirm `scripts/refresh_data.py` invokes this path, so a future refresh reproduces it.
 
 **Acceptance**
-- [ ] `affordability_ranked.parquet` has 3190 rows, 11 years, and all six `z_*`/`risk_*` columns
-- [ ] `normalize.py` is the only producer of these columns anywhere in the tree
-- [ ] `test_ranked_artifact_has_risk_columns` passes
+- [x] `affordability_ranked.parquet` has 3190 rows, 11 years, and all nine `z_*`/`rank_*`/`risk_*` columns
+- [x] `normalize.py` is the only producer of these columns anywhere in the tree (`scripts/refresh_data.py` now calls it; the page path is removed in T1.2)
+- [x] `tests/test_ranked_artifact.py` — 15 tests, all passing (11 failed before the fix)
+
+**Outcome:** the inline ranking in `scripts/refresh_data.py:114-121` was the source of
+the drift. It has been replaced by a call to `normalize_and_rank()`. `normalize.py` was
+rewritten to score every year rather than collapsing to one, and it now documents the
+orientation contract. See Finding N — the fix corrected a live inverted-risk defect.
 
 ---
 
@@ -836,3 +874,4 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.1 | **DONE.** Rewrote `normalize.py` (per-year scoring, documented orientation contract); routed `refresh_data.py` through it; regenerated the artifact; added `tests/test_ranked_artifact.py` (15 tests, 11 were failing). Uncovered and fixed Finding N — risk classes were inverted on the live app. | Next: **T1.2**, delete the inline recompute at `01_Riksoversikt.py:58-80`. Note pre-existing failure `test_skane_worst_v_c` (Finding O) — not a regression, defer to T1.8. |
