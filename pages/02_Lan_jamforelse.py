@@ -5,8 +5,10 @@ Jämför 21 län under tre formelversioner (A, B, C) med trendlinjer och ranking
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
-    page_title="SHAI · Län jämförelse",
+    page_title=L("lj.shai_lan_jamforelse"),
     page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
@@ -38,7 +40,7 @@ try:
         municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
         county_panel = pd.read_parquet("data/processed/panel_county.parquet")
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("lj.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -66,9 +68,9 @@ if "is_imputed_income" in municipal.columns:
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
-    eyebrow="Sida 02 · Regional jämförelse",
-    title="Län jämförelse",
-    subtitle="21 län jämförda under tre bostadsekonomiska formler",
+    eyebrow=L("lj.sida_02_regional_jamforelse"),
+    title=L("lj.lan_jamforelse"),
+    subtitle=L("lj.21_lan_jamforda_under_tre_bostadsekonomiska"),
     year=selected_year,
 )
 
@@ -77,9 +79,7 @@ FORMULA_INFO = {
     "Bankversion (A)": {
         "formula": r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}",
         "desc": (
-            "Den enklaste versionen — mäter hushållets betalningsförmåga relativt "
-            "bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. "
-            "Högre värde = bättre överkomlighet."
+            L("lj.den_enklaste_versionen_mater_hushallets")
         ),
         "col": "version_a",
         "color_highlight": "#B94A48",
@@ -88,31 +88,25 @@ FORMULA_INFO = {
     "Makroversion (B)": {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
         "desc": (
-            "En sammansatt riskindikator som viktar fyra makrovariabler: pris/inkomst, "
-            "ränta, arbetslöshet och inflation. Speglar centralbankens makrotillsynsperspektiv. "
-            "Högre värde = högre risk."
+            L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
         ),
         "col": "version_b",
         "color_highlight": "#C4A35A",
         "color_others": "#7B68A8",
         "footnote": (
-            "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. "
-            "Obs: R och π är nationella variabler — de bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13)."
+            L("lj.arbetsloshet_avser_oppet_arbetslosa_enligt")
         ),
     },
     "Realversion (C)": {
         "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
         "desc": (
-            "Den rekommenderade versionen — justerar för inflation genom att använda "
-            "realräntan istället för nominalräntan. Akademiskt förankrad. "
-            "Högre värde = bättre överkomlighet."
+            L("lj.den_rekommenderade_versionen_justerar_for")
         ),
         "col": "version_c",
         "color_highlight": "#2E7D5B",
         "color_others": "#D4785A",
         "footnote": (
-            "Att olika formler rangordnar länen olika är förväntat och inte ett fel — "
-            "de mäter olika ekonomiska perspektiv."
+            L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
     },
 }
@@ -131,7 +125,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
         if "footnote" in info:
             st.caption(f"ℹ️ {info['footnote']}")
 
-        st.caption("Stockholm visas som referenslän (markerat med starkare linje).")
+        st.caption(L("lj.stockholm_visas_som_referenslan_markerat_med"))
 
         col_chart, col_table = st.columns([3, 2])
 
@@ -156,7 +150,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                             color=info["color_highlight"] if is_sthlm else info["color_others"],
                         ),
                         opacity=1.0 if is_sthlm else 0.35,
-                        hovertemplate=f"<b>{name}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}<extra></extra>",
+                        hovertemplate=L("lj.v0_ar_x_varde_y_2f", v0=name),
                     ))
 
                 # Shade imputed-income years
@@ -181,10 +175,10 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else PERIOD
 
                 layout = get_chart_layout(
-                    title=f"{tab_name} — Länsutveckling {yr_range}",
+                    title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=yr_range),
                     height=420,
-                    xaxis_title="År",
-                    yaxis_title="Indexvärde",
+                    xaxis_title=L("lj.ar"),
+                    yaxis_title=L("lj.indexvarde"),
                     showlegend=False,
                 )
                 layout["xaxis"]["dtick"] = 1
@@ -209,23 +203,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                         <td class="num">{f"{row[vcol]:.2f}".replace(".", ",")}</td>
                     </tr>"""
 
-                st.markdown(f"""
-                <div class="shai-card">
-                    <div class="shai-card-header">
-                        <div>
-                            <div class="shai-card-title">Länsranking {selected_year}</div>
-                            <div class="shai-card-subtitle">{tab_name}</div>
-                        </div>
-                        <span class="shai-card-tag">RANKING</span>
-                    </div>
-                    <table class="shai-table">
-                        <thead>
-                            <tr><th>#</th><th>Län</th><th class="num">Värde</th></tr>
-                        </thead>
-                        <tbody>{rows_html}</tbody>
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(L("lj.lansranking_v0_v1_ranking_lan_varde_v2", v0=selected_year, v1=tab_name, v2=rows_html), unsafe_allow_html=True)
 
 # ── Cross-formula comparison ─────────────────────────────────────────
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
@@ -233,9 +211,9 @@ st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 with st.container(border=True):
     st.markdown(
         card_header(
-            "Varför skiljer sig versionerna åt?",
-            "Topp 5 och botten 5 län under varje formel",
-            "JÄMFÖRELSE",
+            L("lj.varfor_skiljer_sig_versionerna_at"),
+            L("lj.topp_5_och_botten_5_lan_under_varje_formel"),
+            L("lj.jamforelse"),
         ),
         unsafe_allow_html=True,
     )
@@ -256,12 +234,12 @@ with st.container(border=True):
                 ascending = vcol != "version_b"
 
                 worst = year_data.nsmallest(5, vcol) if ascending else year_data.nlargest(5, vcol)
-                st.markdown("*Sämst överkomlighet:*")
+                st.markdown(L("lj.samst_overkomlighet"))
                 for _, r in worst.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
 
                 best = year_data.nlargest(5, vcol) if ascending else year_data.nsmallest(5, vcol)
-                st.markdown("*Bäst överkomlighet:*")
+                st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
 
