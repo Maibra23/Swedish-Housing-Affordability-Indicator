@@ -237,7 +237,7 @@ app needs is already in `data/processed/`.
 
 ## Known limitations
 
-See `docs/METHODOLOGY_v2.md` section 7 for the full list (F1–F15). Key ones for ops:
+See `docs/METHODOLOGY.md` section 7 for the full list (F1–F15). Key ones for ops:
 
 | ID | Description | Impact |
 |----|-------------|--------|

@@ -83,12 +83,19 @@ troubleshooting reference.
 
 | File | Contents |
 |------|----------|
-| `docs/METHODOLOGY_v2.md` | Formulas, variables, limitations (F1–F15) |
-| `docs/DEPLOYMENT.md` | Deployment guide, data refresh, file inventory |
-| `docs/PRD.md` | Product requirements |
-| `docs/DESIGN_SYSTEM.md` | KRI design tokens and component patterns |
-| `docs/PLAYBOOK_v2.md` | Development playbook |
+| `docs/METHODOLOGY.md` | Formulas, variables, normalisation decisions, limitations F1–F16 |
+| `docs/DEPLOYMENT.md` | Install paths, data vintage, refresh, file inventory, troubleshooting |
+| `docs/REVITALIZATION_PLAN.md` | The work plan this codebase is being brought back through |
 | `docs/OPEN_RISKS.md` | Known hazards and pending decisions, with recommendations |
+| `docs/DESIGN_SYSTEM.md` | CSS tokens and component patterns |
+| `docs/CHOROPLETH_MAP_REFERENCE.md` | Folium map implementation reference |
+| `docs/PRD.md` | Product requirements |
+| `docs/PLAYBOOK.md` | Development playbook |
+| `docs/DEVIATIONS.md` | Where the implementation departs from the PRD, and why |
+| `docs/archive/` | Build-time artifacts and superseded analyses, kept for reference only |
+
+`docs/archive/` is not maintained. Nothing outside it should link into it as current
+guidance.
 
 ## Troubleshooting
 

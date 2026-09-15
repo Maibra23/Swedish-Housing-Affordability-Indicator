@@ -621,7 +621,7 @@ SWEDISH_LABELS: dict[str, str] = {
 
     **Källa:** Finansinspektionen
     """,
-    "mt.6_begransningar_f1f15": "6. Begränsningar (F1–F15)",
+    "mt.6_begransningar_f1f15": "6. Begränsningar (F1–F16)",
     "mt.id_begransning_atgard_f1_kommunal": """
     | ID | Begränsning | Åtgärd |
     |----|-------------|--------|
