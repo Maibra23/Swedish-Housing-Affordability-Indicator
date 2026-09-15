@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 23 / 34 tasks
-**Current phase:** Phase 3 · next task **T3.3** — §0 still applies to T3.4–T3.9 and T3.12
-**Test suite:** 401 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 27 / 34 tasks
+**Current phase:** Phase 3 · next task **T3.4** — §0 still applies to T3.4–T3.9
+**Test suite:** 497 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -444,16 +444,16 @@ everything to `.shai-*`.
 | T2.5 | Verify clean-environment deploy | 2 | **DONE** |
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | **DONE** |
 | T3.2 | Normalise all CSS classes to `.shai-*` | 3 | **DONE** |
-| T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | TODO |
+| T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | **DONE** |
 | T3.4 | Add `.shai-explanation` under every bare number | 3 | TODO |
 | T3.5 | Add `help_badge()` glossary component | 3 | TODO |
 | T3.6 | Add `.shai-vintage` badge component | 3 | TODO |
 | T3.7 | Add `src/ui/filters.py`; de-duplicate page filter logic | 3 | TODO |
 | T3.8 | Add shared `src/ui/data_table.py` (KRI pattern) | 3 | TODO |
 | T3.9 | Add "Om kartan / Om grafen" contextual expanders | 3 | TODO |
-| T3.10 | Split `components.py`; extract landing components | 3 | TODO |
-| T3.11 | Split `04_Kontantinsats.py` (880 lines) | 3 | TODO |
-| T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | TODO |
+| T3.10 | Split `components.py`; extract landing components | 3 | **DONE** |
+| T3.11 | Split `04_Kontantinsats.py` (880 lines) | 3 | **DONE** |
+| T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | **DONE** |
 | T4.1 | `test_copy_matches_artifacts.py` | 4 | **DONE** |
 | T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
 | T4.3 | `test_labels.py` | 4 | **DONE** |
@@ -1181,7 +1181,7 @@ not ours to rename, and the `variant-*` / `up` / `hog` modifiers, only ever appl
 
 ---
 
-### T3.3 — Split `css.py` · TODO
+### T3.3 — Split `css.py` · DONE
 
 **Fixes:** Finding K
 **Files:** `src/ui/css.py` (902 lines) → `src/ui/tokens.py`, `src/ui/css_layout.py`, `src/ui/css_components.py`
@@ -1289,7 +1289,7 @@ per-page HTML table strings.
 
 ---
 
-### T3.10 — Split `components.py` · TODO
+### T3.10 — Split `components.py` · DONE
 
 **Fixes:** Finding K
 **Files:** `src/ui/components.py` (434 lines) → generic + NEW `src/ui/landing.py`
@@ -1305,7 +1305,7 @@ Landing-only functions (`render_landing_hero`, `render_landing_stat_strip`,
 
 ---
 
-### T3.11 — Split `04_Kontantinsats.py` · TODO
+### T3.11 — Split `04_Kontantinsats.py` · DONE
 
 **Fixes:** Finding K
 **Files:** `pages/04_Kontantinsats.py` (880 lines), `src/kontantinsats/`
@@ -1320,7 +1320,7 @@ page keeps layout and wiring only.
 
 ---
 
-### T3.12 — Align `.streamlit/config.toml` · TODO
+### T3.12 — Align `.streamlit/config.toml` · DONE
 
 **Files:** `.streamlit/config.toml`
 

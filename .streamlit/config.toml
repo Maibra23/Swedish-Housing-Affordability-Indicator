@@ -6,8 +6,11 @@ showSidebarNavigation = false
 
 [theme]
 base = "light"
-primaryColor = "#0B1F3F"
+# primaryColor drives Streamlit's own widget accents (pills, sliders, focus
+# rings). It should match the accent token, not the brand navy: navy on navy
+# leaves a selected pill indistinguishable from an unselected one. See T3.12.
+primaryColor = "#C4A35A"
 backgroundColor = "#F7F8FA"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#1A1A2E"
-font = "sans serif"
+font = "Source Sans 3, sans-serif"

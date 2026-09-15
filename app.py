@@ -23,7 +23,8 @@ st.set_page_config(
 from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css
 from src.ui.sidebar import render_sidebar, APP_VERSION
-from src.ui.components import (
+from src.ui.components import footer_note
+from src.ui.landing import (
     render_landing_hero,
     render_landing_stat_strip,
     render_landing_what_is_block,
@@ -31,7 +32,6 @@ from src.ui.components import (
     render_landing_steps,
     render_landing_nav_card,
     render_landing_credibility,
-    footer_note,
 )
 
 inject_css()

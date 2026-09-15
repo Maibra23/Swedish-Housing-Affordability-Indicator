@@ -122,6 +122,9 @@ def relabelled_panel(tmp_path, monkeypatch):
 def rendered(monkeypatch):
     """Capture the HTML a landing component emits.
 
+    T3.10 moved these out of `components` into `src/ui/landing.py`; the sinks are
+    patched on that module.
+
     Both sinks are patched. `render_landing_steps` writes through `st.html`
     rather than `st.markdown` — capturing only the latter returned an empty
     string, which quietly satisfied every "the old literal is absent" assertion
@@ -129,14 +132,14 @@ def rendered(monkeypatch):
     """
 
     def _render(component, *args, **kwargs) -> str:
-        from src.ui import components
+        from src.ui import landing
 
         captured: list[str] = []
         for sink in ("markdown", "html"):
             monkeypatch.setattr(
-                components.st, sink, lambda payload, **_: captured.append(str(payload))
+                landing.st, sink, lambda payload, **_: captured.append(str(payload))
             )
-        getattr(components, component)(*args, **kwargs)
+        getattr(landing, component)(*args, **kwargs)
         assert captured, f"{component} rendered nothing — the capture missed its sink"
         return "\n".join(captured)
 
