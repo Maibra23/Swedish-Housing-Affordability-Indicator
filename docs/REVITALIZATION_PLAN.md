@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — **Phase 1 complete** · 12 / 34 tasks
-**Current phase:** Phase 2 · next task **T2.1**
-**Test suite:** 172 passed, 0 failed, 1 skipped · 67/67 page renders clean
+**Status:** IN PROGRESS — Phase 1 complete · Phase 2 at T2.4 (gated) · 15 / 34 tasks
+**Current phase:** Phase 2 · next task **T2.4**, which is gated on **O1**
+**Test suite:** 204 passed, 0 failed, 1 skipped · 67/67 page renders clean
 
 ---
 
@@ -411,9 +411,9 @@ everything to `.shai-*`.
 | T1.8 | Unify normalisation convention across A/B/C (window **and** transform) | 1 | **DONE** |
 | T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | **DONE** |
 | T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | **DONE** |
-| T2.1 | Add runtime-only `requirements.txt` | 2 | TODO |
-| T2.2 | Split build-only deps into optional group; clean `pyproject.toml` | 2 | TODO |
-| T2.3 | Fix README troubleshooting + deployment docs | 2 | TODO |
+| T2.1 | Add runtime-only `requirements.txt` | 2 | **DONE** |
+| T2.2 | Split build-only deps into optional group; clean `pyproject.toml` | 2 | **DONE** |
+| T2.3 | Fix README troubleshooting + deployment docs | 2 | **DONE** |
 | T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | TODO |
 | T2.5 | Verify clean-environment deploy | 2 | TODO |
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | TODO |
@@ -868,7 +868,7 @@ app boots.
 
 ---
 
-### T2.1 — Add a runtime-only `requirements.txt` · TODO
+### T2.1 — Add a runtime-only `requirements.txt` · DONE
 
 **Fixes:** Finding I
 **Files:** NEW `requirements.txt`
@@ -877,13 +877,21 @@ Verified runtime imports across `app.py` and `pages/*.py`: streamlit, pandas, nu
 folium, streamlit-folium, branca, pyarrow. Nothing else. Pin lower bounds.
 
 **Acceptance**
-- [ ] `requirements.txt` exists with runtime deps only
-- [ ] `prophet`, `pmdarima`, `statsmodels`, `requests` absent from it
-- [ ] Fresh venv install from it can run `streamlit run app.py`
+- [x] `requirements.txt` exists with runtime deps only — eight packages
+- [x] `prophet`, `pmdarima`, `statsmodels`, `requests` absent, and asserted *unreachable*
+      from any page rather than merely absent from the file
+- [ ] Fresh venv install from it can run `streamlit run app.py` — **deferred to T2.5**,
+      which owns the clean-environment check
+
+`tests/test_runtime_dependencies.py` (8). The expected set is not written down: it is walked
+from `app.py` and `pages/*.py` through first-party code, so adding `import scipy` to a page
+fails the suite until `requirements.txt` catches up. The plan's list was right, including
+`pyarrow`, which appears in no import statement at all — `pd.read_parquet` needs it. That
+entry has to justify itself in a test rather than sit there as folklore.
 
 ---
 
-### T2.2 — Split build-only deps; clean `pyproject.toml` · TODO
+### T2.2 — Split build-only deps; clean `pyproject.toml` · DONE
 
 **Fixes:** Finding I
 **Files:** `pyproject.toml`
@@ -893,13 +901,36 @@ Move `prophet`, `pmdarima`, `statsmodels`, `requests` into
 to suppress a Poetry behaviour that setuptools does not need.
 
 **Acceptance**
-- [ ] `[project.dependencies]` matches `requirements.txt`
-- [ ] `pip install -e ".[pipeline]"` installs the refresh toolchain
-- [ ] No Poetry configuration remains
+- [x] `[project.dependencies]` matches `requirements.txt`, asserted both ways
+- [x] `pip install -e ".[pipeline]"` resolves and builds editable metadata (dry run on
+      3.12; the full clean install is T2.5)
+- [x] No Poetry configuration remains
+
+`tests/test_packaging.py` (8). Three things widened this task.
+
+**`requires-python` was `>=3.11,<3.12`.** Not a compatibility statement — the suite and all
+67 renders pass on 3.12.10 — but it made `pip install -e .` refuse on the interpreter the app
+is verified against, which would have blocked this task's own acceptance criterion. Now
+`>=3.11`; the floor is real, because `sidebar.py` imports stdlib `tomllib`.
+
+**`packages.find` said `where = ["src"]`**, describing a src-layout this project does not
+use. It would have installed `ui`, `data` and `indices` as top-level packages that nothing
+imports — every page and test spells them `src.*`. Now `where = ["."], include = ["src*"]`,
+which resolves to exactly the seven `src.*` packages.
+
+**Bare `pytest` could not collect the suite** — six files errored. It worked only under
+`python -m pytest`, which injects the working directory, and §0 happens to document that
+form. Editors and CI runners call the bare console script. `pythonpath` now carries both
+`.` (for `src.provenance`, `tests.sourcetools`) and `src` (for `indices.real_rate`), and a
+subprocess test runs the bare invocation so the fix cannot silently regress.
+
+`pytest` also left `[project.dependencies]` — a test runner on the serving host is pure
+install cost — and now sits in a `dev` extra with `pytest-cov` and `scipy`, the last of which
+backs the normality tests behind D6 and was previously undeclared entirely.
 
 ---
 
-### T2.3 — Fix README and deployment docs · TODO
+### T2.3 — Fix README and deployment docs · DONE
 
 **Fixes:** Finding I
 **Files:** `README.md`, `docs/DEPLOYMENT.md`
@@ -909,9 +940,20 @@ two-tier install: `requirements.txt` for running, `.[pipeline]` for refreshing. 
 real data vintage and the ragged-panel constraint from §3 Finding E.
 
 **Acceptance**
-- [ ] No reference to `streamlit-echarts`
-- [ ] Both install paths documented
-- [ ] Data vintage and the income constraint stated
+- [x] No reference to `streamlit-echarts` in `README.md` or `docs/DEPLOYMENT.md`
+- [x] Both install paths documented in both files, and the bare `pip install -e .` that is
+      neither path is gone
+- [x] Data vintage and the income constraint stated, with Finding E's ragged-panel table
+      reproduced in `DEPLOYMENT.md`
+
+`tests/test_docs_install_paths.py` (16). The vintage assertions read `complete_case_max_year()`
+and `n_kommuner()` from the artifact and require the prose to agree, so a refresh that moves
+the data fails the docs rather than quietly outdating them — the same guard T1.10 put on the
+UI. A stated `Python 3.x` must also satisfy `requires-python`, which caught `README.md`
+promising 3.11 flat after T2.2 widened the floor to `>=3.11`.
+
+Deliberately out of scope: `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still mention
+ECharts. Both are build-time artifacts slated for deletion in T4.6.
 
 ---
 
@@ -1278,6 +1320,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |
 | 2026-09-15 | T1.9, T1.10 | **Both DONE — Phase 1 closed.** T1.9: dropped the YoY delta on the high-risk count and relabelled it a relative position within the year, with no split figure in the copy (D6). Widened mid-task — the count was read from the *risk-filtered* frame while the row's other three cards read the unfiltered year, so deselecting "Hög" showed the national high-risk count as 0; now counted on `mun_year`. `tests/test_risk_kpi.py` (8). T1.10: nineteen literal `290` / `2014–2024` / "11 år" across nine files replaced with provenance reads; `_panel_facts()` resolves them per call in `components.py`. `tests/test_no_hardcoded_counts.py` (47), including a behavioural check against a relabelled panel (277 kommuner, 2009–2019). Fixed a false-green in my own fixture: `render_landing_steps` emits via `st.html`, so a markdown-only capture returned an empty string and passed every absence assertion vacuously. Also corrected the step's claim that values are z-standardised "över hela panelen" — D5 made that false. **Suite: 172 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.1**. Note for this machine: the §0 `python3.11` rule is macOS-specific — on Windows the default `python` is 3.12.10 and collects the full suite, though `pyproject.toml` still declares `requires-python = ">=3.11,<3.12"`, which T2.2 should reconcile. Deferred, not done: `21 län` is still a literal (provenance carries no county count), and `06_Metodologi.py` still hardcodes the measured "16 av N kommuner" class-change figure — both belong to T4.1. |
 | 2026-09-15 | T1.8, Findings O + P | **DONE.** O2 → D5 (within-year `z_*`; B's construction stays pooled), O4 → D6 (log-transform A and C). Implemented in `normalize.py`, artifacts regenerated, `rank_*` verified identical across all versions and years. `z_c` normality now holds every year (p = 0.34–0.83); 2024 split 19.7/50.3/30.0 → 23.4/48.3/28.3. METHODOLOGY §4 rewritten into window/transform/class subsections stating what B would lose under within-year. Finding O resolved (a near-tie boundary — Skåne is 6th by 0.7 points); Finding P corrected in both files. Histogram caption updated: on a log scale z = 0 is the median, not the mean. `tests/test_normalization_convention.py` (16). **Suite: 117 passed, 0 failed, 1 skipped — green for the first time.** 67/67 renders clean. | Next: **T1.9** — drop the YoY delta on the high-risk count; its labels must not quote a split figure, since D6 moved it. Then **T1.10**. Phase 1 has no blocked tasks left. |
 | 2026-09-15 | T1.8 (analysis only) | **BLOCKED, no code changed.** Investigating T1.7's colour domain exposed a larger issue: `version_c` is a ratio and therefore log-normal, but is z-scored raw and cut at ±0.67σ. Normality is rejected at p < 6e-15 in every year; under a log it passes in all eleven (p = 0.34–0.83). Recorded as **Finding Q**. This also proved **Finding F's own arithmetic wrong** — the split is ≈19/51/30 with 83–89 high-risk, not the "25/50/25, near 72" it claimed; F corrected in place. Split the normalisation question into two axes, window (**O2**) and transform (**O4**), widened T1.8 to own both, and marked it `BLOCKED`. Blast radius measured for the decision: ranks unchanged, 16 of 290 municipalities (6 %) change class. | **Answer O2 and O4 to unblock T1.8.** Until then the next workable task is **T1.9** (unblocked), then **T1.10**. Do not change the transform piecemeal — the numbers are currently self-consistent and a partial change is worse than either endpoint. |

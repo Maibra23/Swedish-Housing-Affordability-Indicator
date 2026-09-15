@@ -1,0 +1,28 @@
+# Runtime dependencies — what Streamlit Community Cloud installs to serve the app.
+#
+# This file is deliberately NOT the project's full dependency set. The refresh
+# pipeline (prophet, pmdarima, statsmodels, requests) runs on a developer's
+# machine and writes parquet artifacts that are committed; the server only reads
+# them. Prophet and pmdarima compile from source, so shipping them here bought a
+# slow, fragile cold start and nothing else. See docs/REVITALIZATION_PLAN.md,
+# Finding I / T2.1.
+#
+#   running the app   pip install -r requirements.txt
+#   refreshing data   pip install -e ".[pipeline]"
+#
+# Bounds are lower-only: Streamlit Cloud rebuilds periodically and an upper pin
+# would rot silently. The versions named are the ones this app is verified
+# against. tests/test_runtime_dependencies.py derives the expected package set
+# from the import graph, so adding an import to a page fails the suite until
+# this file catches up.
+
+streamlit>=1.55.0
+pandas>=2.3.3
+numpy>=1.26.2
+plotly>=6.6.0
+folium>=0.20.0
+streamlit-folium>=0.27.1
+branca>=0.8.2
+
+# Not imported anywhere — pandas needs it to read the .parquet artifacts.
+pyarrow>=23.0.1

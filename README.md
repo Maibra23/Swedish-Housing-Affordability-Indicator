@@ -4,22 +4,53 @@ Streamlit dashboard analysing housing affordability across 290 Swedish municipal
 using three econometric formulas (Version A/B/C), a kontantinsats engine covering
 four regulatory regimes, a scenario simulator, and 6-year ARIMA/Prophet forecasts.
 
-**Version:** 1.3.0 · **Python:** 3.11 · **Data:** SCB, Riksbanken, Kolada
+**Version:** 1.3.0 · **Python:** 3.11+ · **Data:** SCB, Riksbanken, Kolada
+
+## Data vintage
+
+The composite index covers **2014–2024**. It ends at 2024 because **median income**
+(SCB HE0110) ends at 2024, and all three formulas require it. Prices, the price index
+and unemployment already have 2025 published — refreshing them advances those component
+series but **cannot** move the index past 2024. The app reads its vintage from
+`data/processed/data_provenance.json` rather than from the clock, so what it shows is
+always the age of the data in front of you.
 
 ## Setup
+
+Two installs, because there are two audiences.
+
+**To run the app** — this is what Streamlit Community Cloud performs on deploy:
 
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -r requirements.txt
 ```
+
+Eight packages, no compilers. The app only reads the committed parquet artifacts.
+
+**To refresh the data** — adds the SCB/Riksbanken/Kolada clients and the forecast
+toolchain. `prophet` and `pmdarima` compile from source, so expect a slow first install;
+that is exactly why they are not in the runtime set:
+
+```bash
+pip install -e ".[pipeline]"
+```
+
+Add `.[dev]` for the test suite; the extras combine: `pip install -e ".[pipeline,dev]"`.
 
 ## Run locally
 
 ```bash
 streamlit run app.py
+```
+
+## Tests
+
+```bash
+pytest tests/
 ```
 
 ## Data refresh
@@ -59,6 +90,12 @@ troubleshooting reference.
 
 ## Troubleshooting
 
-If you see frontend errors about ECharts/BidiComponent on the map page, remove the
-unused package: `pip uninstall streamlit-echarts` (the app uses Plotly for charts
-and Folium for the choropleth map).
+`docs/DEPLOYMENT.md` holds the operational troubleshooting reference.
+
+**A deploy installs a compiler toolchain, or times out.** Something is installing from
+`pyproject.toml` instead of `requirements.txt`. Only the latter is the runtime set;
+`prophet` and `pmdarima` live in the `pipeline` extra so they never reach the serving host.
+
+**The suite fails to collect.** Run it from the repository root. `pyproject.toml` puts
+both the root and `src` on `pythonpath`, which is what resolves `src.provenance` and
+`indices.real_rate`.
