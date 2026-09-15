@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T15:31:10+00:00",
+  "generated_at": "2026-09-15T19:22:47+00:00",
   "sources": {
     "median_income": {
       "min_year": 2011,
@@ -8,7 +8,7 @@
     },
     "transaction_price_sek": {
       "min_year": 2011,
-      "max_year": 2024,
+      "max_year": 2025,
       "n_regions": 290
     },
     "policy_rate": {
@@ -18,7 +18,7 @@
     },
     "unemployment_rate": {
       "min_year": 2011,
-      "max_year": 2024,
+      "max_year": 2025,
       "n_regions": 290
     },
     "cpi_yoy_pct": {
@@ -38,7 +38,7 @@
     },
     "kt_ratio": {
       "min_year": 2011,
-      "max_year": 2024,
+      "max_year": 2025,
       "n_regions": 290
     },
     "population": {
@@ -48,7 +48,7 @@
     },
     "completions": {
       "min_year": 2011,
-      "max_year": 2024,
+      "max_year": 2025,
       "n_regions": 290
     },
     "cpi_index": {

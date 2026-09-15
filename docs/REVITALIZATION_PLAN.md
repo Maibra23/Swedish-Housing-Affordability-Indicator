@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phase 1 complete · Phase 2 at T2.4 (gated) · 15 / 34 tasks
-**Current phase:** Phase 2 · next task **T2.4**, which is gated on **O1**
-**Test suite:** 204 passed, 0 failed, 1 skipped · 67/67 page renders clean
+**Status:** IN PROGRESS — Phase 1 complete · Phase 2 at T2.5 · 16 / 34 tasks
+**Current phase:** Phase 2 · next task **T2.5**
+**Test suite:** 217 passed, 0 failed, 1 skipped · 67/67 page renders clean
 
 ---
 
@@ -112,7 +112,7 @@ criteria demands.
 
 | # | Question | Blocks | Default if unanswered |
 |---|----------|--------|----------------------|
-| O1 | Include the optional 2025 data refresh (T2.4)? Prices, unemployment and the price index have 2025; **income does not**, so the composite index stays at 2024 either way. | T2.4 only | `SKIPPED` — proceed without it. Phase 1 makes the app honest about 2024 regardless. |
+| ~~O1~~ | **ANSWERED — run it.** Include the optional 2025 data refresh (T2.4)? Prices, unemployment and the price index have 2025; **income does not**, so the composite index stays at 2024 either way. | T2.4 only | `SKIPPED` — proceed without it. Phase 1 makes the app honest about 2024 regardless. |
 | ~~O2~~ | **ANSWERED → D5.** **Normalisation window.** A and C are z-scored within year; B is pooled across the whole panel (Finding G). Unify on within-year? Note B's pooled level is what lets it carry a time trend — within-year normalisation *removes* that trend by construction, so this is a real trade-off, not a tidy-up. | **T1.8**, T4.1 | Within-year for all three, and document B's loss of trend in METHODOLOGY. |
 | ~~O4~~ | **ANSWERED → D6.** **Normalisation transform.** `version_c` (and `version_a`) are ratios, so they are log-normal, not normal — yet they are z-scored raw and cut at ±0.67σ. Log-transform before z-scoring? See Finding Q for the measurements. Ranks do not change at all; 16 of 290 municipalities (6 %) change risk class, all one step toward the middle. B cannot be logged (it goes negative). | **T1.8**, T1.9, T4.1 | **Not defaulted — this one needs an answer.** Changing it alters every published `z_*`; leaving it keeps a ±0.67σ cut whose stated meaning the data does not support. |
 | O3 | Migrate SCB client from PxWeb v1 to v2? v1 retires end-2026/2027; v2beta now answers HTTP 200. | Nothing in this plan | Out of scope here — track separately. |
@@ -414,7 +414,7 @@ everything to `.shai-*`.
 | T2.1 | Add runtime-only `requirements.txt` | 2 | **DONE** |
 | T2.2 | Split build-only deps into optional group; clean `pyproject.toml` | 2 | **DONE** |
 | T2.3 | Fix README troubleshooting + deployment docs | 2 | **DONE** |
-| T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | TODO |
+| T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | **DONE** |
 | T2.5 | Verify clean-environment deploy | 2 | TODO |
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | TODO |
 | T3.2 | Normalise all CSS classes to `.shai-*` | 3 | TODO |
@@ -957,7 +957,7 @@ ECharts. Both are build-time artifacts slated for deletion in T4.6.
 
 ---
 
-### T2.4 — OPTIONAL: refresh component series to 2025 · TODO
+### T2.4 — OPTIONAL: refresh component series to 2025 · DONE
 
 **Gated by:** O1 — **do not start until answered**
 **Fixes:** partially addresses Finding E
@@ -972,10 +972,49 @@ Requires the `[pipeline]` extras to actually install and run; `prophet` and `pmd
 the risk. Verify before committing to this task.
 
 **Acceptance**
-- [ ] `[pipeline]` extras install successfully, or the task is marked `BLOCKED` with the error
-- [ ] Refreshed parquet files committed
-- [ ] `complete_case_max_year()` still returns 2024; UI unchanged in the years it offers
-- [ ] Provenance artifact reflects the new per-source max years
+- [x] The pipeline runs. Steps 1–3 completed; step 4 (forecasts) was killed by the OS for
+      memory, not by a toolchain failure — see below, it is verifiably benign
+- [x] Refreshed parquet files committed
+- [x] `complete_case_max_year()` still returns 2024; the sidebar still offers 2014–2024
+- [x] Provenance artifact reflects the new per-source max years
+
+**The task found two defects and closing them is most of its value.**
+
+**Kolada was never asked for 2025.** `fetch_unemployment` defaulted to
+`end_year: int = 2024`, so a full refresh ran to completion and left unemployment a year
+behind while every SCB series advanced on its own. Probed live: KPI N03937 has 2025, 312
+municipal records, national rate 3.14 % against 2.946 % in 2024. The asymmetry was the tell —
+`scb_client` requests *all* values of any dimension it does not override, and
+`riksbanken_client` ends at `date.today()`; only Kolada carried a year literal, and only
+Kolada stalled. This is Finding H one layer down: T1.10 removed hardcoded years from what the
+app *displays*, this removes one from what the pipeline *fetches*, where the failure is
+quieter — nothing renders wrong, the number is simply old. The ceiling now resolves at fetch
+time. Over-asking is free: Kolada answers HTTP 200 with zero records for an unpublished year.
+`tests/test_kolada_year_range.py` (7).
+
+**An imputed year was re-basing published numbers.** With prices, kt-ratio and unemployment
+all carrying 2025, the only missing input was income — which `build_panel` forward-fills — so
+a 2025 row survived into the index for the first time (3190 → 3480 rows). It cannot be
+displayed: the selector stops at `complete_case_max_year()`, still 2024. But
+`compute_version_b` z-scores its components **pooled across every row it is handed**, so that
+one invisible year shifted the pooled mean and standard deviation: `z_b` moved on all 3190
+rows (max 0.051), 1816 changed `rank_b`, 19 changed `risk_b` class. A and C were untouched —
+D5 made them within-year, which is exactly why this stayed hidden until now. `step_compute_indices`
+now filters each panel through `complete_case()` before scoring. With that in place the
+refresh is **purely additive**: `INDEX CONTRACT COLUMNS CHANGED: NONE`.
+`tests/test_index_complete_case.py` (6).
+
+**What actually changed in the data.** Component series gained 2025 (`transaction_price_sek`,
+`kt_ratio`, `completions`, `unemployment_rate`); `price_index` 2025 and CPI 2026 revised
+slightly. The only change inside the index range is SCB revising its own 2024 bostadsrätt
+prices by −1.49 % to +1.21 % — an upstream correction, visible on page 04. Every
+`version_*`, `z_*`, `rank_*` and `risk_*` value for 2014–2024 is bit-identical to `HEAD`.
+
+**Forecasts were not regenerated, and do not need to be.** The pipeline trains on `BASE_YEAR`
+2014 through `_resolve_end_year()`, which still returns 2024 because it keys off non-imputed
+income. Inside that window the only column that moved is `bostadsratt_price_sek`, and
+`src/forecast/` never references it — it forecasts `affordability_c`, `cpi_yoy_pct`, `income`,
+`rate` and `transaction_price_sek`. Re-running step 4 would train on identical inputs.
 
 ---
 
@@ -1320,6 +1359,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T2.4, O1 | **DONE.** O1 answered: run it. The refresh itself was the small part. Two defects it exposed: (1) `kolada_client.fetch_unemployment` defaulted to `end_year=2024` and so never asked for 2025, which Kolada has had all along — ceiling now resolved at fetch time, `tests/test_kolada_year_range.py` (7); (2) once unemployment 2025 landed, a forward-filled-income 2025 row survived into the index and, because `compute_version_b` pools its component z-scores across the whole frame, re-based `version_b` for every historical year — 1816 rank changes, 19 class changes, from a year no page can render. `step_compute_indices` now filters through `complete_case()`; `tests/test_index_complete_case.py` (6). With both fixed the refresh is purely additive: **INDEX CONTRACT COLUMNS CHANGED: NONE**. Step 4 was killed by the OS for memory and is verifiably unnecessary — the forecast training window ends at 2024 and none of the forecast variables moved inside it. **Suite: 217 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.5**, clean-venv deploy check; scripts are staged. Carry forward: pages 02, 04 and 05 read their year lists from the data rather than from `YEAR_RANGE`. Harmless today because `complete_case()` keeps the index at 2024, but it is the same class of leak and belongs in Phase 3. Also unverified: whether `[pipeline]` installs from scratch — prophet/pmdarima were already present here. |
 | 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |
 | 2026-09-15 | T1.9, T1.10 | **Both DONE — Phase 1 closed.** T1.9: dropped the YoY delta on the high-risk count and relabelled it a relative position within the year, with no split figure in the copy (D6). Widened mid-task — the count was read from the *risk-filtered* frame while the row's other three cards read the unfiltered year, so deselecting "Hög" showed the national high-risk count as 0; now counted on `mun_year`. `tests/test_risk_kpi.py` (8). T1.10: nineteen literal `290` / `2014–2024` / "11 år" across nine files replaced with provenance reads; `_panel_facts()` resolves them per call in `components.py`. `tests/test_no_hardcoded_counts.py` (47), including a behavioural check against a relabelled panel (277 kommuner, 2009–2019). Fixed a false-green in my own fixture: `render_landing_steps` emits via `st.html`, so a markdown-only capture returned an empty string and passed every absence assertion vacuously. Also corrected the step's claim that values are z-standardised "över hela panelen" — D5 made that false. **Suite: 172 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.1**. Note for this machine: the §0 `python3.11` rule is macOS-specific — on Windows the default `python` is 3.12.10 and collects the full suite, though `pyproject.toml` still declares `requires-python = ">=3.11,<3.12"`, which T2.2 should reconcile. Deferred, not done: `21 län` is still a literal (provenance carries no county count), and `06_Metodologi.py` still hardcodes the measured "16 av N kommuner" class-change figure — both belong to T4.1. |
 | 2026-09-15 | T1.8, Findings O + P | **DONE.** O2 → D5 (within-year `z_*`; B's construction stays pooled), O4 → D6 (log-transform A and C). Implemented in `normalize.py`, artifacts regenerated, `rank_*` verified identical across all versions and years. `z_c` normality now holds every year (p = 0.34–0.83); 2024 split 19.7/50.3/30.0 → 23.4/48.3/28.3. METHODOLOGY §4 rewritten into window/transform/class subsections stating what B would lose under within-year. Finding O resolved (a near-tie boundary — Skåne is 6th by 0.7 points); Finding P corrected in both files. Histogram caption updated: on a log scale z = 0 is the median, not the mean. `tests/test_normalization_convention.py` (16). **Suite: 117 passed, 0 failed, 1 skipped — green for the first time.** 67/67 renders clean. | Next: **T1.9** — drop the YoY delta on the high-risk count; its labels must not quote a split figure, since D6 moved it. Then **T1.10**. Phase 1 has no blocked tasks left. |

@@ -70,7 +70,8 @@ python scripts/refresh_data.py --no-forecast    # skip forecast step (~5–15 mi
 After refreshing, commit the updated parquet files and push to redeploy:
 
 ```bash
-git add data/processed/ data/raw/
+# data/raw/ is a local cache and is gitignored — only data/processed/ deploys
+git add data/processed/
 git commit -m "chore: refresh SHAI data — $(date +%Y-%m-%d)"
 git push
 ```

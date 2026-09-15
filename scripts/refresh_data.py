@@ -100,15 +100,26 @@ def step_compute_indices() -> None:
 
     import pandas as pd
     from src.indices.affordability import compute_all as compute_affordability
+    from src.indices.affordability import complete_case
     from src.indices.normalize import normalize_and_rank
     from src.provenance import write_provenance
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()
 
+    # Score the observed panel only. Version B pools its component z-scores across
+    # every row it is given, so an imputed-income year — which no page can render,
+    # because the sidebar stops at complete_case_max_year() — would silently
+    # re-base version_b for every year that is rendered. See complete_case().
     for level in ("municipal", "county", "national"):
         panel = pd.read_parquet(DATA_DIR / f"panel_{level}.parquet")
-        aff = compute_affordability(panel)
+        observed = complete_case(panel)
+        if len(observed) < len(panel):
+            logger.info(
+                "  %s: scoring %d of %d rows (%d imputed-income rows held back)",
+                level, len(observed), len(panel), len(panel) - len(observed),
+            )
+        aff = compute_affordability(observed)
         out = DATA_DIR / f"affordability_{level}.parquet"
         aff.to_parquet(out, index=False)
         logger.info("  Saved %s  (%d rows)", out.name, len(aff))
