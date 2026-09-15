@@ -152,6 +152,53 @@ def test_every_requirement_pins_a_lower_bound() -> None:
     assert not unpinned, f"no lower bound, so a resolver may pick anything: {unpinned}"
 
 
+def test_every_requirement_caps_the_next_major() -> None:
+    """An unverified major version must not reach production unannounced.
+
+    The bounds were lower-only, on the reasoning that Streamlit Cloud rebuilds
+    periodically and an upper pin would rot. The clean-environment check in T2.5
+    showed what that resolves to: pandas 3.0.5 and numpy 2.5.3 against the 2.3.3
+    and 1.26.2 the app was verified on — two major-version boundaries crossed
+    without anyone choosing it. Everything passed, so the caps below sit *above*
+    what is known to work; the point is to stop the *next* boundary arriving
+    silently, not to pin to the oldest thing that runs.
+
+    See R7 in docs/OPEN_RISKS.md.
+    """
+    uncapped = [
+        line.strip()
+        for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+        and not line.strip().startswith("#")
+        and "<" not in line
+    ]
+    assert not uncapped, (
+        "no upper bound, so the next major release deploys untested: "
+        f"{uncapped}"
+    )
+
+
+def test_requirements_and_pyproject_agree_on_versions_not_just_names() -> None:
+    """Two files claiming different versions of the same truth is the drift itself."""
+    import tomllib
+
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = {
+        spec.strip().lower().replace(" ", "")
+        for spec in pyproject["project"]["dependencies"]
+    }
+    required = {
+        line.strip().lower().replace(" ", "")
+        for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    }
+    assert declared == required, (
+        "pyproject and requirements.txt disagree on version specifiers — "
+        f"only in pyproject: {sorted(declared - required)}; "
+        f"only in requirements: {sorted(required - declared)}"
+    )
+
+
 def test_indirect_dependencies_are_justified() -> None:
     """`pyarrow` is in the file but in no import statement. Prove it is needed."""
     readers = [
