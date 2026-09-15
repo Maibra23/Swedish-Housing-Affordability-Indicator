@@ -6,7 +6,7 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Status:** IN PROGRESS — 9 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.8**
+**Current phase:** Phase 1 · next task **T1.9** (T1.8 is `BLOCKED` on O2 + O4)
 
 ---
 
@@ -52,7 +52,8 @@ criteria demands.
 | # | Question | Blocks | Default if unanswered |
 |---|----------|--------|----------------------|
 | O1 | Include the optional 2025 data refresh (T2.4)? Prices, unemployment and the price index have 2025; **income does not**, so the composite index stays at 2024 either way. | T2.4 only | `SKIPPED` — proceed without it. Phase 1 makes the app honest about 2024 regardless. |
-| O2 | After T1.5, is within-year normalisation confirmed for all three versions (A, B, C)? | T1.5, T4.1 | Within-year, and document the change in METHODOLOGY. |
+| O2 | **Normalisation window.** A and C are z-scored within year; B is pooled across the whole panel (Finding G). Unify on within-year? Note B's pooled level is what lets it carry a time trend — within-year normalisation *removes* that trend by construction, so this is a real trade-off, not a tidy-up. | **T1.8**, T4.1 | Within-year for all three, and document B's loss of trend in METHODOLOGY. |
+| O4 | **Normalisation transform.** `version_c` (and `version_a`) are ratios, so they are log-normal, not normal — yet they are z-scored raw and cut at ±0.67σ. Log-transform before z-scoring? See Finding Q for the measurements. Ranks do not change at all; 16 of 290 municipalities (6 %) change risk class, all one step toward the middle. B cannot be logged (it goes negative). | **T1.8**, T1.9, T4.1 | **Not defaulted — this one needs an answer.** Changing it alters every published `z_*`; leaving it keeps a ±0.67σ cut whose stated meaning the data does not support. |
 | O3 | Migrate SCB client from PxWeb v1 to v2? v1 retires end-2026/2027; v2beta now answers HTTP 200. | Nothing in this plan | Out of scope here — track separately. |
 
 ---
@@ -190,12 +191,73 @@ Skattekraftspanelen's `src/provenance.py` exists to express.
 Incidental: SCB PxWeb **v2beta now returns HTTP 200**, contradicting `docs/DEVIATIONS.md` D1
 which recorded all v2 data endpoints as 404. See O3.
 
-### F. Risk class is 25/50/25 by construction — HIGH
+### F. Risk class is a fixed split by construction — HIGH
 
-`src/indices/normalize.py:66` cuts within-year z-scores at ±0.67σ — the quartiles of a
-normal distribution. The national high-risk count is therefore pinned near 72 every year,
-yet Riksöversikt renders it with a year-over-year delta arrow as though national
-affordability improved or worsened. The number cannot carry that meaning.
+*(Corrected 2026-09-15 during T1.7. The original wording of this finding was itself wrong;
+see Finding Q.)*
+
+`src/indices/normalize.py` cuts within-year z-scores at ±0.67σ. The national high-risk count
+is therefore near-constant, yet Riksöversikt renders it with a year-over-year delta arrow as
+though national affordability improved or worsened. The number cannot carry that meaning —
+that part stands, and T1.9 remains correct.
+
+**What was wrong:** this finding claimed the split is "25/50/25 by construction" with the
+high-risk count "pinned near 72". ±0.67σ are the quartiles *of a normal distribution*, and
+`z_c` is not normal. Measured across all eleven years the split is **≈19 / 51 / 30** and the
+high-risk count sits at **83–89, never near 72**. The claim was theory, not measurement. See
+Finding Q.
+
+### Q. The index is z-scored on a raw ratio, which is not normal — HIGH (found during T1.7)
+
+Chasing the map's colour domain exposed something larger than the map. `version_c` is
+`income / (price × real_rate)` — a **ratio of positive quantities**, which is log-normal, not
+normal. `normalize.py` z-scores it directly and then cuts at ±0.67σ, a boundary whose meaning
+depends entirely on the normality it does not have.
+
+Measured on the committed artifact, every year 2014–2024:
+
+| | raw `version_c` | `log(version_c)` |
+|---|---|---|
+| Skewness | **+1.26 … +1.92** | −0.17 … +0.15 |
+| D'Agostino–Pearson normality | **rejected, p < 6e-15 every year** | **not rejected, p = 0.34 … 0.83 every year** |
+
+The log transform does not merely improve things; it makes the variable textbook normal in all
+eleven years independently. Same for `version_a`. Three consequences:
+
+1. **The class split is asymmetric by accident.** ≈30 % of municipalities are labelled *hög
+   risk* and only ≈19 % *låg risk*. Nobody chose that asymmetry — it is the left tail of the
+   inverted ratio falling past −0.67σ. Under a log transform the split moves to ≈23 / 48 / 28.
+2. **The UI's stated interpretation is unsound.** Riksöversikt captions the histogram
+   "Z-poäng = standardavvikelser från riksgenomsnittet". On a variable this skewed, a standard
+   deviation does not carry the meaning that sentence implies, and the mean is not the typical
+   municipality: 2024's mean `version_c` is 28.6 against a median of 26.8.
+3. **The map fix was the right shape anyway.** T1.7 anchors the colour domain on empirical
+   percentiles rather than σ multiples, so the map is already robust to this. Had it been left
+   on ±2.5σ this finding would have made it worse still.
+
+**Blast radius is small and precisely bounded.** A log transform is monotonic, so **`rank_a`,
+`rank_b` and `rank_c` do not change at all** — verified identical on 2024. Only `z_*` and
+`risk_*` move, and only for **16 of 290 municipalities (6 %)**, all of them one step toward the
+middle:
+
+| Move | Count | Examples |
+|---|---|---|
+| `hog` → `medel` | 5 | Staffanstorp, Håbo, Strömstad, Skövde, Tjörn |
+| `medel` → `lag` | 11 | Ovanåker, Torsås, Dals-Ed, Arjeplog, Lycksele |
+| unchanged | 274 | — |
+
+**Version B does not fit this pattern and must be handled separately.** It is a weighted sum of
+z-scores, not a ratio: it takes negative values in 1919 of 3190 rows, so a log is undefined for
+it. It is also right-skewed (+1.4 … +1.7) *and* pooled across the whole panel, so its
+within-year mean drifts from −0.37 (2015) to +0.86 (2023) — that drift is Finding G, and for B
+it is arguably the point, since B is meant to carry a time trend.
+
+**How to manage it:** this is a methodology change, not a defect fix — it changes every
+published `z_*` and the class of 16 municipalities. It is therefore a decision (**O4**), not a
+task, and it belongs to **T1.8**, which already owns the normalisation convention. T1.8's scope
+is widened to cover the transform as well as the window. Do not change the transform ahead of
+that decision: the numbers are currently self-consistent, and a partial change would be worse
+than either endpoint.
 
 ### G. Two incompatible normalisation conventions — HIGH
 
@@ -279,7 +341,7 @@ everything to `.shai-*`.
 | T1.5 | Replace `date.today()` with real data vintage | 1 | **DONE** |
 | T1.6 | Fix map basemap (CARTO → Esri) | 1 | **DONE** |
 | T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | **DONE** |
-| T1.8 | Unify normalisation convention across A/B/C | 1 | TODO |
+| T1.8 | Unify normalisation convention across A/B/C (window **and** transform) | 1 | **BLOCKED** — O2, O4 |
 | T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | TODO |
 | T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | TODO |
 | T2.1 | Add runtime-only `requirements.txt` | 2 | TODO |
@@ -586,20 +648,57 @@ checked: restoring the fixed ±2.5 domain makes `test_no_municipality_is_clipped
 
 ---
 
-### T1.8 — Unify the normalisation convention · TODO
+### T1.8 — Unify the normalisation convention · BLOCKED
 
-**Fixes:** Finding G
-**Files:** `src/indices/affordability.py:22-30,51-68`, `src/indices/normalize.py`
-**Blocked by:** O2
+**Fixes:** Findings G, Q, O — and settles the premise T1.9 rests on
+**Files:** `src/indices/affordability.py:22-30,51-68`, `src/indices/normalize.py`,
+`data/processed/affordability_*.parquet`, `tests/test_validation.py`, METHODOLOGY
+**Blocked by:** **O2 and O4 — both unanswered. Do not start.**
 
-`affordability.py:_zscore` pools across the whole panel for Version B; `normalize.py`
-z-scores within year. Pick one (default: within-year) and apply it consistently, then record
-the change and its effect on Version B's level in METHODOLOGY.
+Scope widened 2026-09-15 after Finding Q. There are **two** independent axes here, and they
+were conflated as one:
+
+| Axis | Question | Decision |
+|---|---|---|
+| **Window** | Within-year, or pooled across the panel? A and C are within-year, B is pooled. | O2 |
+| **Transform** | Z-score the raw ratio, or its log? Raw fails normality at p < 6e-15 every year; the log passes in all eleven. | O4 |
+
+A choice on one does not imply the other, and the ±0.67σ class boundary is only meaningful
+once **both** are settled — it is a normal-distribution quantile being applied to whatever the
+two choices produce.
+
+**Why this is genuinely blocked rather than merely undecided.** Every other Phase 1 task fixed
+something demonstrably wrong against a standard the project already held: an artifact that
+disagreed with its producer, a selector offering years with no data, a footer printing the
+render date. This one does not have that property. Both answers are defensible, they are not
+reconcilable, and each changes numbers the app publishes:
+
+- Choosing **within-year for B** deletes the only time trend in the index by construction.
+  B's within-year mean currently runs −0.37 (2015) to +0.86 (2023), which is B doing its job
+  as a macro-pressure measure. Normalising within year sets it to ~0 every year, permanently.
+- Choosing **log** changes every `z_*` the app displays and moves 16 municipalities across a
+  risk boundary — outward-facing numbers about named places.
+
+Guessing would mean publishing a methodology nobody chose, which is the failure mode this whole
+plan exists to correct. It is also **not blocking anything else**: T1.9 and T1.10 are
+independent and can proceed first.
+
+**Also resolve here, both waiting on the same decision:**
+
+- **Finding O** — `test_skane_worst_v_c` has failed since before this work began. Whether Skåne
+  belongs in the five least affordable counties depends on the convention chosen, so the
+  expectation cannot be corrected until it is.
+- **Finding P** — `06_Metodologi.py:247` documents the imputation rule that audit F9 replaced.
+  Independent of O2/O4, but it lives in the methodology copy this task rewrites.
 
 **Acceptance**
-- [ ] One documented convention, applied to A, B and C
-- [ ] `docs/METHODOLOGY_v2.md` states it and notes the Version B level change
-- [ ] Existing validation tests still pass, or their expectations are updated with reasons
+- [ ] O2 and O4 both answered and recorded in §1 as locked decisions
+- [ ] One documented convention on both axes, applied to A, B and C
+- [ ] METHODOLOGY states it, and states what B loses if the window changes
+- [ ] Artifacts regenerated; `rank_*` verified unchanged if only the transform moved
+- [ ] `test_skane_worst_v_c` (Finding O) passes or its expectation is updated with the reason
+- [ ] Finding P corrected
+- [ ] `tests/test_ranked_artifact.py` still passes, or its expectations are updated with reasons
 
 ---
 
@@ -608,8 +707,11 @@ the change and its effect on Version B's level in METHODOLOGY.
 **Fixes:** Finding F
 **Files:** `pages/01_Riksoversikt.py:110-150`
 
-Because ±0.67σ on within-year z-scores is 25/50/25 by construction, the national high-risk
-**count** is near-constant and its YoY delta is noise. Remove the delta arrow and relabel the
+Because ±0.67σ on within-year z-scores produces a near-fixed split, the national high-risk
+**count** is near-constant and its YoY delta is noise. (The split is **≈19 / 51 / 30**, not the
+25/50/25 this originally claimed — see Findings F and Q. The correction does not weaken the
+task: a near-constant count is exactly as unfit to carry a trend at 30 % as at 25 %. The
+*labels* here must not quote a split figure, though, since O4 would move it.) Remove the delta arrow and relabel the
 metric as a relative position. If an absolute measure of national affordability is wanted,
 it must come from a level series (e.g. median Version C in real terms), not from the class counts.
 
@@ -1054,6 +1156,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.8 (analysis only) | **BLOCKED, no code changed.** Investigating T1.7's colour domain exposed a larger issue: `version_c` is a ratio and therefore log-normal, but is z-scored raw and cut at ±0.67σ. Normality is rejected at p < 6e-15 in every year; under a log it passes in all eleven (p = 0.34–0.83). Recorded as **Finding Q**. This also proved **Finding F's own arithmetic wrong** — the split is ≈19/51/30 with 83–89 high-risk, not the "25/50/25, near 72" it claimed; F corrected in place. Split the normalisation question into two axes, window (**O2**) and transform (**O4**), widened T1.8 to own both, and marked it `BLOCKED`. Blast radius measured for the decision: ranks unchanged, 16 of 290 municipalities (6 %) change class. | **Answer O2 and O4 to unblock T1.8.** Until then the next workable task is **T1.9** (unblocked), then **T1.10**. Do not change the transform piecemeal — the numbers are currently self-consistent and a partial change is worse than either endpoint. |
 | 2026-09-15 | T1.6, T1.7, T4.5 | **All DONE.** Basemap moved to Esri `World_Light_Gray_Base` with attribution and a background fallback. Colour domain now built from the data: ends at min/max, neutral at the median, steps at the quartiles. Fixes a fault worse than KRI's — SHAI's `z_c` is left-skewed, so ±2.5 clipped 104 municipality-years off the green end *and* left the top 43 % of the red ramp unused. Clipping now zero. `tests/test_choropleth.py` (21) satisfies T4.5; extracted `tests/sourcetools.py` so the prose-vs-code stripper is shared. Suite: **100 passed, 1 failed, 1 skipped**; all 67 page renders still clean. | Next: **T1.8**, which is **blocked on O2** — confirm within-year normalisation for A/B/C. If O2 stays unanswered the documented default is within-year. T1.8 also owns two loose ends: Finding O (`test_skane_worst_v_c`, failing since before this work) and Finding P (`06_Metodologi.py:247` documents the imputation rule F9 replaced). T1.9 and T1.10 are unblocked if you would rather not wait on O2. |
 | 2026-09-15 | T1.4, T1.5 | **Both DONE.** Selector now spans 2014–2024 from provenance — drops the two dead years and gains 2014–2019, which the index always covered. Footer shows the artifact's `generated_at`, proven independent of the clock. Removed the sidebar forward-fill note and the unreachable imputed-income banner on page 01. `tests/test_year_range.py` (16), mutation-checked. Verified all 6 pages × 11 years render via `AppTest` (67 renders, clean). Suite: **79 passed, 1 failed, 1 skipped** — failure is Finding O, unchanged. | Next: **T1.6** (map basemap, no dependencies) then **T1.7**. New **Finding P**: `06_Metodologi.py:247` documents the imputation rule that F9 replaced — fix during T1.8 or T4.1. Note the repo's tests must run under **python3.11**; the system `python3` is 3.9 and cannot import `tomllib`. |
 | 2026-09-15 | T1.2, T1.3, T4.2 | **All DONE.** T1.2: removed both inline recomputes, repointed the page at the ranked artifact only, recoloured the histogram from `risk_c`, fixed Finding N3 (caption stated the orientation backwards), added `tests/test_pages_no_recompute.py` (14). T1.3: added `src/provenance.py` + committed `data/processed/data_provenance.json`, wired into `step_compute_indices()`; income's imputed tail is excluded so the complete case lands on 2024. T4.2 satisfied by `tests/test_provenance.py` (18). Suite: **63 passed, 1 failed, 1 skipped** — the failure is Finding O, unchanged. | Next: **T1.4** — `YEAR_RANGE` from `complete_case_max_year()`. Note T1.2's 2014 criterion is verified at the data layer only; it becomes reachable in the UI once T1.4 lands. `generated_at()` is already in place for T1.5. |
