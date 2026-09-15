@@ -6,7 +6,7 @@ automatic order selection per series.
 Frequency: ANNUAL (11 observations per series, 2014-2024).
 Horizon: 6 annual steps (2025-2030).
 
-Per METHODOLOGY_v2.md section 5: ARIMA is recommended for inference.
+Per METHODOLOGY.md section 5: ARIMA is recommended for inference.
 With only 11 observations, auto_arima may select trivial orders like
 (0,1,0) (random walk). This is acceptable and documented.
 """

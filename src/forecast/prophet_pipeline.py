@@ -5,7 +5,7 @@ Forecasts 4 component series per county, then composes into Version C affordabil
 Frequency: ANNUAL (11 observations per series, 2014-2024).
 Horizon: 6 annual steps (2025-2030).
 
-Per METHODOLOGY_v2.md section 5: Prophet is the default UI model.
+Per METHODOLOGY.md section 5: Prophet is the default UI model.
 Limitation: Prophet is optimized for daily/weekly data; with 11 annual
 observations, treat results as indicative trend projections.
 """

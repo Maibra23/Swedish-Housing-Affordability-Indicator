@@ -1,4 +1,4 @@
-"""Kontantinsats regime engine per METHODOLOGY_v2.md section 6.
+"""Kontantinsats regime engine per METHODOLOGY.md section 6.
 
 Models five Swedish regulatory regimes for housing down payments and
 amortization requirements. Uses transaction_price_sek directly from

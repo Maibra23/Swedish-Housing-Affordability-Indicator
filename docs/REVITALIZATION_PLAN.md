@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete · T3.1, T4.1, T4.4 done · 20 / 34 tasks
-**Current phase:** Phase 3 · next tasks **T4.3**, **T4.6**, then §0 on the missing reference repos
-**Test suite:** 345 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · 22 / 34 tasks
+**Current phase:** Phase 3 · next task **T3.2** — read §0 on the missing reference repos first
+**Test suite:** 395 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -224,8 +224,8 @@ i.e. zero growth is the rule that F9 **replaced**. The methodology page document
 behaviour that was removed.
 
 **Resolved in T1.8.** Corrected in both places it appeared — `pages/06_Metodologi.py` and
-`docs/METHODOLOGY_v2.md` — to state the 3 %/yr rule and note that imputed years are no longer
-reachable from the UI at all. `docs/AUDIT_methodology_assumptions.md` still describes zero
+`docs/METHODOLOGY.md` — to state the 3 %/yr rule and note that imputed years are no longer
+reachable from the UI at all. `docs/archive/AUDIT_methodology_assumptions.md` still describes zero
 growth, correctly: it is a dated audit record of the state that prompted the change, and
 rewriting it would falsify the record.
 
@@ -393,7 +393,7 @@ landing-page-only ones.
 ### L. Documentation duplicated and partly false — MEDIUM
 
 17 files, 6,933 lines, with four superseded v1/v2 pairs both still present:
-`METHODOLOGY.md`+`METHODOLOGY_v2.md`, `PLAYBOOK.md`+`PLAYBOOK_v2.md`,
+`METHODOLOGY.md`+`METHODOLOGY.md`, `PLAYBOOK.md`+`PLAYBOOK.md`,
 `prompts.md`+`PROMPTS_v2.md`, `patch_post_day2.md`+`PATCH_POST_DAY2_v2.md`.
 
 `docs/DESIGN_SYSTEM.md` §10 states the map is *"Plotly `go.Scattergeo` … avoids shipping
@@ -456,10 +456,10 @@ everything to `.shai-*`.
 | T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | TODO |
 | T4.1 | `test_copy_matches_artifacts.py` | 4 | **DONE** |
 | T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
-| T4.3 | `test_labels.py` | 4 | TODO |
+| T4.3 | `test_labels.py` | 4 | **DONE** |
 | T4.4 | `test_pages_render.py` | 4 | **DONE** (pulled forward) |
 | T4.5 | `test_choropleth.py` | 4 | **DONE** (landed early, with T1.6/T1.7) |
-| T4.6 | Delete superseded docs; consolidate | 4 | TODO |
+| T4.6 | Delete superseded docs; consolidate | 4 | **DONE** |
 | T4.7 | Rewrite `DESIGN_SYSTEM.md` to match shipped code | 4 | TODO |
 
 ---
@@ -790,7 +790,7 @@ independent and can proceed first.
 - [x] METHODOLOGY states it, and states what B loses if the window changes
 - [x] Artifacts regenerated; `rank_*` verified unchanged — asserted per version per year
 - [x] Finding O resolved — `test_skane_among_least_affordable_v_c`, with the reason recorded
-- [x] Finding P corrected in both `06_Metodologi.py` and `METHODOLOGY_v2.md`
+- [x] Finding P corrected in both `06_Metodologi.py` and `METHODOLOGY.md`
 - [x] `tests/test_ranked_artifact.py` still passes unchanged — all 15
 
 **Outcome:** `LOG_TRANSFORMED = ("a", "c")` in `normalize.py`; `_log_for_scoring()` raises rather
@@ -980,7 +980,7 @@ the data fails the docs rather than quietly outdating them — the same guard T1
 UI. A stated `Python 3.x` must also satisfy `requires-python`, which caught `README.md`
 promising 3.11 flat after T2.2 widened the floor to `>=3.11`.
 
-Deliberately out of scope: `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still mention
+Deliberately out of scope: `docs/prompts.md` and `docs/archive/UX_UI_GAP_ANALYSIS.md` still mention
 ECharts. Both are build-time artifacts slated for deletion in T4.6.
 
 ---
@@ -1378,14 +1378,29 @@ against it, so it landed early. 18 tests.
 
 ---
 
-### T4.3 — `tests/test_labels.py` · TODO
+### T4.3 — `tests/test_labels.py` · DONE
 
 **Depends on:** T3.1
 
 **Acceptance**
-- [ ] Every referenced key exists and is non-empty
-- [ ] Load-bearing wording asserted verbatim (headings the methodology specifies)
-- [ ] Caveat strings assert the limitation they exist to state
+- [x] Every referenced key exists and is non-empty — landed with T3.1 in
+      `tests/test_no_inline_copy.py`, which also bans orphaned keys
+- [x] Load-bearing wording asserted verbatim — the orientation contract and its inversions
+      banned outright, because Finding N flipped that contract in code and N3 stated it
+      backwards in a caption
+- [x] Caveat strings assert the limitation they exist to state — every cited F-id must resolve
+      in the register, and five caveats must still name what they bound
+
+`tests/test_labels.py` (16). Two findings. **The register heading was off by one:**
+"6. Begränsningar (F1–F15)" introduced a register defining F1–**F16**; corrected. And **F16's
+share claim is now re-derived** from the artifact rather than trusted.
+
+One test I wrote was wrong and got reframed. It banned *any* exact split figure in that
+section, which would have deleted D6's own evidence — "cirka 19 / 51 / 30 i stället för
+25 / 50 / 25" is the argument for the log transform. It now requires each figure sit in a
+sentence marking it historical or theoretical, so none can be read as today's split. The ban
+on split figures in *KPI copy*, where T1.9's constraint actually bites, stays in
+`tests/test_risk_kpi.py`.
 
 ---
 
@@ -1435,7 +1450,7 @@ code punishes the explanation. The same helper now backs `tests/test_year_range.
 
 ---
 
-### T4.6 — Delete superseded docs · TODO
+### T4.6 — Delete superseded docs · DONE
 
 **Fixes:** Finding L
 **Files:** `docs/`
@@ -1447,9 +1462,21 @@ file with no reader"* — and fold build-time artifacts (`PROMPTS`, `PATCH_POST_
 `APARTMENT_DATA_ANALYSIS_PLAN`, `translation_audit`) into an archive or delete them.
 
 **Acceptance**
-- [ ] No `_v2` suffix remains
-- [ ] No two documents describe the same thing
-- [ ] Every surviving doc is linked from `README.md`
+- [x] No `_v2` suffix remains among maintained docs
+- [x] No two documents describe the same thing
+- [x] Every surviving doc is linked from `README.md`, and the README links nothing missing
+
+`tests/test_docs_inventory.py` (34). 19 documents → **9 maintained** plus a 6-file archive.
+
+Deleted the four superseded v1 files and renamed the `_v2` survivors onto their names.
+Build-time artifacts went to `docs/archive/` rather than being deleted — the plan allowed
+either, and archiving keeps them retrievable without a reader mistaking them for current
+guidance. That includes `UX_UI_GAP_ANALYSIS.md`, 1869 lines describing a Plotly `Scattergeo`
+map Folium replaced.
+
+Renaming broke references in eight files, including docstrings in `src/forecast/`,
+`src/indices/affordability.py` and `src/kontantinsats/engine.py`. All updated, and a
+parametrised test now fails on any code comment citing a document that does not exist.
 
 ---
 
@@ -1479,12 +1506,13 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T4.3, T4.6 | **Both DONE. Phase 4 complete except T4.7**, which depends on all of Phase 3. T4.3: orientation contract asserted verbatim and its inversions banned. Found the limitation register heading off by one (F1–F15 introducing F1–F16). F16's "ungefär en fjärdedel" recomputed from the artifact. One test I wrote was wrong and got reframed — banning every exact split would have deleted D6's own evidence. T4.6: 19 docs → 9 maintained plus a 6-file archive; renaming broke references in eight files including three `src/` docstrings, now guarded. **Suite: 395 passed, 0 failed, 1 skipped.** | Next: **T3.2** onward. §0 still applies: no reference repo on this machine, so T3.4–T3.9 and T3.12 will be built from the plan's descriptions rather than matched against Skattekraftspanelen. Re-check them if that repo becomes available. |
 | 2026-09-16 | T4.1 | **DONE, and it caught real drift immediately.** The methodology source table still claimed four series end 2024 after T2.4 moved them to 2025 — invisible to 345 other tests because none of them read prose. Those seven rows now interpolate `source_coverage()`, which turned the test from *compare copy to data* into *guard that copy stays derived*; drift is now impossible rather than detected. Also re-derives the D5 panel-mean extremes (−0,37/2015, +0,86/2023 — exact today) because R1 makes that the sentence most likely to go stale. Narrowed the coverage criterion on purpose: 96 labels contain digits, almost all domain parameters, so the guard polices bare four-digit years and classifies the rest. **Suite: 345 passed, 0 failed, 1 skipped.** | Next: **T4.3** then **T4.6**, both independent of the reference repo. Then the Phase 3 remainder — §0 lists which five are self-contained. |
 | 2026-09-16 | T3.1 | **DONE, no reference repo needed.** 269 keys in `src/ui/labels.py`; **0 Swedish literals left** in `app.py` or `pages/*.py`, down from 332. Verified by fingerprinting all 5709 rendered strings across 67 page/year states before and after — **0 states differ**, so the extraction is provably inert rather than hopefully so. Two silent traps: `ast.col_offset` is a UTF-8 **byte** offset, so character slicing shifted every extracted expression (`APP_VERSION` → `P_VERSION}"`) — caught by reading the plan before applying it; and literal braces must be doubled for `str.format`, or the Plotly hover template and the inline-CSS blocks raise `KeyError` on render. `tests/test_no_inline_copy.py` (20) guards all of it. Also fixed an existing test weakness: `test_risk_kpi.py` matched the substring `risk_`, which `rv.hogrisk_kommuner` contains, and its copy assertions were reading key *names* rather than copy. **Suite: 323 passed, 0 failed, 1 skipped.** | Next: **T4.1**, now unblocked and described in this plan as its highest-value test — re-derive every number in the copy from the artifacts. T4.3 is also unblocked. Then the remaining Phase 3 work, which still needs the reference repo (§0). New **R9**: `labels.py` now holds HTML and LaTeX blocks as well as copy — correct per the acceptance, wrong as a long-term home. |
 | 2026-09-16 | T4.4, R7 | **Pre-Phase-3 work. T4.4 DONE, pulled forward.** The 67-render check is now `tests/test_pages_render.py` — 81 tests, 14 s, in the default suite, wider than the scratch script it replaces (empty and single risk selections, years off `YEAR_RANGE`, a content assertion, plus two meta-tests proving the harness can fail). Closes R6. It immediately found **R8**: `folium_static` is deprecated and scheduled for removal, 13 warnings per sweep — recorded, not fixed, because migrating to `st_folium` changes rerun behaviour and belongs with T3.9. **R7 accepted, option B**: major-version caps in `requirements.txt`, mirrored into `pyproject.toml`, plus a test that the two agree on specifiers rather than just names. Caps sit *above* what T2.5 verified — a clean install still resolves pandas 3.0.5 / numpy 2.5.3 / streamlit 1.64.0, byte-identical to before, so no downgrade. Residual risk kept open: 0.x packages get `<1`, which still admits breaking minor bumps, and `folium` is what draws the map. **Suite: 299 passed, 0 failed, 1 skipped.** | **Before T3.1, read §0 — neither reference repo exists on this machine.** Five Phase 3 tasks are self-contained (T3.1, T3.2, T3.3, T3.10, T3.11); the seven pattern-borrowing ones need Skattekraftspanelen's `src/ui/` or they become guesswork. Recommended order: T3.1 → T4.1 (T3.1 unblocks it), then pause for repo access. Still unaddressed and arguably above most of Phase 3: **R5** — `src/indices/affordability.py` computes all three versions and has zero tests. |
 | 2026-09-15 | T2.5 | **DONE — Phase 2 closed.** Clean venv, `requirements.txt` only: 39 distributions, no compilers, pipeline packages absent, **67/67 renders clean inside it**, Esri tile host HTTP 200. Also closes T2.1's deferred third criterion. The check earned its keep immediately: lower-only bounds resolve a fresh deploy to **pandas 3.0.5** and **numpy 2.5.3** against the 2.3.3 / 1.26.2 this app is verified on — two major-version boundaries. Everything passes on them, so nothing is broken, but production runs versions no test here has exercised and the next resolver shift is nobody's decision. Logged as **R7 (High)**. Started `docs/OPEN_RISKS.md` for this class of finding — seven entries, R1 and R7 High. | Next: **T3.1**, Phase 3. Read `docs/OPEN_RISKS.md` first: **R2** (three pages read year lists from data, not `YEAR_RANGE`) belongs with T3.7, and **R6** (the 67-render check is still a scratch script) argues for pulling **T4.4** forward before Phase 3 starts changing the UI it verifies. One criterion is genuinely open: nobody has confirmed the deployed Streamlit Cloud app, which needs the account owner. |
 | 2026-09-15 | T2.4, O1 | **DONE.** O1 answered: run it. The refresh itself was the small part. Two defects it exposed: (1) `kolada_client.fetch_unemployment` defaulted to `end_year=2024` and so never asked for 2025, which Kolada has had all along — ceiling now resolved at fetch time, `tests/test_kolada_year_range.py` (7); (2) once unemployment 2025 landed, a forward-filled-income 2025 row survived into the index and, because `compute_version_b` pools its component z-scores across the whole frame, re-based `version_b` for every historical year — 1816 rank changes, 19 class changes, from a year no page can render. `step_compute_indices` now filters through `complete_case()`; `tests/test_index_complete_case.py` (6). With both fixed the refresh is purely additive: **INDEX CONTRACT COLUMNS CHANGED: NONE**. Step 4 was killed by the OS for memory and is verifiably unnecessary — the forecast training window ends at 2024 and none of the forecast variables moved inside it. **Suite: 217 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.5**, clean-venv deploy check; scripts are staged. Carry forward: pages 02, 04 and 05 read their year lists from the data rather than from `YEAR_RANGE`. Harmless today because `complete_case()` keeps the index at 2024, but it is the same class of leak and belongs in Phase 3. Also unverified: whether `[pipeline]` installs from scratch — prophet/pmdarima were already present here. |
-| 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |
+| 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/archive/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |
 | 2026-09-15 | T1.9, T1.10 | **Both DONE — Phase 1 closed.** T1.9: dropped the YoY delta on the high-risk count and relabelled it a relative position within the year, with no split figure in the copy (D6). Widened mid-task — the count was read from the *risk-filtered* frame while the row's other three cards read the unfiltered year, so deselecting "Hög" showed the national high-risk count as 0; now counted on `mun_year`. `tests/test_risk_kpi.py` (8). T1.10: nineteen literal `290` / `2014–2024` / "11 år" across nine files replaced with provenance reads; `_panel_facts()` resolves them per call in `components.py`. `tests/test_no_hardcoded_counts.py` (47), including a behavioural check against a relabelled panel (277 kommuner, 2009–2019). Fixed a false-green in my own fixture: `render_landing_steps` emits via `st.html`, so a markdown-only capture returned an empty string and passed every absence assertion vacuously. Also corrected the step's claim that values are z-standardised "över hela panelen" — D5 made that false. **Suite: 172 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.1**. Note for this machine: the §0 `python3.11` rule is macOS-specific — on Windows the default `python` is 3.12.10 and collects the full suite, though `pyproject.toml` still declares `requires-python = ">=3.11,<3.12"`, which T2.2 should reconcile. Deferred, not done: `21 län` is still a literal (provenance carries no county count), and `06_Metodologi.py` still hardcodes the measured "16 av N kommuner" class-change figure — both belong to T4.1. |
 | 2026-09-15 | T1.8, Findings O + P | **DONE.** O2 → D5 (within-year `z_*`; B's construction stays pooled), O4 → D6 (log-transform A and C). Implemented in `normalize.py`, artifacts regenerated, `rank_*` verified identical across all versions and years. `z_c` normality now holds every year (p = 0.34–0.83); 2024 split 19.7/50.3/30.0 → 23.4/48.3/28.3. METHODOLOGY §4 rewritten into window/transform/class subsections stating what B would lose under within-year. Finding O resolved (a near-tie boundary — Skåne is 6th by 0.7 points); Finding P corrected in both files. Histogram caption updated: on a log scale z = 0 is the median, not the mean. `tests/test_normalization_convention.py` (16). **Suite: 117 passed, 0 failed, 1 skipped — green for the first time.** 67/67 renders clean. | Next: **T1.9** — drop the YoY delta on the high-risk count; its labels must not quote a split figure, since D6 moved it. Then **T1.10**. Phase 1 has no blocked tasks left. |
 | 2026-09-15 | T1.8 (analysis only) | **BLOCKED, no code changed.** Investigating T1.7's colour domain exposed a larger issue: `version_c` is a ratio and therefore log-normal, but is z-scored raw and cut at ±0.67σ. Normality is rejected at p < 6e-15 in every year; under a log it passes in all eleven (p = 0.34–0.83). Recorded as **Finding Q**. This also proved **Finding F's own arithmetic wrong** — the split is ≈19/51/30 with 83–89 high-risk, not the "25/50/25, near 72" it claimed; F corrected in place. Split the normalisation question into two axes, window (**O2**) and transform (**O4**), widened T1.8 to own both, and marked it `BLOCKED`. Blast radius measured for the decision: ranks unchanged, 16 of 290 municipalities (6 %) change class. | **Answer O2 and O4 to unblock T1.8.** Until then the next workable task is **T1.9** (unblocked), then **T1.10**. Do not change the transform piecemeal — the numbers are currently self-consistent and a partial change is worse than either endpoint. |
