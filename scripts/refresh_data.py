@@ -6,7 +6,8 @@ publish annual updates, usually Q1 of each year for the prior year's data).
 Steps executed:
   1. Fetch all raw data from SCB PxWeb, Riksbanken Swea, and Kolada APIs
   2. Rebuild the three panel parquets (municipal, county, national)
-  3. Compute affordability indices A/B/C and save affordability parquets
+  3. Compute affordability indices A/B/C, save affordability parquets, and
+     record the data vintage in data/processed/data_provenance.json
   4. Run ARIMA and Prophet forecast pipelines and save forecast parquets
 
 Usage:
@@ -100,6 +101,7 @@ def step_compute_indices() -> None:
     import pandas as pd
     from src.indices.affordability import compute_all as compute_affordability
     from src.indices.normalize import normalize_and_rank
+    from src.provenance import write_provenance
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()
@@ -124,6 +126,14 @@ def step_compute_indices() -> None:
         len(ranked),
         ranked["year"].nunique(),
     )
+
+    # Record the vintage of what was just built. The panel is ragged — income
+    # ends before prices and the policy rate — so the UI must be told which year
+    # actually carries every index input rather than assuming the panel's max.
+    # This runs here, not in a separate step, so it cannot be skipped while the
+    # artifacts it describes are rebuilt. See src/provenance.py.
+    panel_municipal = pd.read_parquet(DATA_DIR / "panel_municipal.parquet")
+    write_provenance(panel_municipal, ranked)
 
     logger.info("Step 3 done in %.1f s", time.time() - t0)
 

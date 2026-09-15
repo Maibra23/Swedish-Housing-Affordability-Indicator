@@ -5,8 +5,8 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
-**Status:** IN PROGRESS — 1 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.2**
+**Status:** IN PROGRESS — 4 / 34 tasks complete
+**Current phase:** Phase 1 · next task **T1.4**
 
 ---
 
@@ -104,6 +104,15 @@ map was green over Stockholm and red over inland Norrland.
 `ascending=False` without inverting B, so rank 1 meant "most affordable" for A and C but
 "least affordable" for B. Latent rather than user-visible: only `_c` columns reach the UI.
 Fixed by the same change.
+
+**N3 — the prose still stated the old orientation.** (Found during T1.2, FIXED.) T1.1 corrected
+the classes but not the copy describing them. `pages/01_Riksoversikt.py` captioned the
+distribution chart *"Högre z = bättre överkomlighet"* and its expander restated the cut as
+*"grön (z ≤ −0,67) … röd (z > 0,67)"*. Both are backwards under the orientation contract:
+`corr(z_c, version_c) = -1.0` on the 2024 artifact, so a **lower** z is the more affordable
+municipality. The colours were already correct, so the chart rendered right while its own
+legend told the reader to read it the other way round. This is precisely the class of defect
+T4.1 (`test_copy_matches_artifacts.py`) exists to catch.
 
 ### O. `test_skane_worst_v_c` fails on data, not code — PRE-EXISTING
 
@@ -239,8 +248,8 @@ everything to `.shai-*`.
 | Task | Title | Phase | Status |
 |------|-------|-------|--------|
 | T1.1 | Regenerate ranked artifact through `normalize.py` | 1 | **DONE** |
-| T1.2 | Remove inline z/rank/risk recomputation from pages | 1 | TODO |
-| T1.3 | Add `src/provenance.py` + provenance artifact | 1 | TODO |
+| T1.2 | Remove inline z/rank/risk recomputation from pages | 1 | **DONE** |
+| T1.3 | Add `src/provenance.py` + provenance artifact | 1 | **DONE** |
 | T1.4 | Drive `YEAR_RANGE` from provenance; kill dead years | 1 | TODO |
 | T1.5 | Replace `date.today()` with real data vintage | 1 | TODO |
 | T1.6 | Fix map basemap (CARTO → Esri) | 1 | TODO |
@@ -266,7 +275,7 @@ everything to `.shai-*`.
 | T3.11 | Split `04_Kontantinsats.py` (880 lines) | 3 | TODO |
 | T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | TODO |
 | T4.1 | `test_copy_matches_artifacts.py` | 4 | TODO |
-| T4.2 | `test_provenance.py` | 4 | TODO |
+| T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
 | T4.3 | `test_labels.py` | 4 | TODO |
 | T4.4 | `test_pages_render.py` | 4 | TODO |
 | T4.5 | `test_choropleth.py` | 4 | TODO |
@@ -316,23 +325,47 @@ orientation contract. See Finding N — the fix corrected a live inverted-risk d
 
 ---
 
-### T1.2 — Remove inline z/rank/risk recomputation from pages · TODO
+### T1.2 — Remove inline z/rank/risk recomputation from pages · DONE
 
-**Fixes:** Finding A
-**Files:** `pages/01_Riksoversikt.py:58-80`
+**Fixes:** Findings A, N3
+**Files:** `pages/01_Riksoversikt.py`, NEW `tests/test_pages_no_recompute.py`
 **Depends on:** T1.1
 
 Delete the `if selected_year == ranked["year"].iloc[0] / else` block entirely and read the
 selected year straight from the ranked artifact.
 
 **Acceptance**
-- [ ] No page computes a z-score, rank or risk class
-- [ ] `grep -rn "0.67\|rank(method" pages/` returns nothing
-- [ ] Selecting **2014** shows a working risk filter and a non-zero "Högrisk kommuner" count
+- [x] No page computes a z-score, rank or risk class
+- [x] `grep -rn "0.67\|rank(method" pages/` returns nothing
+- [x] Selecting **2014** shows a working risk filter and a non-zero "Högrisk kommuner" count —
+  verified at the data layer (2014: 89 `hog` / 145 `medel` / 56 `lag`, filter returns 89).
+  Not yet reachable through the UI: the selector starts at 2020 until **T1.4**.
+
+**Outcome:** four changes, three of them beyond the block the task named.
+
+1. The `if/else` recompute and the second inline re-scoring of the previous year in the KPI
+   block are gone. `mun_year` / `mun_prev` are now plain year slices of the ranked artifact,
+   and the page no longer loads `affordability_municipal.parquet` at all — every column it
+   reads is present on `affordability_ranked.parquet`.
+2. The distribution histogram was still cutting the z-scale at a locally hardcoded ±0.67 to
+   pick its colours. It now groups on the artifact's own `risk_c` column, so the chart cannot
+   disagree with the KPI above it.
+3. **Finding N3** — the chart caption and expander stated the orientation backwards. Corrected
+   to "Lägre z = bättre överkomlighet", and the expander no longer restates the numeric
+   boundary; that detail lives in `normalize.py`'s docstring, which is its only correct home.
+4. `tests/test_pages_no_recompute.py` (14 tests) asserts at source level that no page ranks,
+   cuts, builds a cross-sectional z-score, assigns a `z_*`/`rank_*`/`risk_*` column, or
+   imports `indices.normalize`. Source-level because the defect is structural — a second copy
+   of this logic anywhere is free to drift from the first.
+
+One test was written too broadly at first and flagged `03_Kommun_djupanalys.py:259`, which
+computes a coefficient of variation over a single municipality's own time series. That is a
+descriptive statistic, not a cross-sectional score, and is legitimate; the test was narrowed
+rather than the page changed.
 
 ---
 
-### T1.3 — Add `src/provenance.py` and the provenance artifact · TODO
+### T1.3 — Add `src/provenance.py` and the provenance artifact · DONE
 
 **Fixes:** Findings B, C, H
 **Files:** NEW `src/provenance.py`, NEW `data/processed/data_provenance.json`, `scripts/refresh_data.py`
@@ -348,10 +381,33 @@ Public API: `load_provenance()`, `panel_max_year()`, `complete_case_max_year()`,
 pipeline never ran.
 
 **Acceptance**
-- [ ] `complete_case_max_year()` returns `2024`
-- [ ] `panel_max_year()` returns `2026`
-- [ ] `scripts/refresh_data.py` writes the artifact on every run
-- [ ] Artifact is committed
+- [x] `complete_case_max_year()` returns `2024`
+- [x] `panel_max_year()` returns `2026`
+- [x] `scripts/refresh_data.py` writes the artifact on every run
+- [x] Artifact is committed
+
+**Outcome:** `src/provenance.py` (359 lines) holds both the reader API and the builder, so the
+definition of "complete case" exists once. Public API as specified, plus `generated_at()` for
+T1.5. `load_provenance()` is `lru_cache`d and raises `FileNotFoundError` naming the command
+that regenerates it; `source_coverage()` deep-copies so a caller cannot corrupt the cache.
+
+The load-bearing detail is **income imputation**. `build_panel` forward-fills `median_income`
+to 2026 at +3 %/yr and flags those rows with `is_imputed_income`, so a naive `max_year` on the
+column reads 2026 and `complete_case_max_year` would have come out at 2026 — the exact false
+freshness this task exists to remove. The builder excludes imputed rows when deciding a
+source's real window, which is what puts income's `max_year` at 2024 and pins the complete
+case there.
+
+Recorded coverage, all 290 regions: income / prices / unemployment / population / K-T 2024;
+price index 2025; policy rate and CPI 2026. `balanced: false`.
+
+Writing happens inside `step_compute_indices()` rather than as its own step, so it cannot be
+skipped while the artifacts it describes are rebuilt. Verified by running the step end to end:
+all four affordability parquets regenerated **byte-content-identical** to the committed
+versions (`assert_frame_equal` passes on each), so the provenance wiring introduced no data
+change — they were reverted to keep the change set clean.
+
+`tests/test_provenance.py` (18 tests) satisfies **T4.2** in full and is marked there.
 
 ---
 
@@ -786,14 +842,21 @@ the guard that prevents Findings A, C and H from returning.
 
 ---
 
-### T4.2 — `tests/test_provenance.py` · TODO
+### T4.2 — `tests/test_provenance.py` · DONE
 
 **Depends on:** T1.3
 
+Written as the TDD artifact for T1.3 rather than deferred to Phase 4 — the module was built
+against it, so it landed early. 18 tests.
+
 **Acceptance**
-- [ ] `complete_case_max_year()` and `panel_max_year()` asserted against the artifact
-- [ ] Missing artifact raises `FileNotFoundError` with a helpful message
-- [ ] Per-source coverage matches the panel
+- [x] `complete_case_max_year()` and `panel_max_year()` asserted against the artifact
+- [x] Missing artifact raises `FileNotFoundError` with a helpful message (asserts the message
+      names `refresh_data`); a missing key raises `KeyError`
+- [x] Per-source coverage matches the panel — every recorded window is re-derived from
+      `panel_municipal.parquet` independently of how it was written, including the
+      imputed-income exclusion, and `complete_case_max_year` is re-derived from the raw
+      `notna()` mask rather than read back
 
 ---
 
@@ -874,4 +937,5 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.2, T1.3, T4.2 | **All DONE.** T1.2: removed both inline recomputes, repointed the page at the ranked artifact only, recoloured the histogram from `risk_c`, fixed Finding N3 (caption stated the orientation backwards), added `tests/test_pages_no_recompute.py` (14). T1.3: added `src/provenance.py` + committed `data/processed/data_provenance.json`, wired into `step_compute_indices()`; income's imputed tail is excluded so the complete case lands on 2024. T4.2 satisfied by `tests/test_provenance.py` (18). Suite: **63 passed, 1 failed, 1 skipped** — the failure is Finding O, unchanged. | Next: **T1.4** — `YEAR_RANGE` from `complete_case_max_year()`. Note T1.2's 2014 criterion is verified at the data layer only; it becomes reachable in the UI once T1.4 lands. `generated_at()` is already in place for T1.5. |
 | 2026-09-15 | T1.1 | **DONE.** Rewrote `normalize.py` (per-year scoring, documented orientation contract); routed `refresh_data.py` through it; regenerated the artifact; added `tests/test_ranked_artifact.py` (15 tests, 11 were failing). Uncovered and fixed Finding N — risk classes were inverted on the live app. | Next: **T1.2**, delete the inline recompute at `01_Riksoversikt.py:58-80`. Note pre-existing failure `test_skane_worst_v_c` (Finding O) — not a regression, defer to T1.8. |

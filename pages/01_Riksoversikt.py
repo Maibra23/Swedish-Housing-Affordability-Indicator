@@ -15,7 +15,6 @@ st.set_page_config(
 
 import re
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -39,10 +38,15 @@ inject_css()
 selections = render_sidebar(page_key="rv")
 
 # ── Load data ────────────────────────────────────────────────────────
+# affordability_ranked carries every column of the municipal affordability
+# panel plus z_*, rank_* and risk_*. `indices/normalize.py` is the only
+# producer of those columns — nothing on this page recomputes them. An earlier
+# inline copy here omitted the sign inversion that normalize.py applies to
+# versions A and C, which rendered the risk classes upside down for every year
+# except 2014. See tests/test_ranked_artifact.py.
 try:
     with st.spinner("Laddar data..."):
         ranked = pd.read_parquet("data/processed/affordability_ranked.parquet")
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
 except Exception as e:
     st.error("Kunde inte hämta data. Försök igen senare.")
     st.caption(f"Detaljer: {e}")
@@ -51,39 +55,21 @@ except Exception as e:
 selected_year = selections["selected_year"]
 selected_risks = selections["selected_risks"]
 
-# Filter to selected year from municipal panel
-mun_year = municipal[municipal["year"] == selected_year].copy()
-mun_prev = municipal[municipal["year"] == selected_year - 1].copy()
+mun_year = ranked[ranked["year"] == selected_year]
+mun_prev = ranked[ranked["year"] == selected_year - 1]
 
-# Use ranked data (always 2024, latest) for rankings/z-scores
-if selected_year == ranked["year"].iloc[0]:
-    df_ranked = ranked.copy()
-else:
-    df_ranked = mun_year.copy()
-    if "version_c" in df_ranked.columns and len(df_ranked) > 0:
-        mean_c = df_ranked["version_c"].mean()
-        std_c = df_ranked["version_c"].std()
-        if std_c > 0:
-            df_ranked["z_c"] = (df_ranked["version_c"] - mean_c) / std_c
-        else:
-            df_ranked["z_c"] = 0.0
-        df_ranked["rank_c"] = df_ranked["z_c"].rank(method="min").astype(int)
-        df_ranked["risk_c"] = pd.cut(
-            df_ranked["z_c"],
-            bins=[-np.inf, -0.67, 0.67, np.inf],
-            labels=["lag", "medel", "hog"],
-        )
-
-# Apply risk filter from multi-select pills
-risk_label_map = {"Hög": "hog", "Medel": "medel", "Låg": "lag"}
-if "risk_c" in df_ranked.columns and len(selected_risks) < 3:
-    allowed = [risk_label_map[r] for r in selected_risks if r in risk_label_map]
-    df_ranked = df_ranked[df_ranked["risk_c"].isin(allowed)]
-
-# Empty state
-if len(mun_year) == 0:
+# Empty state — checked before anything reads these frames.
+if mun_year.empty:
     st.warning("Inga data tillgängliga för den valda perioden.")
     st.stop()
+
+# Apply risk filter from the multi-select pills. An empty selection is
+# normalised to "all three" by the sidebar, so len < 3 means a real filter.
+RISK_LABEL_MAP = {"Hög": "hog", "Medel": "medel", "Låg": "lag"}
+df_ranked = mun_year
+if len(selected_risks) < 3:
+    allowed = [RISK_LABEL_MAP[r] for r in selected_risks if r in RISK_LABEL_MAP]
+    df_ranked = df_ranked[df_ranked["risk_c"].isin(allowed)]
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
@@ -108,17 +94,12 @@ mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
 delta_vc = mean_vc - mean_vc_prev
 delta_vc_pct = (delta_vc / mean_vc_prev * 100) if mean_vc_prev != 0 else 0
 
-n_hog = len(df_ranked[df_ranked["risk_c"] == "hog"]) if "risk_c" in df_ranked.columns else 0
-if len(mun_prev) > 0 and "version_c" in mun_prev.columns:
-    mean_prev = mun_prev["version_c"].mean()
-    std_prev = mun_prev["version_c"].std()
-    if std_prev > 0:
-        z_prev = (mun_prev["version_c"] - mean_prev) / std_prev
-        n_hog_prev = int((z_prev > 0.67).sum())
-    else:
-        n_hog_prev = 0
-else:
-    n_hog_prev = n_hog
+# Risk class comes from the artifact for both years; the previous year is not
+# re-scored here. The class boundaries (see indices/normalize.py) place roughly
+# a quarter of municipalities in "hog" every year by construction, so delta_hog
+# is close to constant and carries no trend — T1.9 removes it from the KPI.
+n_hog = int((df_ranked["risk_c"] == "hog").sum())
+n_hog_prev = int((mun_prev["risk_c"] == "hog").sum()) if not mun_prev.empty else n_hog
 delta_hog = n_hog - n_hog_prev
 
 mean_kt = mun_year["kt_ratio"].mean() if "kt_ratio" in mun_year.columns and len(mun_year) > 0 else 0
@@ -200,21 +181,22 @@ with col_hist:
             card_header("Fördelning av SHAI poäng", f"Version C · {selected_year}", "HISTOGRAM"),
             unsafe_allow_html=True,
         )
-        st.caption("Z-poäng = standardavvikelser från riksgenomsnittet. Noll = rikssnitt. Högre z = bättre överkomlighet.")
+        st.caption("Z-poäng = standardavvikelser från riksgenomsnittet. Noll = rikssnitt. Lägre z = bättre överkomlighet.")
         if "z_c" in df_ranked.columns and len(df_ranked) > 0:
             z_vals = df_ranked["z_c"].dropna()
 
             fig = go.Figure()
 
-            bins_low = z_vals[z_vals <= -0.67]
-            bins_mid = z_vals[(z_vals > -0.67) & (z_vals <= 0.67)]
-            bins_high = z_vals[z_vals > 0.67]
-
-            for subset, color, name in [
-                (bins_low, COLORS["low_risk"], "Låg risk"),
-                (bins_mid, COLORS["medium_risk"], "Medel risk"),
-                (bins_high, COLORS["high_risk"], "Hög risk"),
+            # Colour by the artifact's own risk_c column rather than re-cutting
+            # the z-scale here. normalize.py owns the class boundaries; keeping a
+            # second copy of them in this page is exactly how the classes drifted
+            # out of sync before (Finding N).
+            for risk_class, color, name in [
+                ("lag", COLORS["low_risk"], "Låg risk"),
+                ("medel", COLORS["medium_risk"], "Medel risk"),
+                ("hog", COLORS["high_risk"], "Hög risk"),
             ]:
+                subset = df_ranked.loc[df_ranked["risk_c"] == risk_class, "z_c"].dropna()
                 if len(subset) > 0:
                     fig.add_trace(go.Histogram(
                         x=subset,
@@ -249,8 +231,11 @@ with col_hist:
         with st.expander("Om fördelningsgrafen"):
             st.markdown(
                 "Histogrammet visar hur SHAI-poängen (z-poäng) fördelar sig bland kommunerna. "
-                "Färgerna speglar riskklasserna: grön (z ≤ −0,67), gul (−0,67 < z ≤ 0,67), "
-                "röd (z > 0,67). Den streckade linjen visar medianen.",
+                "Skalan är vänd så att ett lägre z betyder bättre överkomlighet: grön stapel "
+                "= låg risk, gul = medel, röd = hög risk. Färgen kommer från riskklassen i "
+                "datafilen, inte från en gräns som räknas om här. Den streckade linjen visar "
+                "medianen. Klassgränserna placerar ungefär 25 % av kommunerna i varje "
+                "ytterklass varje år, så fördelningens form säger mer än antalet i en klass.",
             )
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)

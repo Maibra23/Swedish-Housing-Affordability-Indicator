@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-09-15T10:08:47+00:00",
+  "sources": {
+    "median_income": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "transaction_price_sek": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "policy_rate": {
+      "min_year": 2014,
+      "max_year": 2026,
+      "n_regions": 290
+    },
+    "unemployment_rate": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "cpi_yoy_pct": {
+      "min_year": 2011,
+      "max_year": 2026,
+      "n_regions": 290
+    },
+    "bostadsratt_price_sek": {
+      "min_year": 2011,
+      "max_year": 2026,
+      "n_regions": 290
+    },
+    "price_index": {
+      "min_year": 2011,
+      "max_year": 2025,
+      "n_regions": 290
+    },
+    "kt_ratio": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "population": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "completions": {
+      "min_year": 2011,
+      "max_year": 2024,
+      "n_regions": 290
+    },
+    "cpi_index": {
+      "min_year": 2011,
+      "max_year": 2026,
+      "n_regions": 290
+    }
+  },
+  "panel_min_year": 2011,
+  "panel_max_year": 2026,
+  "complete_case_max_year": 2024,
+  "index_min_year": 2014,
+  "index_max_year": 2024,
+  "index_inputs": [
+    "median_income",
+    "transaction_price_sek",
+    "policy_rate",
+    "unemployment_rate",
+    "cpi_yoy_pct"
+  ],
+  "n_kommuner": 290,
+  "panel_rows": 4640,
+  "index_rows": 3190,
+  "balanced": false,
+  "note": "The panel is ragged at the top end: sources end in different years. Every affordability formula requires median_income, so the composite index cannot move past complete_case_max_year even when prices, the price index or the policy rate are fresher. Use complete_case_max_year for anything that displays an index value or offers a year to the user; use panel_max_year only when talking about a component series on its own. median_income is forward-filled beyond its recorded max_year and those rows are flagged with is_imputed_income."
+}
