@@ -171,6 +171,7 @@ def test_every_template_supplies_every_placeholder_it_declares() -> None:
         }
 
     supplied: dict[str, set[str]] = {}
+    dynamic: set[str] = set()
     for path in _page_files() + sorted((ROOT / "src" / "ui").glob("*.py")):
         if path.name == "labels.py":
             continue
@@ -184,13 +185,20 @@ def test_every_template_supplies_every_placeholder_it_declares() -> None:
                 and isinstance(node.args[0], ast.Constant)
             ):
                 key = node.args[0].value
+                if any(kw.arg is None for kw in node.keywords):
+                    # `L(key, **mapping)` — the names are not knowable from the
+                    # syntax. Page 06 fills the methodology source table this way,
+                    # and test_copy_matches_artifacts.py checks that call against
+                    # the dict literal it unpacks. Nothing to assert here.
+                    dynamic.add(key)
+                    continue
                 names = {kw.arg for kw in node.keywords if kw.arg}
                 supplied.setdefault(key, set()).update(names)
 
     offenders = {
         key: sorted(declared[key] - supplied.get(key, set()))
         for key in declared
-        if declared[key] - supplied.get(key, set())
+        if key not in dynamic and declared[key] - supplied.get(key, set())
     }
     assert not offenders, f"placeholder never supplied at any call site: {offenders}"
 

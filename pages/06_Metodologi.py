@@ -16,7 +16,12 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
-from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.provenance import (
+    complete_case_max_year,
+    first_year,
+    n_kommuner,
+    source_coverage,
+)
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import page_title, card_header, footer_note
@@ -30,6 +35,28 @@ PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
 PERIOD = f"{PERIOD_START}–{PERIOD_END}"
 N_YEARS = PERIOD_END - PERIOD_START + 1
 N_KOMMUNER = n_kommuner()
+
+# The source table states, per variable, how far upstream publication reaches.
+# Those years are recorded in the provenance artifact, so the table reads them
+# rather than restating them: the T2.4 refresh advanced four series to 2025 while
+# the prose still said 2024, and nothing noticed until T4.1 compared the two.
+_COVERAGE = source_coverage()
+
+
+def _max_year(column: str) -> int:
+    """Last observed year for `column`, as the artifact records it."""
+    return _COVERAGE[column]["max_year"]
+
+
+SOURCE_MAX = {
+    "income_max": _max_year("median_income"),
+    "price_max": _max_year("transaction_price_sek"),
+    "price_index_max": _max_year("price_index"),
+    "kt_max": _max_year("kt_ratio"),
+    "unemployment_max": _max_year("unemployment_rate"),
+    "population_max": _max_year("population"),
+    "completions_max": _max_year("completions"),
+}
 
 page_title(
     eyebrow="Sida 06 · Metodologi",
@@ -60,7 +87,7 @@ with st.container(border=True):
         unsafe_allow_html=True,
     )
 
-    st.markdown(L("mt.variabel_symbol_kalla_upplosning_frekvens"))
+    st.markdown(L("mt.variabel_symbol_kalla_upplosning_frekvens", **SOURCE_MAX))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 3 — Formler (always visible)
@@ -118,7 +145,7 @@ with st.expander(L("mt.6_begransningar_f1f15")):
 # SECTION 7 — Datavalidering (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander("7. Datavalidering"):
-    st.markdown(L("mt.foljande_valideringskontroller_kors_innan"))
+    st.markdown(L("mt.foljande_valideringskontroller_kors_innan", income_max=SOURCE_MAX["income_max"]))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 8 — Referenser (expander)

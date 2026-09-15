@@ -443,18 +443,18 @@ SWEDISH_LABELS: dict[str, str] = {
     "mt.variabel_symbol_kalla_upplosning_frekvens": """
     | Variabel | Symbol | Källa | Upplösning | Frekvens | Täckning |
     |----------|--------|-------|------------|----------|----------|
-    | Medianinkomst (sammanräknad förvärvsinkomst) | I | SCB HE0110 | Kommun, län, riket | Årlig | 2011–2024 |
-    | **Transaktionspris småhus (medelvärde, SEK)** | **P_SEK** | **SCB BO0501B (BO0501C2)** | **Kommun, län** | **Årlig** | **1981–2024** |
+    | Medianinkomst (sammanräknad förvärvsinkomst) | I | SCB HE0110 | Kommun, län, riket | Årlig | 2011–{income_max} |
+    | **Transaktionspris småhus (medelvärde, SEK)** | **P_SEK** | **SCB BO0501B (BO0501C2)** | **Kommun, län** | **Årlig** | **1981–{price_max}** |
     | **Transaktionspris bostadsrätt (medelvärde, SEK)** | **P_BR** | **SCB BO0501C (FastprisBRFRegionAr, BO0501R7)** | **Län (21), riket** | **Årlig** | **2000–present** |
-    | Fastighetsprisindex | P_idx | SCB BO0501A | Län (21), riket | Årlig | 1990–2025 |
-    | Köpeskillingskoefficient (K/T, deskriptiv) | KT | SCB BO0501B (BO0501C4) | Kommun (312), län | Årlig | 1981–2024 |
+    | Fastighetsprisindex | P_idx | SCB BO0501A | Län (21), riket | Årlig | 1990–{price_index_max} |
+    | Köpeskillingskoefficient (K/T, deskriptiv) | KT | SCB BO0501B (BO0501C4) | Kommun (312), län | Årlig | 1981–{kt_max} |
     | Styrränta | R | Riksbanken Swea | Riket | Dag → årssnitt | 2014–idag |
     | KPI (skuggindex) | π | SCB PR0101 | Riket | Månad → årssnitt | 1980–idag |
     | KPI årsförändring | π% | SCB PR0101 | Riket | Månad → årssnitt | 1981–idag |
     | Realränta | r* = R − π | Härledd | Riket | Årlig | 2014–idag |
-    | Arbetslöshet | U | Kolada N03937 (Af) | Kommun, län, riket | Årlig | 2010–2024 |
-    | Befolkning | N | SCB BE0101 | Kommun, län, riket | Årlig | 1968–2024 |
-    | Bostadsbyggande | H | SCB BO0101 | Kommun, län, riket | Årlig | 1975–2024 |
+    | Arbetslöshet | U | Kolada N03937 (Af) | Kommun, län, riket | Årlig | 2010–{unemployment_max} |
+    | Befolkning | N | SCB BE0101 | Kommun, län, riket | Årlig | 1968–{population_max} |
+    | Bostadsbyggande | H | SCB BO0101 | Kommun, län, riket | Årlig | 1975–{completions_max} |
 
     **Obs:** P_SEK (SCB BO0501C2) är *medelvärdet* (ej medianen) av köpeskillingen för permanenta
     småhus (Fastighetstyp 220). SHAI-formlerna A, B och C använder P_SEK (villapris) som
@@ -645,7 +645,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "mt.foljande_valideringskontroller_kors_innan": """
     Följande valideringskontroller körs innan publicering:
 
-    1. **Nominell inkomst ökande:** Medianinkomst bör öka nominellt år för år (2011–2024).
+    1. **Nominell inkomst ökande:** Medianinkomst bör öka nominellt år för år (2011–{income_max}).
     2. **Real inkomst stabil:** Deflaterad inkomst bör vara ungefär stabil eller svagt ökande.
     3. **Stockholm i topp 5 sämst (Version C):** Verifierat med K/T-data.
     4. **Norrbotten i topp 5 bäst (Version A):** Verifierat.
