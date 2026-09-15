@@ -28,6 +28,7 @@ from pathlib import Path
 
 import pytest
 
+from src.ui.labels import SWEDISH_LABELS
 from tests.sourcetools import executable_source
 
 PAGE = Path(__file__).resolve().parents[1] / "pages" / "01_Riksoversikt.py"
@@ -114,11 +115,33 @@ def _risk_kpi(tree: ast.Module) -> ast.Call:
 
 
 def _literal(node: ast.expr | None) -> str:
-    """Flatten a kwarg to text, tolerating f-strings and implicit concatenation."""
+    """Flatten a kwarg to the text a reader will see.
+
+    Since T3.1 the copy lives in `SWEDISH_LABELS` and reaches the page as
+    `L("rv.some_key")`, so a naive walk would return the *key* and every
+    assertion about wording would pass on a string nobody reads. Calls to `L`
+    are resolved through the dict; a missing key fails loudly here rather than
+    rendering blank.
+    """
     if node is None:
         return ""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
+
+    parts: list[str] = []
+    for sub in ast.walk(node):
+        if (
+            isinstance(sub, ast.Call)
+            and isinstance(sub.func, ast.Name)
+            and sub.func.id == "L"
+            and sub.args
+            and isinstance(sub.args[0], ast.Constant)
+        ):
+            key = sub.args[0].value
+            assert key in SWEDISH_LABELS, f"page references undefined label {key!r}"
+            parts.append(SWEDISH_LABELS[key])
+    if parts:
+        return " ".join(parts)
     return " ".join(
         n.value for n in ast.walk(node) if isinstance(n, ast.Constant) and isinstance(n.value, str)
     )
@@ -137,11 +160,15 @@ def test_risk_class_kpi_carries_no_delta(tree: ast.Module) -> None:
 
 def test_page_never_reads_a_risk_class_for_the_previous_year(tree: ast.Module) -> None:
     """Without last year's classes there is no delta to accidentally reintroduce."""
+    # `risk_[abc]`, not a bare "risk_": since T3.1 the label key
+    # `rv.hogrisk_kommuner` contains that substring, and matching it made this
+    # guard fire on the copy rather than on a computation.
+    contract_column = re.compile(r"risk_[abc]")
     offenders = [
         source
         for node in ast.walk(tree)
         if isinstance(node, (ast.Compare, ast.Subscript, ast.Call))
-        and "risk_" in (source := ast.unparse(node))
+        and contract_column.search(source := ast.unparse(node))
         and "prev" in source
     ]
     assert not offenders, (

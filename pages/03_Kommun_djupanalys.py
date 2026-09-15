@@ -6,6 +6,8 @@ Historisk SHAI över indexets hela period + prognos sex år framåt.
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
     page_title="SHAI · Kommun djupanalys",
     page_icon=None,
@@ -48,7 +50,7 @@ try:
         except FileNotFoundError:
             forecast_arima = pd.DataFrame()
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("kd.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -65,7 +67,7 @@ page_title(
 # ── Kommun selector ──────────────────────────────────────────────────
 kommun_list = sorted(municipal["region_name"].unique())
 selected_kommun = st.selectbox(
-    "Välj kommun",
+    L("kd.valj_kommun"),
     kommun_list,
     index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
     key="kd_kommun_select",
@@ -74,7 +76,7 @@ selected_kommun = st.selectbox(
 kommun_data = municipal[municipal["region_name"] == selected_kommun].sort_values("year")
 
 if len(kommun_data) == 0:
-    st.warning("Inga data tillgängliga för den valda kommunen.")
+    st.warning(L("kd.inga_data_tillgangliga_for_den_valda"))
     st.stop()
 
 lan_code = kommun_data["lan_code"].iloc[0]
@@ -94,30 +96,30 @@ if len(latest) > 0:
         kpi_card(
             label="SHAI (Version C)",
             value=f"{lat['version_c']:.1f}".replace(".", ","),
-            unit="poäng",
+            unit=L("kd.poang"),
             delta=f"{vc_delta_pct:+.1f}%".replace(".", ",") if len(prev) > 0 else "",
             delta_direction="down" if vc_delta > 0 else "up" if vc_delta < 0 else "flat",
             variant="accent",
-            tooltip="Realversion. Inkomst / (Pris × max(R−π, 0,5%)). Högre = bättre överkomlighet. Råkvot, ej ett 0–100 index.",
+            tooltip=L("kd.realversion_inkomst_pris_max_r_0_5_hogre"),
         ),
         kpi_card(
             label="Medianinkomst",
             value=f"{lat['median_income']:,.0f}".replace(",", "\u00A0"),
             unit="SEK",
             variant="default",
-            tooltip="Sammanräknad förvärvsinkomst, medelvärde per individ (SCB HE0110). Individuell bruttoinkomst — ej hushållsinkomst.",
+            tooltip=L("kd.sammanraknad_forvarvsinkomst_medelvarde_per"),
         ),
         kpi_card(
             label="K/T-kvot",
             value=f"{lat['kt_ratio']:.2f}".replace(".", ","),
             variant="default",
-            tooltip="Köpeskillingskoefficient: köpeskilling / taxeringsvärde. Speglar relativ prisnivå. Obs: K/T ingår ej i SHAI-formeln — transaktionspriset i SEK används.",
+            tooltip=L("kd.kopeskillingskoefficient_kopeskilling"),
         ),
         kpi_card(
-            label="Styrränta",
+            label=L("kd.styrranta"),
             value=f"{lat['policy_rate']:.2f}%".replace(".", ","),
             variant="default",
-            tooltip="Riksbankens styrränta, årsgenomsnitt. Nationell — samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
+            tooltip=L("kd.riksbankens_styrranta_arsgenomsnitt"),
         ),
     ])
 
@@ -125,9 +127,7 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 # ── Caveat callout ───────────────────────────────────────────────────
 st.warning(
-    f"**Prognoser baseras på {N_YEARS} årliga observationer ({PERIOD}).** "
-    "Konfidensintervall vidgas snabbt efter år 3. "
-    "Tolka långtidsprognoser med försiktighet."
+    L("kd.prognoser_baseras_pa_v0_arliga_observationer", v0=N_YEARS, v1=PERIOD)
 )
 
 
@@ -161,7 +161,7 @@ def _build_forecast_chart(
                 mode="markers",
                 name="Framskriven inkomst",
                 marker=dict(size=10, color=COLORS["accent"], symbol="diamond"),
-                hovertemplate="<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
+                hovertemplate=L("kd.x_framskrivet_fran_2024"),
             ))
 
     # Forecast
@@ -204,7 +204,7 @@ def _build_forecast_chart(
 
     layout = get_chart_layout(
         height=380,
-        xaxis_title="År",
+        xaxis_title=L("kd.ar"),
         yaxis_title="SHAI (Version C)",
     )
     layout["xaxis"]["dtick"] = 1
@@ -221,8 +221,8 @@ with tab_prophet:
             card_header(f"Prognos — {selected_kommun}", "Prophet-modell", "PROPHET"),
             unsafe_allow_html=True,
         )
-        st.caption("Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.")
-        st.caption(f"Prognoserna beräknas på länsnivå ({kommun_data['lan_code'].iloc[0]}) — inte per kommun.")
+        st.caption(L("kd.prophet_ar_optimerat_for_dagliga"))
+        st.caption(L("kd.prognoserna_beraknas_pa_lansniva_v0_inte_per", v0=kommun_data['lan_code'].iloc[0]))
         if len(forecast_prophet) > 0:
             fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
@@ -255,7 +255,7 @@ with st.container(border=True):
     component_configs = [
         ("Medianinkomst", "median_income", "SEK", col1, "#3D8B6E"),
         ("K/T-kvot", "kt_ratio", "kvot", col2, "#4A6FA5"),
-        ("Styrränta", "policy_rate", "%", col3, "#D4785A"),
+        (L("kd.styrranta"), "policy_rate", "%", col3, "#D4785A"),
     ]
 
     # Compute driver
@@ -300,9 +300,7 @@ with st.container(border=True):
 
     if driver:
         st.markdown(
-            f"<div style='font-size:13px;color:{COLORS['text_secondary']};text-align:center;padding:8px 0;'>"
-            f"<strong>{driver}</strong> har störst relativ variation och driver mest av "
-            f"SHAI-förändringen för {selected_kommun}.</div>",
+            L("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
             unsafe_allow_html=True,
         )
 

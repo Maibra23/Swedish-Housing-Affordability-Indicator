@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete · T4.4 pulled forward · 18 / 34 tasks
-**Current phase:** Phase 3 · next task **T3.1** — but read §0 on the missing reference repos first
-**Test suite:** 217 passed, 0 failed, 1 skipped · 67/67 page renders clean
+**Status:** IN PROGRESS — Phases 1 and 2 complete · T4.4, T3.1 done · 19 / 34 tasks
+**Current phase:** Phase 3 · next task **T4.1** (now unblocked) — then §0 on the missing reference repos
+**Test suite:** 323 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -442,7 +442,7 @@ everything to `.shai-*`.
 | T2.3 | Fix README troubleshooting + deployment docs | 2 | **DONE** |
 | T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | **DONE** |
 | T2.5 | Verify clean-environment deploy | 2 | **DONE** |
-| T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | TODO |
+| T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | **DONE** |
 | T3.2 | Normalise all CSS classes to `.shai-*` | 3 | TODO |
 | T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | TODO |
 | T3.4 | Add `.shai-explanation` under every bare number | 3 | TODO |
@@ -1088,7 +1088,7 @@ Primary reference for every task: `/Users/Brook/Downloads/kommun-skattekraft-str
 
 ---
 
-### T3.1 — Add `src/ui/labels.py` · TODO
+### T3.1 — Add `src/ui/labels.py` · DONE
 
 **Fixes:** Finding M
 **Files:** NEW `src/ui/labels.py`
@@ -1099,9 +1099,40 @@ One `SWEDISH_LABELS` dict holding every user-facing string, plus formatting help
 stay English; user-facing strings are Swedish.
 
 **Acceptance**
-- [ ] `SWEDISH_LABELS` exists and is the only source of user-facing copy
-- [ ] No Swedish string literal remains inline in `app.py` or `pages/*.py`
-- [ ] Every key non-empty
+- [x] `SWEDISH_LABELS` exists and is the only source of user-facing copy — 269 keys,
+      672 lines, reached through `L(key, **values)`
+- [x] No Swedish string literal remains inline in `app.py` or `pages/*.py` — **0 remaining**,
+      down from 332 across seven files
+- [x] Every key non-empty, every key used, every referenced key defined
+
+`tests/test_no_inline_copy.py` (20). No reference repo was needed for this task.
+
+**Proven inert rather than assumed so.** 269 call sites is too many to eyeball, so before
+touching anything I captured every string rendered by all 67 page/year states — 5709 of them —
+then re-captured after. **0 of 67 render states differ.** The extraction changed no output.
+
+Two bugs the migration hit, both worth recording because both are silent:
+
+**`ast` `col_offset` is a UTF-8 *byte* offset, not a character index.** These files are full of
+å/ä/ö, so slicing the source by character shifted every extracted expression right by one per
+multibyte character earlier on the line — `APP_VERSION` came out as `P_VERSION}"`. Caught by
+reading the generated plan before applying it; the collector now works on the encoded bytes.
+
+**Literal braces must be doubled in anything `str.format` will touch.** One label is a Plotly
+hover template (`<b>{v0}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}`), and several are HTML blocks
+carrying inline CSS. Unescaped, `format` reads `{x}` as a field and raises `KeyError` on
+render. All 40 templates are now round-trip checked in the suite.
+
+The guard also found a genuine weakness in an **existing** test: `test_risk_kpi.py` matched the
+substring `risk_`, which the new label key `rv.hogrisk_kommuner` contains, so it began firing
+on copy instead of on a computation. Tightened to `risk_[abc]`. Its copy assertions now resolve
+`L("key")` through the dict — otherwise they would have asserted against key *names* and
+passed on strings nobody reads.
+
+Side effect worth having: `06_Metodologi.py` went 350 → 129 lines and `04_Kontantinsats.py`
+885 → 794, which is most of T3.3's and T3.11's motivation already banked.
+
+**Unblocks T4.1 and T4.3.**
 
 ---
 
@@ -1421,6 +1452,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T3.1 | **DONE, no reference repo needed.** 269 keys in `src/ui/labels.py`; **0 Swedish literals left** in `app.py` or `pages/*.py`, down from 332. Verified by fingerprinting all 5709 rendered strings across 67 page/year states before and after — **0 states differ**, so the extraction is provably inert rather than hopefully so. Two silent traps: `ast.col_offset` is a UTF-8 **byte** offset, so character slicing shifted every extracted expression (`APP_VERSION` → `P_VERSION}"`) — caught by reading the plan before applying it; and literal braces must be doubled for `str.format`, or the Plotly hover template and the inline-CSS blocks raise `KeyError` on render. `tests/test_no_inline_copy.py` (20) guards all of it. Also fixed an existing test weakness: `test_risk_kpi.py` matched the substring `risk_`, which `rv.hogrisk_kommuner` contains, and its copy assertions were reading key *names* rather than copy. **Suite: 323 passed, 0 failed, 1 skipped.** | Next: **T4.1**, now unblocked and described in this plan as its highest-value test — re-derive every number in the copy from the artifacts. T4.3 is also unblocked. Then the remaining Phase 3 work, which still needs the reference repo (§0). New **R9**: `labels.py` now holds HTML and LaTeX blocks as well as copy — correct per the acceptance, wrong as a long-term home. |
 | 2026-09-16 | T4.4, R7 | **Pre-Phase-3 work. T4.4 DONE, pulled forward.** The 67-render check is now `tests/test_pages_render.py` — 81 tests, 14 s, in the default suite, wider than the scratch script it replaces (empty and single risk selections, years off `YEAR_RANGE`, a content assertion, plus two meta-tests proving the harness can fail). Closes R6. It immediately found **R8**: `folium_static` is deprecated and scheduled for removal, 13 warnings per sweep — recorded, not fixed, because migrating to `st_folium` changes rerun behaviour and belongs with T3.9. **R7 accepted, option B**: major-version caps in `requirements.txt`, mirrored into `pyproject.toml`, plus a test that the two agree on specifiers rather than just names. Caps sit *above* what T2.5 verified — a clean install still resolves pandas 3.0.5 / numpy 2.5.3 / streamlit 1.64.0, byte-identical to before, so no downgrade. Residual risk kept open: 0.x packages get `<1`, which still admits breaking minor bumps, and `folium` is what draws the map. **Suite: 299 passed, 0 failed, 1 skipped.** | **Before T3.1, read §0 — neither reference repo exists on this machine.** Five Phase 3 tasks are self-contained (T3.1, T3.2, T3.3, T3.10, T3.11); the seven pattern-borrowing ones need Skattekraftspanelen's `src/ui/` or they become guesswork. Recommended order: T3.1 → T4.1 (T3.1 unblocks it), then pause for repo access. Still unaddressed and arguably above most of Phase 3: **R5** — `src/indices/affordability.py` computes all three versions and has zero tests. |
 | 2026-09-15 | T2.5 | **DONE — Phase 2 closed.** Clean venv, `requirements.txt` only: 39 distributions, no compilers, pipeline packages absent, **67/67 renders clean inside it**, Esri tile host HTTP 200. Also closes T2.1's deferred third criterion. The check earned its keep immediately: lower-only bounds resolve a fresh deploy to **pandas 3.0.5** and **numpy 2.5.3** against the 2.3.3 / 1.26.2 this app is verified on — two major-version boundaries. Everything passes on them, so nothing is broken, but production runs versions no test here has exercised and the next resolver shift is nobody's decision. Logged as **R7 (High)**. Started `docs/OPEN_RISKS.md` for this class of finding — seven entries, R1 and R7 High. | Next: **T3.1**, Phase 3. Read `docs/OPEN_RISKS.md` first: **R2** (three pages read year lists from data, not `YEAR_RANGE`) belongs with T3.7, and **R6** (the 67-render check is still a scratch script) argues for pulling **T4.4** forward before Phase 3 starts changing the UI it verifies. One criterion is genuinely open: nobody has confirmed the deployed Streamlit Cloud app, which needs the account owner. |
 | 2026-09-15 | T2.4, O1 | **DONE.** O1 answered: run it. The refresh itself was the small part. Two defects it exposed: (1) `kolada_client.fetch_unemployment` defaulted to `end_year=2024` and so never asked for 2025, which Kolada has had all along — ceiling now resolved at fetch time, `tests/test_kolada_year_range.py` (7); (2) once unemployment 2025 landed, a forward-filled-income 2025 row survived into the index and, because `compute_version_b` pools its component z-scores across the whole frame, re-based `version_b` for every historical year — 1816 rank changes, 19 class changes, from a year no page can render. `step_compute_indices` now filters through `complete_case()`; `tests/test_index_complete_case.py` (6). With both fixed the refresh is purely additive: **INDEX CONTRACT COLUMNS CHANGED: NONE**. Step 4 was killed by the OS for memory and is verifiably unnecessary — the forecast training window ends at 2024 and none of the forecast variables moved inside it. **Suite: 217 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.5**, clean-venv deploy check; scripts are staged. Carry forward: pages 02, 04 and 05 read their year lists from the data rather than from `YEAR_RANGE`. Harmless today because `complete_case()` keeps the index at 2024, but it is the same class of leak and belongs in Phase 3. Also unverified: whether `[pipeline]` installs from scratch — prophet/pmdarima were already present here. |

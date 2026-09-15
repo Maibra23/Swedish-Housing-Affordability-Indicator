@@ -8,6 +8,8 @@ because SCB only publishes apartment prices at the county level.
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
     page_title="SHAI · Kontantinsats",
     page_icon=None,
@@ -48,7 +50,7 @@ try:
         municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
         county_data = pd.read_parquet("data/processed/panel_county.parquet")
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("ki.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -59,8 +61,7 @@ county_yr = county_data[county_data["year"] == selected_year]
 if len(mun_year) == 0:
     _available = sorted(municipal["year"].unique(), reverse=True)
     st.warning(
-        f"Inga data tillgängliga för {selected_year}. "
-        f"Välj ett år med data: {', '.join(str(y) for y in _available[:5])}."
+        L("ki.inga_data_tillgangliga_for_v0_valj_ett_ar", v0=selected_year, v1=', '.join(str(y) for y in _available[:5]))
     )
     st.stop()
 
@@ -82,24 +83,17 @@ _br_available = (
 
 if not _br_available:
     st.warning(
-        "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker "
-        "permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. "
-        "I storstäder är typiska bostadsrätspriser lägre än villapriser — "
-        "kontantinsatskraven och spartiderna är därmed höga för stadsbor som söker lägenhet. "
-        "Se Begränsning F11 i Metodologi (Sida 06)."
+        L("ki.obs_priserna_avser_smahus_villor_scb")
     )
 else:
     st.info(
-        "**Välj Pristyp:** Bostadsrättspriser (SCB BO0501C) analyseras på **länsnivå** "
-        "(21 län) — SCB publicerar inga kommunspecifika bostadsrättspriser. "
-        f"Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** ({N_KOMMUNER} kommuner). "
-        "När du väljer Bostadsrätt byter analysen automatiskt till länsnivå."
+        L("ki.valj_pristyp_bostadsrattspriser_scb_bo0501c", v0=N_KOMMUNER)
     )
 
 # ── 1 · Controls ──────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Välj analysenhet", "Region, pristyp, hushållstyp och sparandeantagande", "URVAL"),
+        card_header(L("ki.valj_analysenhet"), L("ki.region_pristyp_hushallstyp_och"), "URVAL"),
         unsafe_allow_html=True,
     )
 
@@ -107,33 +101,31 @@ with st.container(border=True):
 
     # Pristyp FIRST — determines whether selector shows kommun or län
     with col_pristyp:
-        _pristyp_options = ["Småhus (villa)"]
+        _pristyp_options = [L("ki.smahus_villa")]
         if _br_available:
-            _pristyp_options.append("Bostadsrätt")
+            _pristyp_options.append(L("ki.bostadsratt"))
         pristyp = st.radio(
             "Pristyp",
             options=_pristyp_options,
             index=0,
             key="ki_pristyp",
             help=(
-                f"Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå ({N_KOMMUNER} kommuner). "
-                "Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt — **länsnivå** (21 län). "
-                "SCB publicerar inga kommunspecifika bostadsrättspriser."
+                L("ki.smahus_scb_bo0501c2_fastighetstyp_220", v0=N_KOMMUNER)
             ),
             horizontal=False,
         )
-        use_bostadsratt = (pristyp == "Bostadsrätt")
+        use_bostadsratt = (pristyp == L("ki.bostadsratt"))
 
     # Conditional selector: län for bostadsrätt, kommun for småhus
     with col_sel:
         if use_bostadsratt:
             region_list = sorted(county_yr["region_name"].dropna().unique())
             _default_lan = (
-                region_list.index("Stockholms län")
-                if "Stockholms län" in region_list else 0
+                region_list.index(L("ki.stockholms_lan"))
+                if L("ki.stockholms_lan") in region_list else 0
             )
             selected_name = st.selectbox(
-                "Välj län",
+                L("ki.valj_lan"),
                 region_list,
                 index=_default_lan,
                 key="ki_lan_select",
@@ -145,7 +137,7 @@ with st.container(border=True):
                 if "Stockholm" in region_list else 0
             )
             selected_name = st.selectbox(
-                "Välj kommun",
+                L("ki.valj_kommun"),
                 region_list,
                 index=_default_kommun,
                 key="ki_kommun_select",
@@ -153,13 +145,12 @@ with st.container(border=True):
 
     with col_type:
         household_type = st.radio(
-            "Hushållstyp",
-            options=["Singelhushåll", "Par (2 inkomster)"],
+            L("ki.hushallstyp"),
+            options=[L("ki.singelhushall"), "Par (2 inkomster)"],
             index=0,
             key="ki_household_type",
             help=(
-                "Singelhushåll: en individuell inkomst. "
-                "Par: sammanlagd inkomst (2×) — halverar spartiden och sänker LTI."
+                L("ki.singelhushall_en_individuell_inkomst_par")
             ),
         )
         household_multiplier = 2 if household_type == "Par (2 inkomster)" else 1
@@ -173,27 +164,24 @@ with st.container(border=True):
             step=1,
             key="ki_savings_slider",
             help=(
-                "Andel av bruttoinkomsten som sparas årligen. "
-                "10 % är vanligt; över 20 % är ambitiöst. "
-                "Påverkar hur lång tid det tar att spara ihop insatsen."
+                L("ki.andel_av_bruttoinkomsten_som_sparas_arligen")
             ),
         ) / 100.0
         _sparkvot_caption = st.empty()
 
     # Advanced settings (bank margin)
-    with st.expander("Avancerade inställningar — Räntepåslag"):
+    with st.expander(L("ki.avancerade_installningar_rantepaslag")):
         st.caption(
-            "Riksbankens styrränta används som bas. Bankens räntepåslag adderas för att "
-            "approximera faktisk bolåneränta. Typiskt ~1,7 pp för 3-månaders rörlig ränta."
+            L("ki.riksbankens_styrranta_anvands_som_bas")
         )
         bank_margin_pct = st.slider(
-            "Bankens räntepåslag (pp ovan styrräntan)",
+            L("ki.bankens_rantepaslag_pp_ovan_styrrantan"),
             min_value=0.0,
             max_value=3.0,
             value=1.7,
             step=0.1,
             key="ki_bank_margin_slider",
-            help="Faktisk bolåneränta ≈ styrränta + räntepåslag. 0 pp = enbart styrränta (historisk default). 1,7 pp = typisk 2024 bankmarknad.",
+            help=L("ki.faktisk_bolaneranta_styrranta_rantepaslag_0"),
         )
         bank_margin = bank_margin_pct / 100.0
 
@@ -204,7 +192,7 @@ else:
     selected_row_df = mun_year[mun_year["region_name"] == selected_name]
 
 if len(selected_row_df) == 0:
-    st.warning("Inga data tillgängliga för den valda regionen.")
+    st.warning(L("ki.inga_data_tillgangliga_for_den_valda"))
     st.stop()
 
 selected_row = selected_row_df.iloc[0]
@@ -212,13 +200,13 @@ selected_row = selected_row_df.iloc[0]
 # ── Extract values ───────────────────────────────────────────────────
 # County name lookup — only needed in kommun mode for BR price provenance
 _LAN_NAMES = {
-    "01": "Stockholms län", "03": "Uppsala län", "04": "Södermanlands län",
-    "05": "Östergötlands län", "06": "Jönköpings län", "07": "Kronobergs län",
-    "08": "Kalmar län", "09": "Gotlands län", "10": "Blekinge län",
-    "12": "Skåne län", "13": "Hallands län", "14": "Västra Götalands län",
-    "17": "Värmlands län", "18": "Örebro län", "19": "Västmanlands län",
-    "20": "Dalarnas län", "21": "Gävleborgs län", "22": "Västernorrlands län",
-    "23": "Jämtlands län", "24": "Västerbottens län", "25": "Norrbottens län",
+    "01": L("ki.stockholms_lan"), "03": L("ki.uppsala_lan"), "04": L("ki.sodermanlands_lan"),
+    "05": L("ki.ostergotlands_lan"), "06": L("ki.jonkopings_lan"), "07": L("ki.kronobergs_lan"),
+    "08": L("ki.kalmar_lan"), "09": L("ki.gotlands_lan"), "10": L("ki.blekinge_lan"),
+    "12": L("ki.skane_lan"), "13": L("ki.hallands_lan"), "14": L("ki.vastra_gotalands_lan"),
+    "17": L("ki.varmlands_lan"), "18": L("ki.orebro_lan"), "19": L("ki.vastmanlands_lan"),
+    "20": L("ki.dalarnas_lan"), "21": L("ki.gavleborgs_lan"), "22": L("ki.vasternorrlands_lan"),
+    "23": L("ki.jamtlands_lan"), "24": L("ki.vasterbottens_lan"), "25": L("ki.norrbottens_lan"),
 }
 
 pristyp_fallback_note: str | None = None
@@ -228,14 +216,13 @@ if use_bostadsratt:
     _villa_price = selected_row.get("transaction_price_sek")
     if pd.notna(_br_price):
         price = _br_price
-        price_source_label = f"Bostadsrätt — {selected_name} (SCB BO0501C)"
+        price_source_label = L("ki.bostadsratt_v0_scb_bo0501c", v0=selected_name)
     else:
         price = _villa_price
         pristyp_fallback_note = (
-            f"Bostadsrättspris saknas för {selected_name} — "
-            "småhuspriset används som fallback."
+            L("ki.bostadsrattspris_saknas_for_v0_smahuspriset", v0=selected_name)
         )
-        price_source_label = "Småhus (fallback)"
+        price_source_label = L("ki.smahus_fallback")
     _lan_code = str(selected_row.get("lan_code", "")).zfill(2)
     _lan_name = selected_name  # Already at county level
 else:
@@ -248,9 +235,9 @@ else:
         if _has_br_muni and pd.notna(selected_row.get("bostadsratt_price_sek"))
         else None
     )
-    price_source_label = "Småhus (SCB BO0501C2)"
+    price_source_label = L("ki.smahus_scb_bo0501c2")
     _lan_code = str(selected_row.get("lan_code", "")).zfill(2)
-    _lan_name = _LAN_NAMES.get(_lan_code, f"Län {_lan_code}")
+    _lan_name = _LAN_NAMES.get(_lan_code, L("ki.lan_v0", v0=_lan_code))
 
 _individual_income = selected_row["median_income"]
 income = _individual_income * household_multiplier   # household income
@@ -258,8 +245,7 @@ rate = selected_row["policy_rate"] / 100.0
 effective_rate_display_pct = selected_row["policy_rate"] + bank_margin_pct
 
 _sparkvot_caption.caption(
-    f"= {format_sek(income * savings_rate)} SEK/år "
-    f"({'par' if household_multiplier == 2 else 'singel'})"
+    L("ki.v0_sek_ar_v1", v0=format_sek(income * savings_rate), v1='par' if household_multiplier == 2 else 'singel')
 )
 
 # ── Compute all regimes ──────────────────────────────────────────────
@@ -275,11 +261,11 @@ cost_pct       = baseline["monthly_total"] / monthly_income * 100
 sparår         = baseline["years_to_save"]
 
 if sparår < 5:
-    aff_variant, aff_label = "success", "Tillgänglig"
+    aff_variant, aff_label = "success", L("ki.tillganglig")
 elif sparår < 10:
-    aff_variant, aff_label = "accent", "Ansträngd"
+    aff_variant, aff_label = "accent", L("ki.anstrangd")
 else:
-    aff_variant, aff_label = "danger", "Otillgänglig"
+    aff_variant, aff_label = "danger", L("ki.otillganglig")
 
 render_kpi_row(
     [
@@ -288,44 +274,39 @@ render_kpi_row(
             value=f"{pi_ratio:.1f}".replace(".", ","),
             unit="x",
             variant="default",
-            tooltip="Under 5x normalt, 5–10x ansträngt, över 10x svårtillgängligt.",
+            tooltip=L("ki.under_5x_normalt_510x_anstrangt_over_10x"),
         ),
         kpi_card(
-            label="Kontantinsatsbörda",
+            label=L("ki.kontantinsatsborda"),
             value=f"{insats_yrs:.1f}".replace(".", ","),
-            unit="x årsinkomst",
+            unit=L("ki.x_arsinkomst"),
             variant="default",
-            tooltip="Hur många årsinkomster kontantinsatsen motsvarar.",
+            tooltip=L("ki.hur_manga_arsinkomster_kontantinsatsen"),
         ),
         kpi_card(
-            label="Boendekostnadsbörda",
+            label=L("ki.boendekostnadsborda"),
             value=format_pct(cost_pct),
             unit="",
             variant="accent" if cost_pct >= 30 else "default",
-            tooltip="Andel av månadsinkomst. Under 30 % anses hållbart.",
+            tooltip=L("ki.andel_av_manadsinkomst_under_30_anses"),
         ),
         kpi_card(
-            label="Tillgänglighet",
+            label=L("ki.tillganglighet"),
             value=aff_label,
             unit="",
             variant=aff_variant,
             tooltip=(
-                "Tillgänglig = under 5 års spartid. "
-                "Ansträngd = 5–10 år. "
-                "Otillgänglig = över 10 år spartid vid vald sparkvot."
+                L("ki.tillganglig_under_5_ars_spartid_anstrangd")
             ),
         ),
     ]
 )
-_level_label = "länsnivå" if use_bostadsratt else "kommunnivå"
+_level_label = L("ki.lansniva") if use_bostadsratt else L("ki.kommunniva")
 st.caption(
-    f"Nuläge · Lättnad 2026 · {selected_name} ({_level_label}) · {selected_year} · "
-    f"Sparkvot {savings_rate*100:.0f}% · Pristyp: {price_source_label}"
+    L("ki.nulage_lattnad_2026_v0_v1_v2_sparkvot_v3_0f", v0=selected_name, v1=_level_label, v2=selected_year, v3=savings_rate*100, v4=price_source_label)
 )
 st.caption(
-    "Inkomsten är individuell bruttoinkomst (SCB HE0110). "
-    "Vid gemensamt köp (par): dividera spartiden med 2. "
-    "Se Begränsning F14 i Metodologi (Sida 06)."
+    L("ki.inkomsten_ar_individuell_bruttoinkomst_scb")
 )
 if pristyp_fallback_note:
     st.caption(pristyp_fallback_note)
@@ -345,44 +326,39 @@ if _show_comparison:
     with st.container(border=True):
         st.markdown(
             card_header(
-                "Villa vs. bostadsrätt",
-                f"{selected_name} · {selected_year} · Lättnad 2026",
-                "PRISTYPSJÄMFÖRELSE",
+                L("ki.villa_vs_bostadsratt"),
+                L("ki.v0_v1_lattnad_2026", v0=selected_name, v1=selected_year),
+                L("ki.pristypsjamforelse"),
             ),
             unsafe_allow_html=True,
         )
         c_villa, c_br = st.columns(2)
         with c_villa:
-            _villa_level = "länsnivå" if use_bostadsratt else "kommunnivå"
-            st.markdown(f"**Småhus (villa)** — SCB BO0501C2 ({_villa_level})")
+            _villa_level = L("ki.lansniva") if use_bostadsratt else L("ki.kommunniva")
+            st.markdown(L("ki.smahus_villa_scb_bo0501c2_v0", v0=_villa_level))
             st.metric("Pris", f"{format_sek(_villa_price)} SEK")
             st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_villa_res['required_cash'])} SEK")
-            st.metric("År att spara",
-                      f"{_villa_res['years_to_save']:.1f}".replace(".", ",") + " år")
-            st.metric("Månadskostnad",
+            st.metric(L("ki.ar_att_spara"),
+                      f"{_villa_res['years_to_save']:.1f}".replace(".", ",") + L("ki.ar"))
+            st.metric(L("ki.manadskostnad"),
                       f"{format_sek(_villa_res['monthly_total'])} SEK")
         with c_br:
-            st.markdown(f"**Bostadsrätt** — SCB BO0501C (länsnivå)")
+            st.markdown(L("ki.bostadsratt_scb_bo0501c_lansniva", ))
             st.metric("Pris", f"{format_sek(_br_price)} SEK")
             st.metric("Kontantinsats (10 %)",
                       f"{format_sek(_br_res['required_cash'])} SEK")
-            st.metric("År att spara",
-                      f"{_br_res['years_to_save']:.1f}".replace(".", ",") + " år")
-            st.metric("Månadskostnad",
+            st.metric(L("ki.ar_att_spara"),
+                      f"{_br_res['years_to_save']:.1f}".replace(".", ",") + L("ki.ar"))
+            st.metric(L("ki.manadskostnad"),
                       f"{format_sek(_br_res['monthly_total'])} SEK")
         if use_bostadsratt:
             st.caption(
-                f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
-                f"Båda priser avser **{selected_name}** (länsnivå). "
-                "Samma hushållsinkomst, ränta och regelverk (Lättnad 2026)."
+                L("ki.priskvot_villa_bostadsratt_v0_1f_bada_priser", v0=_ratio, v1=selected_name)
             )
         else:
             st.caption(
-                f"Priskvot villa/bostadsrätt: **{_ratio:.1f}×**. "
-                f"Villapris avser **{selected_name}** (kommunnivå). "
-                f"Bostadsrättspris avser **{_lan_name}** (länsnivå, SCB BO0501C) — "
-                "SCB publicerar inga kommunspecifika bostadsrättspriser."
+                L("ki.priskvot_villa_bostadsratt_v0_1f_villapris", v0=_ratio, v1=selected_name, v2=_lan_name)
             )
 
 # ── 3 · Nuläge – baseline KPI strip (enhanced tooltips) ───────────────
@@ -393,28 +369,28 @@ render_kpi_row(
             value=format_sek(baseline["required_cash"]),
             unit="SEK",
             variant="accent",
-            tooltip="Total kontantinsats (10 % av medianpriset under nuvarande bolånetak, gäller fr.o.m. apr 2026).",
+            tooltip=L("ki.total_kontantinsats_10_av_medianpriset_under"),
         ),
         kpi_card(
-            label="År att spara (idag)",
+            label=L("ki.ar_att_spara_idag"),
             value=f"{baseline['years_to_save']:.1f}".replace(".", ","),
-            unit="år",
+            unit=L("ki.ar_2"),
             variant="default",
-            tooltip="Antal år för att spara kontantinsatsen vid vald sparkvot.",
+            tooltip=L("ki.antal_ar_for_att_spara_kontantinsatsen_vid"),
         ),
         kpi_card(
-            label="Månadskostnad (idag)",
+            label=L("ki.manadskostnad_idag"),
             value=format_sek(baseline["monthly_total"]),
             unit="SEK",
             variant="default",
-            tooltip="Ränte- + amorteringskostnad per månad efter att ha köpt.",
+            tooltip=L("ki.rante_amorteringskostnad_per_manad_efter_att"),
         ),
         kpi_card(
             label="Kvarvarande inkomst (idag)",
             value=format_sek(baseline["residual_income"]),
-            unit="SEK/år",
+            unit=L("ki.sek_ar"),
             variant="default",
-            tooltip="Inkomst kvar efter att boendekostnaderna är betalda (per år).",
+            tooltip=L("ki.inkomst_kvar_efter_att_boendekostnaderna_ar"),
         ),
     ]
 )
@@ -425,32 +401,7 @@ with st.container(border=True):
         card_header("Regelverksutveckling", "Fem milstolpar 2010–2026", "TIDSLINJE"),
         unsafe_allow_html=True,
     )
-    timeline_html = f"""
-<div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
-  <div style="flex:3;background:{COLORS['text_tertiary']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Före 2010</span>
-  </div>
-  <div style="flex:3;background:{COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Bolånetak</span>
-  </div>
-  <div style="flex:1;background:{COLORS['medium_risk']};display:flex;align-items:center;justify-content:center;padding:0 2px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amorteringskrav</span>
-  </div>
-  <div style="flex:3;background:{COLORS['high_risk']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Skärpt amorteringskrav</span>
-  </div>
-  <div style="flex:2;background:{COLORS['low_risk']};border:2px solid {COLORS['accent']};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;">Lättnader i bolånereglerna</span>
-  </div>
-</div>
-<div style="display:flex;width:100%;margin-top:4px;">
-  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_tertiary']};"></div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2010</div>
-  <div style="flex:1;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2016</div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2018</div>
-  <div style="flex:2;text-align:center;font-size:10px;color:{COLORS['text_secondary']};">2026</div>
-</div>
-"""
+    timeline_html = L("ki.fore_2010_bolanetak_amorteringskrav_skarpt", v0=COLORS['text_tertiary'], v1=COLORS['accent'], v2=COLORS['medium_risk'], v3=COLORS['high_risk'], v4=COLORS['low_risk'], v5=COLORS['accent'], v6=COLORS['text_tertiary'], v7=COLORS['text_secondary'], v8=COLORS['text_secondary'], v9=COLORS['text_secondary'], v10=COLORS['text_secondary'])
     st.markdown(_compact(timeline_html), unsafe_allow_html=True)
 
 # ── 5 · Regime cards ─────────────────────────────────────────────────
@@ -472,11 +423,11 @@ min_cost_key = min(monthly_costs, key=monthly_costs.get)
 max_cost_key = max(monthly_costs, key=monthly_costs.get)
 
 REGIME_WHAT_CHANGED = {
-    "pre_2010": "Ingen formell insatsnivå; hög belåning var vanligare.",
-    "bolanetak": "Bolånetak införs (max 85 % belåning) → högre insats.",
-    "amort_1": "Amorteringskrav införs → högre månadskostnad vid hög belåning.",
-    "amort_2": "Skärpt amorteringskrav (skuldkvot LTI > 4,5×). Gällde mar 2018 – mar 2026.",
-    "latt_2026": "Bolånetak höjt till 90 % (insats 10 %) + skärpt amorteringskrav slopat. Gäller fr.o.m. apr 2026.",
+    "pre_2010": L("ki.ingen_formell_insatsniva_hog_belaning_var"),
+    "bolanetak": L("ki.bolanetak_infors_max_85_belaning_hogre"),
+    "amort_1": L("ki.amorteringskrav_infors_hogre_manadskostnad"),
+    "amort_2": L("ki.skarpt_amorteringskrav_skuldkvot_lti_4_5"),
+    "latt_2026": L("ki.bolanetak_hojt_till_90_insats_10_skarpt"),
 }
 
 regime_accent_colors = {
@@ -502,7 +453,7 @@ with st.container(border=True):
         with col:
             res = results[key]
             regime = REGIMES[key]
-            tag = "LÄGST" if key == min_cost_key else "HÖGST" if key == max_cost_key else ""
+            tag = L("ki.lagst") if key == min_cost_key else L("ki.hogst") if key == max_cost_key else ""
 
             with st.container(border=True):
                 st.markdown(
@@ -520,29 +471,29 @@ with st.container(border=True):
                     f"{format_sek(res['required_cash'])} SEK",
                     delta=_fmt_delta_sek(delta_cash) if key != "latt_2026" else None,
                     delta_color="inverse",
-                    help="Kontantinsats är eget kapital (insats) som krävs vid köp. Lägre är bättre.",
+                    help=L("ki.kontantinsats_ar_eget_kapital_insats_som"),
                 )
                 st.metric(
-                    "År att spara",
-                    f"{res['years_to_save']:.1f}".replace(".", ",") + " år",
+                    L("ki.ar_att_spara"),
+                    f"{res['years_to_save']:.1f}".replace(".", ",") + L("ki.ar"),
                     delta=(
-                        (f"{delta_years:+.1f} år".replace(".", ","))
+                        (L("ki.v0_1f_ar", v0=delta_years).replace(".", ","))
                         if (key != "latt_2026" and abs(delta_years) >= 0.05)
                         else None
                     ),
                     delta_color="inverse",
-                    help="Antal år för att spara kontantinsatsen vid vald sparkvot. Lägre är bättre.",
+                    help=L("ki.antal_ar_for_att_spara_kontantinsatsen_vid_2"),
                 )
                 st.metric(
-                    "Månadskostnad",
+                    L("ki.manadskostnad"),
                     f"{format_sek(res['monthly_total'])} SEK",
                     delta=_fmt_delta_sek(delta_cost) if key != "latt_2026" else None,
                     delta_color="inverse",
-                    help="Summa amortering + räntekostnad per månad. Lägre är bättre.",
+                    help=L("ki.summa_amortering_rantekostnad_per_manad"),
                 )
 
                 if key == "pre_2010":
-                    st.caption("Obs: Inget formellt insatskrav, men banker krävde ofta 5–10 %.")
+                    st.caption(L("ki.obs_inget_formellt_insatskrav_men_banker"))
 
 # ── 6 · Jämförelsetabeller (with reference lines) ─────────────────────
 def _comparison_barchart(
@@ -569,7 +520,7 @@ def _comparison_barchart(
         if value_fmt == "sek":
             text.append(f"{v:,.0f} SEK".replace(",", "\u00A0"))
         elif value_fmt == "years":
-            text.append(f"{v:.1f}".replace(".", ",") + " år")
+            text.append(f"{v:.1f}".replace(".", ",") + L("ki.ar"))
         else:
             text.append(str(v))
 
@@ -608,19 +559,18 @@ def _comparison_barchart(
 
 with st.container(border=True):
     st.caption(
-        "Välj flik för att jämföra regelverken från olika perspektiv. "
-        "Ändra år i sidopanelen för att se historiska scenarion."
+        L("ki.valj_flik_for_att_jamfora_regelverken_fran")
     )
     tab_cost, tab_save, tab_residual = st.tabs(
-        ["Månadskostnad", "År att spara", "Kvarvarande inkomst"]
+        [L("ki.manadskostnad"), L("ki.ar_att_spara"), "Kvarvarande inkomst"]
     )
 
     with tab_cost:
         st.markdown(
             card_header(
-                "Månadskostnad per regelverk",
+                L("ki.manadskostnad_per_regelverk"),
                 f"{selected_name} · {selected_year}",
-                "JÄMFÖRELSE",
+                L("ki.jamforelse"),
             ),
             unsafe_allow_html=True,
         )
@@ -628,7 +578,7 @@ with st.container(border=True):
         st.plotly_chart(
             _comparison_barchart(
                 y_values=costs,
-                yaxis_title="Månadskostnad (SEK)",
+                yaxis_title=L("ki.manadskostnad_sek"),
                 value_fmt="sek",
                 ref_lines=[
                     {
@@ -636,21 +586,21 @@ with st.container(border=True):
                         "color": COLORS["text_secondary"],
                         "dash": "dot",
                         "width": 1.5,
-                        "label": f"30 % av månadsink. · {format_sek(monthly_income * 0.30)} SEK",
+                        "label": L("ki.30_av_manadsink_v0_sek", v0=format_sek(monthly_income * 0.30)),
                     }
                 ],
             ),
             width="stretch",
             config={"displayModeBar": "hover"},
         )
-        st.caption("Lägre månadskostnad innebär mindre löpande belastning givet samma pris- och inkomstnivå.")
+        st.caption(L("ki.lagre_manadskostnad_innebar_mindre_lopande"))
 
     with tab_save:
         st.markdown(
             card_header(
-                "År att spara kontantinsats",
+                L("ki.ar_att_spara_kontantinsats"),
                 f"{selected_name} · {selected_year}",
-                "JÄMFÖRELSE",
+                L("ki.jamforelse"),
             ),
             unsafe_allow_html=True,
         )
@@ -658,7 +608,7 @@ with st.container(border=True):
         st.plotly_chart(
             _comparison_barchart(
                 y_values=years,
-                yaxis_title="År att spara",
+                yaxis_title=L("ki.ar_att_spara"),
                 value_fmt="years",
                 ref_lines=[
                     {
@@ -666,7 +616,7 @@ with st.container(border=True):
                         "color": COLORS["low_risk"],
                         "dash": "dot",
                         "width": 1.5,
-                        "label": "5 år – Tillgänglig",
+                        "label": L("ki.5_ar_tillganglig"),
                         "annotation_position": "bottom right",
                         "annotation_font_color": COLORS["low_risk"],
                     },
@@ -675,7 +625,7 @@ with st.container(border=True):
                         "color": COLORS["high_risk"],
                         "dash": "dot",
                         "width": 1.5,
-                        "label": "10 år – Otillgänglig",
+                        "label": L("ki.10_ar_otillganglig"),
                         "annotation_position": "top left",
                         "annotation_font_color": COLORS["high_risk"],
                     },
@@ -684,14 +634,14 @@ with st.container(border=True):
             width="stretch",
             config={"displayModeBar": "hover"},
         )
-        st.caption("Sparkvoten påverkar främst sparår; regelverken påverkar kravet på insats och amortering.")
+        st.caption(L("ki.sparkvoten_paverkar_framst_sparar"))
 
     with tab_residual:
         st.markdown(
             card_header(
                 "Kvarvarande inkomst per regelverk",
                 f"{selected_name} · {selected_year}",
-                "JÄMFÖRELSE",
+                L("ki.jamforelse"),
             ),
             unsafe_allow_html=True,
         )
@@ -699,7 +649,7 @@ with st.container(border=True):
         st.plotly_chart(
             _comparison_barchart(
                 y_values=residuals,
-                yaxis_title="Kvarvarande inkomst (SEK/år)",
+                yaxis_title=L("ki.kvarvarande_inkomst_sek_ar"),
                 value_fmt="sek",
                 ref_lines=[
                     {
@@ -707,14 +657,14 @@ with st.container(border=True):
                         "color": COLORS["high_risk"],
                         "dash": "dash",
                         "width": 1.5,
-                        "label": "Nollgräns",
+                        "label": L("ki.nollgrans"),
                     }
                 ],
             ),
             width="stretch",
             config={"displayModeBar": "hover"},
         )
-        st.caption("Högre kvarvarande inkomst innebär mer utrymme efter boendekostnader givet antagandena.")
+        st.caption(L("ki.hogre_kvarvarande_inkomst_innebar_mer"))
 
 # ── 7 · Nyckelinsikt ─────────────────────────────────────────────────
 best_key  = min(regime_keys, key=lambda k: results[k]["monthly_total"])
@@ -722,77 +672,36 @@ worst_key = max(regime_keys, key=lambda k: results[k]["monthly_total"])
 cost_diff = results[worst_key]["monthly_total"] - results[best_key]["monthly_total"]
 pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
 
-_hushall_label = "par" if household_multiplier == 2 else "singelhushåll"
+_hushall_label = "par" if household_multiplier == 2 else L("ki.singelhushall_2")
 _rate_note = (
-    f"styrränta {selected_row['policy_rate']:.2f}% + påslag {bank_margin_pct:.1f} pp = {effective_rate_display_pct:.2f}%"
+    L("ki.styrranta_v0_2f_paslag_v1_1f_pp_v2_2f", v0=selected_row['policy_rate'], v1=bank_margin_pct, v2=effective_rate_display_pct)
     if bank_margin_pct > 0
-    else f"styrränta {selected_row['policy_rate']:.2f}%"
+    else L("ki.styrranta_v0_2f", v0=selected_row['policy_rate'])
 )
-insight_html = f"""
-<div class="shai-card" style="border-left:3px solid {COLORS['accent']};">
-  <div class="shai-card-header">
-    <div class="shai-card-title">Nyckelinsikt</div>
-    <span class="shai-card-tag">SYNTES</span>
-  </div>
-  <p style="font-size:14px;color:{COLORS['text_primary']};line-height:1.7;margin:0;">
-    För ett <strong>{_hushall_label}</strong> ({_rate_note}) under
-    <strong>nuvarande regler (Lättnad 2026)</strong> krävs
-    <strong>{format_sek(baseline['required_cash'])} SEK</strong> i kontantinsats,
-    vilket tar <strong>{baseline['years_to_save']:.1f} år</strong> att spara
-    vid {int(savings_rate*100)} % sparkvot.
-    Månadskostnaden är <strong>{format_sek(baseline['monthly_total'])} SEK</strong>
-    (<strong>{cost_pct:.0f} % av månadsinkomst</strong>).<br><br>
-    Det historiskt förmånligaste regelverket
-    (<strong>{REGIMES[best_key]['label']}</strong>) innebar
-    <strong>{format_sek(cost_diff)} SEK lägre</strong> månadskostnad
-    ({pct_diff:.0f} % billigare).
-  </p>
-</div>
-"""
+insight_html = L("ki.nyckelinsikt_syntes_for_ett_v2_v3_under", v0=COLORS['accent'], v1=COLORS['text_primary'], v2=_hushall_label, v3=_rate_note, v4=format_sek(baseline['required_cash']), v5=baseline['years_to_save'], v6=int(savings_rate*100), v7=format_sek(baseline['monthly_total']), v8=cost_pct, v9=REGIMES[best_key]['label'], v10=format_sek(cost_diff), v11=pct_diff)
 st.markdown(_compact(insight_html), unsafe_allow_html=True)
 
 # ── 8 · Detaljer & antaganden ─────────────────────────────────────────
 with st.expander("Detaljer & antaganden"):
-    _region_label = "Län" if use_bostadsratt else "Kommun"
+    _region_label = L("ki.lan") if use_bostadsratt else "Kommun"
     st.markdown(
-        f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;'>"
-        "<strong>Indata</strong><br>"
-        f"- {_region_label}: <strong>{selected_name}</strong> (analysår {selected_year})<br>"
-        f"- Pristyp: <strong>{price_source_label}</strong><br>"
-        f"- Pris (används): <strong>{format_sek(price)} SEK</strong><br>"
+        L("ki.indata_v1_v2_analysar_v3_pristyp_v4_pris", v0=COLORS['text_secondary'], v1=_region_label, v2=selected_name, v3=selected_year, v4=price_source_label, v5=format_sek(price))
         + (
-            f"- Småhuspris (referens): <strong>{format_sek(_villa_price)} SEK</strong><br>"
+            L("ki.smahuspris_referens_v0_sek", v0=format_sek(_villa_price))
             if _villa_price is not None and pd.notna(_villa_price) and use_bostadsratt
             else ""
         )
         + (
-            f"- Bostadsrättspris (referens, {_lan_name}): <strong>{format_sek(_br_price)} SEK</strong><br>"
+            L("ki.bostadsrattspris_referens_v0_v1_sek", v0=_lan_name, v1=format_sek(_br_price))
             if _br_price is not None and pd.notna(_br_price) and not use_bostadsratt
             else ""
         ) +
-        f"- Hushållstyp: <strong>{household_type}</strong><br>"
-        f"- Individuell medianinkomst: <strong>{format_sek(_individual_income)} SEK</strong><br>"
-        f"- Hushållsinkomst (används): <strong>{format_sek(income)} SEK</strong>"
-        f"{' (2 × individuell)' if household_multiplier == 2 else ''}<br>"
-        f"- Styrränta: <strong>{selected_row['policy_rate']:.2f}%</strong><br>"
-        f"- Bankens räntepåslag: <strong>{bank_margin_pct:.1f} pp</strong><br>"
-        f"- Effektiv bolåneränta (används): <strong>{effective_rate_display_pct:.2f}%</strong><br>"
-        f"- Sparkvot: <strong>{int(savings_rate*100)}%</strong><br><br>"
-        "<strong>Konstant mellan regelverk</strong><br>"
-        "- Samma pris, inkomst och räntenivå används i alla regimer<br>"
-        "- Skillnaderna drivs av insatskrav, maxbelåning och amorteringsregler<br><br>"
-        "<strong>Metod</strong><br>"
-        "Se Metodologi (Sida 06), avsnitt 6 för antaganden och definitioner."
-        "</div>",
+        L("ki.hushallstyp_v0_individuell_medianinkomst_v1", v0=household_type, v1=format_sek(_individual_income), v2=format_sek(income), v3=' (2 × individuell)' if household_multiplier == 2 else '', v4=selected_row['policy_rate'], v5=bank_margin_pct, v6=effective_rate_display_pct, v7=int(savings_rate*100)),
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        f"<div style='color:{COLORS['text_secondary']};font-size:13px;line-height:1.55;margin-top:8px;'>"
-        "<strong>Så läser du tabellen</strong><br>"
-        "- Δ-kolumner visar skillnad mot <strong>idag (Lättnad 2026)</strong><br>"
-        "- Markeringar: <strong>bäst</strong> = lägst för Insats/Sparår/Månkostnad, högst för Kvar"
-        "</div>",
+        L("ki.sa_laser_du_tabellen_kolumner_visar_skillnad", v0=COLORS['text_secondary']),
         unsafe_allow_html=True,
     )
 
@@ -806,10 +715,10 @@ with st.expander("Detaljer & antaganden"):
                 "Period": regime["period"],
                 "Insats": float(res["required_cash"]),
                 "Δ Insats": float(res["required_cash"] - baseline["required_cash"]),
-                "Sparår": float(res["years_to_save"]),
-                "Δ Sparår": float(res["years_to_save"] - baseline["years_to_save"]),
-                "Månkostnad": float(res["monthly_total"]),
-                "Δ Månkostnad": float(res["monthly_total"] - baseline["monthly_total"]),
+                L("ki.sparar"): float(res["years_to_save"]),
+                L("ki.sparar_2"): float(res["years_to_save"] - baseline["years_to_save"]),
+                L("ki.mankostnad"): float(res["monthly_total"]),
+                L("ki.mankostnad_2"): float(res["monthly_total"] - baseline["monthly_total"]),
                 "Kvar": float(res["residual_income"]),
                 "Δ Kvar": float(res["residual_income"] - baseline["residual_income"]),
                 "LTV": float(res["ltv"]),
@@ -829,7 +738,7 @@ with st.expander("Detaljer & antaganden"):
         worst_bg = "background-color: rgba(185,74,72,0.10);"  # high_risk
 
         # Lower is better
-        for col in ["Insats", "Sparår", "Månkostnad"]:
+        for col in ["Insats", L("ki.sparar"), L("ki.mankostnad")]:
             if col in _df.columns:
                 mn, mx = _df[col].min(), _df[col].max()
                 out.loc[_df[col] == mn, col] += best_bg
@@ -854,10 +763,10 @@ with st.expander("Detaljer & antaganden"):
             "Period",
             "Insats",
             "Δ Insats",
-            "Sparår",
-            "Δ Sparår",
-            "Månkostnad",
-            "Δ Månkostnad",
+            L("ki.sparar"),
+            L("ki.sparar_2"),
+            L("ki.mankostnad"),
+            L("ki.mankostnad_2"),
             "Kvar",
             "Δ Kvar",
             "LTV",
@@ -865,19 +774,19 @@ with st.expander("Detaljer & antaganden"):
             "Amort.",
         ],
         column_config={
-            "Regelverk": st.column_config.TextColumn("Regelverk", help="Regim/regelverk som jämförs."),
-            "Period": st.column_config.TextColumn("Period", help="Tidsperiod då regelverket gällde."),
-            "Insats": st.column_config.NumberColumn("Insats (SEK)", format="%.0f", help="Kontantinsats i SEK. Lägre är bättre."),
-            "Δ Insats": st.column_config.NumberColumn("Δ Insats vs idag", format="%+.0f", help="Skillnad i insats jämfört med nuvarande regler."),
-            "Sparår": st.column_config.NumberColumn("Sparår", format="%.1f", help="År att spara kontantinsatsen vid vald sparkvot. Lägre är bättre."),
-            "Δ Sparår": st.column_config.NumberColumn("Δ Sparår vs idag", format="%+.1f", help="Skillnad i sparår jämfört med nuvarande regler."),
-            "Månkostnad": st.column_config.NumberColumn("Månkostnad (SEK)", format="%.0f", help="Månadskostnad (ränta + amortering). Lägre är bättre."),
-            "Δ Månkostnad": st.column_config.NumberColumn("Δ Månkostnad vs idag", format="%+.0f", help="Skillnad i månadskostnad jämfört med idag."),
-            "Kvar": st.column_config.NumberColumn("Kvar (SEK/år)", format="%.0f", help="Kvarvarande inkomst per år efter boendekostnad. Högre är bättre."),
-            "Δ Kvar": st.column_config.NumberColumn("Δ Kvar vs idag", format="%+.0f", help="Skillnad i kvarvarande inkomst jämfört med idag."),
-            "LTV": st.column_config.NumberColumn("LTV", format="%.0f%%", help="Belåningsgrad: lån / bostadspris."),
-            "LTI": st.column_config.NumberColumn("LTI", format="%.1f", help="Skuldkvot: lån / årsinkomst."),
-            "Amort.": st.column_config.NumberColumn("Amort.", format="%.1f%%", help="Årlig amortering i % av lånet."),
+            "Regelverk": st.column_config.TextColumn("Regelverk", help=L("ki.regim_regelverk_som_jamfors")),
+            "Period": st.column_config.TextColumn("Period", help=L("ki.tidsperiod_da_regelverket_gallde")),
+            "Insats": st.column_config.NumberColumn("Insats (SEK)", format="%.0f", help=L("ki.kontantinsats_i_sek_lagre_ar_battre")),
+            "Δ Insats": st.column_config.NumberColumn("Δ Insats vs idag", format="%+.0f", help=L("ki.skillnad_i_insats_jamfort_med_nuvarande")),
+            L("ki.sparar"): st.column_config.NumberColumn(L("ki.sparar"), format="%.1f", help=L("ki.ar_att_spara_kontantinsatsen_vid_vald")),
+            L("ki.sparar_2"): st.column_config.NumberColumn(L("ki.sparar_vs_idag"), format="%+.1f", help=L("ki.skillnad_i_sparar_jamfort_med_nuvarande")),
+            L("ki.mankostnad"): st.column_config.NumberColumn(L("ki.mankostnad_sek"), format="%.0f", help=L("ki.manadskostnad_ranta_amortering_lagre_ar")),
+            L("ki.mankostnad_2"): st.column_config.NumberColumn(L("ki.mankostnad_vs_idag"), format="%+.0f", help=L("ki.skillnad_i_manadskostnad_jamfort_med_idag")),
+            "Kvar": st.column_config.NumberColumn(L("ki.kvar_sek_ar"), format="%.0f", help=L("ki.kvarvarande_inkomst_per_ar_efter")),
+            "Δ Kvar": st.column_config.NumberColumn("Δ Kvar vs idag", format="%+.0f", help=L("ki.skillnad_i_kvarvarande_inkomst_jamfort_med")),
+            "LTV": st.column_config.NumberColumn("LTV", format="%.0f%%", help=L("ki.belaningsgrad_lan_bostadspris")),
+            "LTI": st.column_config.NumberColumn("LTI", format="%.1f", help=L("ki.skuldkvot_lan_arsinkomst")),
+            "Amort.": st.column_config.NumberColumn("Amort.", format="%.1f%%", help=L("ki.arlig_amortering_i_av_lanet")),
         },
     )
 

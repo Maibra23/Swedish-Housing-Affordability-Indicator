@@ -20,6 +20,7 @@ These outlive it.
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | OPEN |
+| R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
 
 ---
 
@@ -284,6 +285,32 @@ pan and zoom into a full page re-render. `folium_static` exists precisely to avo
 Phase 3 while the map is already being touched (T3.9 adds the "Om kartan" expander), and
 confirm through `tests/test_pages_render.py` that render counts and timing do not change.
 Not urgent, but do not let it be discovered by a broken deploy.
+
+---
+
+## R9 — `labels.py` holds markup and LaTeX, not only copy
+
+**Severity: Low.** Correct by T3.1's acceptance, wrong as a long-term home.
+
+T3.1 required that no Swedish string literal remain inline in `app.py` or `pages/*.py`. Some
+of those literals were not sentences — they were HTML blocks with inline CSS, a Plotly hover
+template, and a LaTeX formula:
+
+    sc.version_c_realversion_beraknas_som_text   $$	ext{Affordability}_C = rac{...}$$
+    rv.v0_version_c_v1_ranking_kommun_z_poang    a full <div class="shai-card"> template
+    lj.v0_ar_x_varde_y_2f                        <b>{v0}</b><br>År: %{{x}}<br>...
+
+So `SWEDISH_LABELS` is now three things at once: copy, markup templates, and maths. Three
+consequences. The brace-escaping rule exists only because of the markup, and is a live trap
+for anyone adding a label by hand. A reviewer reading copy has to skim HTML. And T4.1, which
+re-derives every quoted number from the artifacts, has to parse numbers out of markup rather
+than out of sentences.
+
+**Recommendation:** split when Phase 3 next touches these files — `SWEDISH_LABELS` for prose,
+a separate `TEMPLATES` mapping (or component functions) for markup. T3.10 splits
+`components.py` and is the natural moment: markup that lives in a component does not need to
+live in a label at all. Low priority because nothing is broken and the guard tests pin the
+current behaviour; worth doing before the dict grows past the point where anyone reads it.
 
 ---
 
