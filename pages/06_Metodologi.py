@@ -14,6 +14,7 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import page_title, card_header, footer_note
@@ -21,11 +22,18 @@ from src.ui.components import page_title, card_header, footer_note
 inject_css()
 selections = render_sidebar(page_key="mt")
 
+# Period and panel size come from the provenance artifact: a literal
+# "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+PERIOD = f"{PERIOD_START}–{PERIOD_END}"
+N_YEARS = PERIOD_END - PERIOD_START + 1
+N_KOMMUNER = n_kommuner()
+
 page_title(
     eyebrow="Sida 06 · Metodologi",
     title="Metodologi och källor",
     subtitle="Teoretisk grund, formler, datakällor och dokumenterade begränsningar",
-    year="2014–2024",
+    year=PERIOD,
 )
 
 # ══════════════════════════════════════════════════════════════════════
@@ -135,7 +143,7 @@ with st.container(border=True):
     """)
 
     st.markdown("### Normalisering, rangordning och riskklass")
-    st.markdown("""
+    st.markdown(f"""
     Formlerna ger ett *nivåvärde* per kommun och år. För att kunna jämföra kommuner
     omvandlas nivån till en **z-poäng**, som i sin tur ger rang och riskklass. Två val styr
     den omvandlingen.
@@ -163,7 +171,7 @@ with st.container(border=True):
     värden, så logaritmen är odefinierad.
 
     Eftersom logaritmen är monoton påverkar transformen **inte rangordningen** — `rank` är
-    identisk med och utan den. Endast z-poängen och, för 16 av 290 kommuner, riskklassen ändras.
+    identisk med och utan den. Endast z-poängen och, för 16 av {N_KOMMUNER} kommuner, riskklassen ändras.
 
     **3. Riskklass.** Klassgränserna ligger vid ±0,67 standardavvikelser, kvartilerna i en
     normalfördelning:
@@ -205,7 +213,7 @@ with st.container(border=True):
 # SECTION 4 — Prognoser (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander("4. Prognoser (Prophet vs ARIMA)"):
-    st.markdown("""
+    st.markdown(f"""
     ### Prophet (standard i gränssnittet)
     - **Bibliotek:** Meta Prophet
     - Dekomponerar i trend + säsongsvariation
@@ -219,7 +227,7 @@ with st.expander("4. Prognoser (Prophet vs ARIMA)"):
     - **Begränsning:** Konfidensintervall vidgas snabbt efter 2–3 år
 
     ### Viktig kaveat
-    **Alla prognoser baseras på 11 årliga observationer (2014–2024).** Detta är en
+    **Alla prognoser baseras på {N_YEARS} årliga observationer ({PERIOD}).** Detta är en
     extremt kort tidsserie för statistisk prognos. Konfidensintervallen vidgas snabbt
     och prognoser bortom 3 år bör tolkas med stor försiktighet.
 

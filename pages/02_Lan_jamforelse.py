@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import page_title, card, card_header, footer_note
@@ -24,6 +25,12 @@ from src.ui.chart_theme import get_chart_layout
 
 inject_css()
 selections = render_sidebar(page_key="lj")
+
+# Period and panel size come from the provenance artifact: a literal
+# "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+PERIOD = f"{PERIOD_START}–{PERIOD_END}"
+N_YEARS = PERIOD_END - PERIOD_START + 1
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -171,7 +178,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
 
                 # Determine title suffix
                 all_yrs = sorted(county_versions["year"].unique())
-                yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else "2014–2024"
+                yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else PERIOD
 
                 layout = get_chart_layout(
                     title=f"{tab_name} — Länsutveckling {yr_range}",

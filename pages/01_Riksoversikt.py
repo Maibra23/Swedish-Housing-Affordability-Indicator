@@ -18,6 +18,7 @@ import re
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -55,6 +56,10 @@ except Exception as e:
 selected_year = selections["selected_year"]
 selected_risks = selections["selected_risks"]
 
+# The panel's own municipality count — never a literal 290, which stops being
+# true the moment a merger or a coverage gap changes the panel. See T1.10.
+N_KOMMUNER = n_kommuner()
+
 mun_year = ranked[ranked["year"] == selected_year]
 mun_prev = ranked[ranked["year"] == selected_year - 1]
 
@@ -75,7 +80,7 @@ if len(selected_risks) < 3:
 page_title(
     eyebrow="Sida 01 · Nationell översikt",
     title="Riksöversikt",
-    subtitle=f"Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner · {selected_year}",
+    subtitle=f"Strukturell bostadsekonomisk hållbarhet i Sveriges {N_KOMMUNER} kommuner · {selected_year}",
     year=selected_year,
 )
 
@@ -85,13 +90,15 @@ mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
 delta_vc = mean_vc - mean_vc_prev
 delta_vc_pct = (delta_vc / mean_vc_prev * 100) if mean_vc_prev != 0 else 0
 
-# Risk class comes from the artifact for both years; the previous year is not
-# re-scored here. The class boundaries (see indices/normalize.py) place roughly
-# a quarter of municipalities in "hog" every year by construction, so delta_hog
-# is close to constant and carries no trend — T1.9 removes it from the KPI.
-n_hog = int((df_ranked["risk_c"] == "hog").sum())
-n_hog_prev = int((mun_prev["risk_c"] == "hog").sum()) if not mun_prev.empty else n_hog
-delta_hog = n_hog - n_hog_prev
+# Risk class is a *within-year* quantile: normalize.py z-scores the municipalities
+# against each other inside each year and cuts at ±0.67σ, so the share landing in
+# "hog" is near-constant by construction and its year-on-year change measures
+# wobble around a fixed boundary, not a change in affordability. The delta is
+# therefore gone (T1.9); the national trend belongs to the level series above.
+#
+# Counted on mun_year, not on the risk-filtered frame: this card says "N of all
+# municipalities", so it must not turn into a readout of the sidebar pills.
+n_hog = int((mun_year["risk_c"] == "hog").sum())
 
 mean_kt = mun_year["kt_ratio"].mean() if "kt_ratio" in mun_year.columns and len(mun_year) > 0 else 0
 mean_kt_prev = mun_prev["kt_ratio"].mean() if "kt_ratio" in mun_prev.columns and len(mun_prev) > 0 else mean_kt
@@ -109,16 +116,21 @@ render_kpi_row([
         delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
         delta_direction="up" if delta_vc > 0 else "down" if delta_vc < 0 else "flat",
         variant="default",
-        tooltip="Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla 290 kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
+        tooltip=f"Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla {N_KOMMUNER} kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
     ),
     kpi_card(
         label="Högrisk kommuner",
         value=str(n_hog),
-        unit="av 290",
-        delta=f"{delta_hog:+d}" if delta_hog != 0 else "oförändrat",
-        delta_direction="up" if delta_hog > 0 else "down" if delta_hog < 0 else "flat",
+        unit=f"av {N_KOMMUNER} · relativ position {selected_year}",
         variant="danger",
-        tooltip="Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög).",
+        tooltip=(
+            "Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög). "
+            "Riskklassen är en relativ position inom året: kommunerna jämförs med "
+            "varandra i just detta år, inte med ett fast gränsvärde. Ungefär lika "
+            "många hamnar i varje klass varje år, så antalet kan inte visa om "
+            "Sverige som helhet blivit mer eller mindre överkomligt — läs det ur "
+            "Genomsnittligt SHAI, som är en nivåserie."
+        ),
     ),
     kpi_card(
         label="K/T-kvot (genomsnitt)",

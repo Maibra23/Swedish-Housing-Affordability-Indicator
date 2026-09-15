@@ -9,7 +9,28 @@ from __future__ import annotations
 import re
 import streamlit as st
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import COLORS
+
+
+def _panel_facts(
+    kommun_count: int | None = None,
+    period_start: int | None = None,
+    period_end: int | None = None,
+) -> tuple[int, int, int]:
+    """Resolve the panel's dimensions, reading the artifact for anything omitted.
+
+    Landing copy used to state `290 kommuner` and `2014–2024` as literals, which
+    made the sentences independent of the data they describe — see Finding H.
+    Resolution happens per call rather than at import so a refresh mid-session
+    is picked up, and the explicit arguments exist so tests can vary the panel
+    without writing a file.
+    """
+    return (
+        n_kommuner() if kommun_count is None else kommun_count,
+        first_year() if period_start is None else period_start,
+        complete_case_max_year() if period_end is None else period_end,
+    )
 
 
 def _compact(html: str) -> str:
@@ -193,15 +214,20 @@ def footer_note(
 # ══════════════════════════════════════════════════════════════════════
 
 
-def render_landing_hero() -> None:
-    """Render the KRI-style landing hero section."""
-    html = """
+def render_landing_hero(kommun_count: int | None = None) -> None:
+    """Render the KRI-style landing hero section.
+
+    Args:
+        kommun_count: Municipality count. Defaults to the provenance artifact.
+    """
+    kommuner, _, _ = _panel_facts(kommun_count)
+    html = f"""
     <div class="lp-hero">
         <div class="lp-hero-inner">
             <div class="lp-eyebrow">Bostadsekonomisk hållbarhetsanalys</div>
             <h1 class="lp-headline">Swedish Housing<br>Affordability Indicator</h1>
             <p class="lp-hero-lead">
-                Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner
+                Strukturell bostadsekonomisk hållbarhet i Sveriges {kommuner} kommuner
                 och 21 län &mdash; med tre ekonometriska formler, prognoser och scenariosimulering.
             </p>
         </div>
@@ -229,9 +255,14 @@ def render_landing_stat_strip(stats: list[dict]) -> None:
     st.markdown(_compact(html), unsafe_allow_html=True)
 
 
-def render_landing_what_is_block() -> None:
-    """Render the 'Vad ar SHAI?' explanation block."""
-    html = """
+def render_landing_what_is_block(kommun_count: int | None = None) -> None:
+    """Render the 'Vad ar SHAI?' explanation block.
+
+    Args:
+        kommun_count: Municipality count. Defaults to the provenance artifact.
+    """
+    kommuner, _, _ = _panel_facts(kommun_count)
+    html = f"""
     <div class="lp-section">
         <div class="lp-section-title">Vad är SHAI?</div>
         <div class="lp-card-light lp-explain-card">
@@ -241,7 +272,7 @@ def render_landing_what_is_block() -> None:
                 kombinerar inkomst, bostadspriser, räntor och inflation.
             </div>
             <div class="lp-body-secondary">
-                Indikatorn analyserar Sveriges 290 kommuner och 21 län med data
+                Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med data
                 från SCB, Riksbanken och Kolada. Utöver indexet erbjuds prognoser
                 (Prophet och ARIMA), kontantinsatsanalys under fyra regelverk,
                 och en scenariosimulator för stresstester.
@@ -343,8 +374,19 @@ def render_index_visual_block() -> None:
     st.markdown(_compact(html), unsafe_allow_html=True)
 
 
-def render_landing_steps() -> None:
-    """Render the 3-step pipeline explanation."""
+def render_landing_steps(
+    kommun_count: int | None = None,
+    period_start: int | None = None,
+    period_end: int | None = None,
+) -> None:
+    """Render the 3-step pipeline explanation.
+
+    Args:
+        kommun_count: Municipality count. Defaults to the provenance artifact.
+        period_start: First year of the index. Defaults to provenance.
+        period_end: Last year of the index. Defaults to provenance.
+    """
+    kommuner, start, end = _panel_facts(kommun_count, period_start, period_end)
     steps = [
         (
             "01",
@@ -355,8 +397,8 @@ def render_landing_steps() -> None:
         (
             "02",
             "Normalisering",
-            "Värden z-standardiseras över hela panelen "
-            "(2014\u20132024, 290 kommuner) för jämförbar ranking.",
+            f"Värden z-standardiseras inom varje år "
+            f"({start}–{end}, {kommuner} kommuner) för jämförbar ranking.",
         ),
         (
             "03",
@@ -415,8 +457,21 @@ def render_landing_nav_card(
     """
 
 
-def render_landing_credibility(version: str = "") -> None:
-    """Render the credibility/data source block."""
+def render_landing_credibility(
+    version: str = "",
+    kommun_count: int | None = None,
+    period_start: int | None = None,
+    period_end: int | None = None,
+) -> None:
+    """Render the credibility/data source block.
+
+    Args:
+        version: App version string. Omitted when empty.
+        kommun_count: Municipality count. Defaults to the provenance artifact.
+        period_start: First year of the index. Defaults to provenance.
+        period_end: Last year of the index. Defaults to provenance.
+    """
+    kommuner, start, end = _panel_facts(kommun_count, period_start, period_end)
     version_str = f"SHAI v{version} &middot; " if version else ""
     html = f"""
     <div class="lp-cred">
@@ -427,7 +482,7 @@ def render_landing_credibility(version: str = "") -> None:
             <span class="lp-cred-pill">Finansinspektionen</span>
         </div>
         <div class="lp-cred-meta">
-            {version_str}Öppen data &middot; 290 kommuner &middot; 2014&ndash;2024
+            {version_str}Öppen data &middot; {kommuner} kommuner &middot; {start}&ndash;{end}
         </div>
     </div>
     """

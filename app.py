@@ -18,6 +18,7 @@ st.set_page_config(
     },
 )
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import (
@@ -38,9 +39,19 @@ selections = render_sidebar(page_key="main")
 render_landing_hero()
 
 # ── Stat strip (connected to hero) ───────────────────────────────────
+# Panel dimensions come from the provenance artifact, so the strip cannot keep
+# advertising a period the index no longer covers. See Finding H / T1.10.
+N_KOMMUNER = n_kommuner()
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+N_YEARS = PERIOD_END - PERIOD_START + 1
+
 render_landing_stat_strip([
-    {"label": "Analysperiod", "value": "2014–2024", "unit": f"11 år  ·  v{APP_VERSION}"},
-    {"label": "Kommuner", "value": "290", "unit": "analyserade"},
+    {
+        "label": "Analysperiod",
+        "value": f"{PERIOD_START}–{PERIOD_END}",
+        "unit": f"{N_YEARS} år  ·  v{APP_VERSION}",
+    },
+    {"label": "Kommuner", "value": str(N_KOMMUNER), "unit": "analyserade"},
     {"label": "Län", "value": "21", "unit": "jämförda"},
     {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},
 ])
@@ -65,7 +76,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(render_landing_nav_card(
         "Riksöversikt",
-        "Nationell överblick med karta, histogram och rankingtabeller för 290 kommuner.",
+        f"Nationell överblick med karta, histogram och rankingtabeller för {N_KOMMUNER} kommuner.",
         tag="SIDA 01",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
