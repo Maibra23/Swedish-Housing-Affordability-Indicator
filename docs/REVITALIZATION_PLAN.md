@@ -5,8 +5,8 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
-**Status:** IN PROGRESS — 4 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.4**
+**Status:** IN PROGRESS — 6 / 34 tasks complete
+**Current phase:** Phase 1 · next task **T1.6**
 
 ---
 
@@ -120,6 +120,20 @@ T4.1 (`test_copy_matches_artifacts.py`) exists to catch.
 counties under Version C. It is not: the five are `01, 09, 13, 04, 03`. Verified failing
 against the pre-T1.1 artifact as well, so it is a stale expectation, not a regression.
 Resolve alongside T1.8 when the normalisation convention is settled.
+
+### P. Metodologi page documents the superseded imputation rule — MEDIUM (found during T1.5)
+
+`pages/06_Metodologi.py:247` records audit finding F9 as *"`is_imputed_income`-flagga;
+**nolltillväxt** antagen"* — zero growth assumed. The pipeline does the opposite:
+`src/data/build_panel.py:30` sets `IMPUTED_INCOME_GROWTH_RATE = 0.03` and the comment at
+`:308` states plainly that *"Zero-growth was a pessimistic assumption per audit finding F9"* —
+i.e. zero growth is the rule that F9 **replaced**. The methodology page documents the
+behaviour that was removed.
+
+Not fixed here: it is outside T1.4/T1.5 and belongs with the methodology copy work. Resolve in
+T1.8 (which already edits METHODOLOGY) or T4.1, whichever lands first. Low user impact — the
+rows it describes are no longer reachable from the UI — but it is a false statement about
+method, which is the one place the app must be exact.
 
 ### B. Two of seven selectable years have no data — CRITICAL
 
@@ -250,8 +264,8 @@ everything to `.shai-*`.
 | T1.1 | Regenerate ranked artifact through `normalize.py` | 1 | **DONE** |
 | T1.2 | Remove inline z/rank/risk recomputation from pages | 1 | **DONE** |
 | T1.3 | Add `src/provenance.py` + provenance artifact | 1 | **DONE** |
-| T1.4 | Drive `YEAR_RANGE` from provenance; kill dead years | 1 | TODO |
-| T1.5 | Replace `date.today()` with real data vintage | 1 | TODO |
+| T1.4 | Drive `YEAR_RANGE` from provenance; kill dead years | 1 | **DONE** |
+| T1.5 | Replace `date.today()` with real data vintage | 1 | **DONE** |
 | T1.6 | Fix map basemap (CARTO → Esri) | 1 | TODO |
 | T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | TODO |
 | T1.8 | Unify normalisation convention across A/B/C | 1 | TODO |
@@ -411,26 +425,46 @@ change — they were reverted to keep the change set clean.
 
 ---
 
-### T1.4 — Drive `YEAR_RANGE` from provenance · TODO
+### T1.4 — Drive `YEAR_RANGE` from provenance · DONE
 
 **Fixes:** Finding B
-**Files:** `src/ui/sidebar.py:27-31`
+**Files:** `src/ui/sidebar.py`, NEW `tests/test_year_range.py`
 **Depends on:** T1.3
 
 Replace `range(2020, date.today().year + 1)` and `_LAST_ACTUAL_DATA_YEAR = 2024` with values
 read from provenance. The selector must end at `complete_case_max_year()`.
 
 **Acceptance**
-- [ ] 2025 and 2026 no longer appear in the year selector
-- [ ] Every offered year renders every page without hitting `st.stop()`
-- [ ] No literal year remains in `sidebar.py`
+- [x] 2025 and 2026 no longer appear in the year selector
+- [x] Every offered year renders every page without hitting `st.stop()`
+- [x] No literal year remains in `sidebar.py`
+
+**Outcome:** `YEAR_RANGE = list(range(first_year(), complete_case_max_year() + 1))` → **2014–2024**,
+both ends from provenance. The range *widened* as well as narrowing: it dropped the two dead
+years at the top and picked up 2014–2019, which the index has always covered but the selector
+never offered. This is also what finally makes T1.2's 2014 criterion reachable through the UI.
+`_LAST_ACTUAL_DATA_YEAR` is gone; `default_year()` is now just the last offered year.
+
+Verified by rendering **every page at every offered year** with `streamlit.testing.v1.AppTest`
+— 6 pages × 11 years plus the landing page, 67 renders, no exception and no `st.stop()`. The
+first attempt drove each page as its own entrypoint and failed on `st.page_link("app.py")`;
+that is an AppTest artifact, not an app defect, and the check was redone through `app.py` with
+`switch_page`.
+
+`tests/test_year_range.py` re-derives the range from the artifacts the pages actually read, so
+adding a year of data moves the selector with no code edit and forgetting to cannot leave a
+dead year on screen. The no-literal-year assertion runs against **executable source** —
+comments and docstrings are stripped by `ast`/`tokenize` — because prose recording the old
+behaviour cannot put a dead year in the selector. Mutation-checked: re-introducing a literal
+year in code, a literal year in displayed markup, or `date.today()` in the footer is caught by
+the stripped-source assertions in all three cases.
 
 ---
 
-### T1.5 — Replace `date.today()` with the real data vintage · TODO
+### T1.5 — Replace `date.today()` with the real data vintage · DONE
 
 **Fixes:** Finding C
-**Files:** `src/ui/sidebar.py:130-145`
+**Files:** `src/ui/sidebar.py`, `pages/01_Riksoversikt.py`, `tests/test_year_range.py`
 **Depends on:** T1.3
 
 The footer must show when the **data** was generated (from `generated_at`), never when the
@@ -438,9 +472,30 @@ page was rendered. Also remove or correct the `Inkomst 2025–2026: modellberäk
 note — once T1.4 lands those years are unreachable from the UI, so the note is misleading.
 
 **Acceptance**
-- [ ] `grep -n "date.today()" src/ui/sidebar.py` returns nothing in user-facing output
-- [ ] Footer states the artifact's generation date
-- [ ] The forward-fill note is gone or accurately scoped
+- [x] `grep -n "date.today()" src/ui/sidebar.py` returns nothing in user-facing output
+- [x] Footer states the artifact's generation date
+- [x] The forward-fill note is gone or accurately scoped
+
+**Outcome:** the footer reads `Data uppdaterad: {data_vintage()}`, parsed from the artifact's
+`generated_at`. `footer_html()` is split out of `render_sidebar()` so the vintage can be
+asserted without a Streamlit runtime. The `date` import is gone entirely.
+
+`generated_at` currently happens to be today's date, so an equality assertion cannot on its own
+distinguish "reads the artifact" from "reads the clock". Demonstrated directly instead: pointed
+the module at an artifact stamped `2024-03-11` and the footer rendered
+`Data uppdaterad: 2024-03-11` on a machine whose clock says 2026-09-15.
+
+The sidebar's forward-fill note is deleted rather than rescoped — it described a state the UI
+can no longer enter. The same applies to the `Imputerat inkomstår` banner at
+`01_Riksoversikt.py:83-89`, which additionally hardcoded "2024" in its prose; removed, with
+`test_no_offered_year_carries_imputed_income` pinning the invariant that makes it dead.
+
+Two similar blocks remain at `02_Lan_jamforelse.py:55-57` and `03_Kommun_djupanalys.py:148-149`.
+Both are data-driven, so they correctly render nothing and mislead no one — left in place rather
+than widening this change into pages these tasks do not name. Sweep them in Phase 3.
+
+**Found in passing:** `06_Metodologi.py` documents the *superseded* imputation rule. Recorded as
+**Finding P**; not fixed here.
 
 ---
 
@@ -937,5 +992,6 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.4, T1.5 | **Both DONE.** Selector now spans 2014–2024 from provenance — drops the two dead years and gains 2014–2019, which the index always covered. Footer shows the artifact's `generated_at`, proven independent of the clock. Removed the sidebar forward-fill note and the unreachable imputed-income banner on page 01. `tests/test_year_range.py` (16), mutation-checked. Verified all 6 pages × 11 years render via `AppTest` (67 renders, clean). Suite: **79 passed, 1 failed, 1 skipped** — failure is Finding O, unchanged. | Next: **T1.6** (map basemap, no dependencies) then **T1.7**. New **Finding P**: `06_Metodologi.py:247` documents the imputation rule that F9 replaced — fix during T1.8 or T4.1. Note the repo's tests must run under **python3.11**; the system `python3` is 3.9 and cannot import `tomllib`. |
 | 2026-09-15 | T1.2, T1.3, T4.2 | **All DONE.** T1.2: removed both inline recomputes, repointed the page at the ranked artifact only, recoloured the histogram from `risk_c`, fixed Finding N3 (caption stated the orientation backwards), added `tests/test_pages_no_recompute.py` (14). T1.3: added `src/provenance.py` + committed `data/processed/data_provenance.json`, wired into `step_compute_indices()`; income's imputed tail is excluded so the complete case lands on 2024. T4.2 satisfied by `tests/test_provenance.py` (18). Suite: **63 passed, 1 failed, 1 skipped** — the failure is Finding O, unchanged. | Next: **T1.4** — `YEAR_RANGE` from `complete_case_max_year()`. Note T1.2's 2014 criterion is verified at the data layer only; it becomes reachable in the UI once T1.4 lands. `generated_at()` is already in place for T1.5. |
 | 2026-09-15 | T1.1 | **DONE.** Rewrote `normalize.py` (per-year scoring, documented orientation contract); routed `refresh_data.py` through it; regenerated the artifact; added `tests/test_ranked_artifact.py` (15 tests, 11 were failing). Uncovered and fixed Finding N — risk classes were inverted on the live app. | Next: **T1.2**, delete the inline recompute at `01_Riksoversikt.py:58-80`. Note pre-existing failure `test_skane_worst_v_c` (Finding O) — not a regression, defer to T1.8. |

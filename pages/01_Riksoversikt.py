@@ -79,15 +79,6 @@ page_title(
     year=selected_year,
 )
 
-# Imputed income warning for 2025+
-_imputed_years_in_view = mun_year["is_imputed_income"].any() if "is_imputed_income" in mun_year.columns else False
-if _imputed_years_in_view:
-    st.warning(
-        f"**Imputerat inkomstår {selected_year}:** Inkomstdata för {selected_year} saknas från SCB. "
-        "Värdet är framskrivet från 2024 med 3 % nominell tillväxt per år. "
-        "Affordabilitysiffrorna för detta år bör tolkas med extra försiktighet."
-    )
-
 # ── KPI cards ────────────────────────────────────────────────────────
 mean_vc = mun_year["version_c"].mean() if len(mun_year) > 0 else 0
 mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
