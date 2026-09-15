@@ -20,14 +20,14 @@ requires-python = ">=3.11"
 # tests/test_runtime_dependencies.py fails if either drifts from what the pages
 # actually import.
 dependencies = [
-    "streamlit>=1.55.0",
-    "pandas>=2.3.3",
-    "numpy>=1.26.2",
-    "plotly>=6.6.0",
-    "folium>=0.20.0",
-    "streamlit-folium>=0.27.1",
-    "branca>=0.8.2",
-    "pyarrow>=23.0.1",
+    "streamlit>=1.55.0,<2",
+    "pandas>=2.3.3,<4",
+    "numpy>=1.26.2,<3",
+    "plotly>=6.6.0,<8",
+    "folium>=0.20.0,<1",
+    "streamlit-folium>=0.27.1,<1",
+    "branca>=0.8.2,<1",
+    "pyarrow>=23.0.1,<26",
 ]
 
 [project.optional-dependencies]

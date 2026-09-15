@@ -6,8 +6,8 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — **Phases 1 and 2 complete** · 17 / 34 tasks
-**Current phase:** Phase 3 · next task **T3.1**
+**Status:** IN PROGRESS — Phases 1 and 2 complete · T4.4 pulled forward · 18 / 34 tasks
+**Current phase:** Phase 3 · next task **T3.1** — but read §0 on the missing reference repos first
 **Test suite:** 217 passed, 0 failed, 1 skipped · 67/67 page renders clean
 
 ---
@@ -37,6 +37,29 @@ delay. If content goes missing, `git checkout HEAD -- docs/REVITALIZATION_PLAN.m
 re-apply the whole post-commit set in one pass rather than patching a half-clobbered file.
 Any script editing these tables must match table rows on the first cell (`startswith`/regex),
 never on an exact space count — `HEAD` is unpadded, the working tree may be padded.
+
+### ⚠ Phase 3 cannot be done as written on this machine
+
+Both reference repositories in §1 are macOS paths and **neither exists here**:
+
+| Repo | Path in §1 | Status |
+|---|---|---|
+| Skattekraftspanelen | `/Users/Brook/Downloads/kommun-skattekraft-stress` | **absent** |
+| KRI | `/Users/Brook/Desktop/Kommunal-Finansiell-Riskindikator` | **absent** |
+
+Every Phase 3 task names Skattekraftspanelen's `src/ui/` as its primary reference, and D2's
+whole rationale is *converging* on it. Seven of the twelve tasks borrow specific patterns
+(T3.4–T3.9, T3.12); without the source, those would be reconstructions from prose — plausible,
+and still not matching, which is the one outcome a convergence goal cannot accept.
+
+Five tasks are genuinely self-contained and need no reference: **T3.1** (extract SHAI's own
+Swedish copy), **T3.2** (normalise CSS names to `.shai-*`), **T3.3** (split `css.py`, 902
+lines), **T3.10** (split `components.py`), **T3.11** (split `04_Kontantinsats.py`, 885 lines).
+
+**T3.1 also unblocks T4.1**, which this plan calls its highest-value test. So the workable
+order is T3.1 → T4.1, then stop and get the reference repo available before the visual tasks.
+
+---
 
 ### Where the work stopped
 
@@ -434,7 +457,7 @@ everything to `.shai-*`.
 | T4.1 | `test_copy_matches_artifacts.py` | 4 | TODO |
 | T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
 | T4.3 | `test_labels.py` | 4 | TODO |
-| T4.4 | `test_pages_render.py` | 4 | TODO |
+| T4.4 | `test_pages_render.py` | 4 | **DONE** (pulled forward) |
 | T4.5 | `test_choropleth.py` | 4 | **DONE** (landed early, with T1.6/T1.7) |
 | T4.6 | Delete superseded docs; consolidate | 4 | TODO |
 | T4.7 | Rewrite `DESIGN_SYSTEM.md` to match shipped code | 4 | TODO |
@@ -1308,14 +1331,29 @@ against it, so it landed early. 18 tests.
 
 ---
 
-### T4.4 — `tests/test_pages_render.py` · TODO
+### T4.4 — `tests/test_pages_render.py` · DONE (pulled forward, out of phase order)
 
 **Reference:** Skattekraftspanelen `tests/test_pages_render.py`
 
 **Acceptance**
-- [ ] Every page imports and executes without raising
-- [ ] Every year offered by the selector renders every page
-- [ ] Empty risk selection renders
+- [x] Every page imports and executes without raising — and rendered *something*: a page
+      that returned early used to satisfy a bare exception check silently
+- [x] Every year offered by the selector renders every page — parametrised off `YEAR_RANGE`,
+      so the sweep widens the day provenance does
+- [x] Empty risk selection renders, and so does a single-class selection, on all six pages
+
+**Pulled forward out of phase order** (R6). This was scheduled second-to-last while being
+the check that actually proves the app works — and Phase 3 is twelve tasks of UI change to
+exactly the surface it covers. Landing it after that would have meant making those changes
+with the verification still sitting in a session scratch directory, re-runnable by nobody.
+
+`tests/test_pages_render.py` — **81 tests in 14 s**, in the default suite. Two of them are
+meta-tests against a temp script that raises and one that renders nothing: without those,
+81 green ticks could mean 81 renders or a broken harness.
+
+It also found **R8** immediately: every map render emits a `DeprecationWarning` that
+`folium_static` will be removed. Recorded, not fixed — the migration to `st_folium` changes
+rerun behaviour and belongs with T3.9, which already touches the map.
 
 ---
 
@@ -1383,6 +1421,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T4.4, R7 | **Pre-Phase-3 work. T4.4 DONE, pulled forward.** The 67-render check is now `tests/test_pages_render.py` — 81 tests, 14 s, in the default suite, wider than the scratch script it replaces (empty and single risk selections, years off `YEAR_RANGE`, a content assertion, plus two meta-tests proving the harness can fail). Closes R6. It immediately found **R8**: `folium_static` is deprecated and scheduled for removal, 13 warnings per sweep — recorded, not fixed, because migrating to `st_folium` changes rerun behaviour and belongs with T3.9. **R7 accepted, option B**: major-version caps in `requirements.txt`, mirrored into `pyproject.toml`, plus a test that the two agree on specifiers rather than just names. Caps sit *above* what T2.5 verified — a clean install still resolves pandas 3.0.5 / numpy 2.5.3 / streamlit 1.64.0, byte-identical to before, so no downgrade. Residual risk kept open: 0.x packages get `<1`, which still admits breaking minor bumps, and `folium` is what draws the map. **Suite: 299 passed, 0 failed, 1 skipped.** | **Before T3.1, read §0 — neither reference repo exists on this machine.** Five Phase 3 tasks are self-contained (T3.1, T3.2, T3.3, T3.10, T3.11); the seven pattern-borrowing ones need Skattekraftspanelen's `src/ui/` or they become guesswork. Recommended order: T3.1 → T4.1 (T3.1 unblocks it), then pause for repo access. Still unaddressed and arguably above most of Phase 3: **R5** — `src/indices/affordability.py` computes all three versions and has zero tests. |
 | 2026-09-15 | T2.5 | **DONE — Phase 2 closed.** Clean venv, `requirements.txt` only: 39 distributions, no compilers, pipeline packages absent, **67/67 renders clean inside it**, Esri tile host HTTP 200. Also closes T2.1's deferred third criterion. The check earned its keep immediately: lower-only bounds resolve a fresh deploy to **pandas 3.0.5** and **numpy 2.5.3** against the 2.3.3 / 1.26.2 this app is verified on — two major-version boundaries. Everything passes on them, so nothing is broken, but production runs versions no test here has exercised and the next resolver shift is nobody's decision. Logged as **R7 (High)**. Started `docs/OPEN_RISKS.md` for this class of finding — seven entries, R1 and R7 High. | Next: **T3.1**, Phase 3. Read `docs/OPEN_RISKS.md` first: **R2** (three pages read year lists from data, not `YEAR_RANGE`) belongs with T3.7, and **R6** (the 67-render check is still a scratch script) argues for pulling **T4.4** forward before Phase 3 starts changing the UI it verifies. One criterion is genuinely open: nobody has confirmed the deployed Streamlit Cloud app, which needs the account owner. |
 | 2026-09-15 | T2.4, O1 | **DONE.** O1 answered: run it. The refresh itself was the small part. Two defects it exposed: (1) `kolada_client.fetch_unemployment` defaulted to `end_year=2024` and so never asked for 2025, which Kolada has had all along — ceiling now resolved at fetch time, `tests/test_kolada_year_range.py` (7); (2) once unemployment 2025 landed, a forward-filled-income 2025 row survived into the index and, because `compute_version_b` pools its component z-scores across the whole frame, re-based `version_b` for every historical year — 1816 rank changes, 19 class changes, from a year no page can render. `step_compute_indices` now filters through `complete_case()`; `tests/test_index_complete_case.py` (6). With both fixed the refresh is purely additive: **INDEX CONTRACT COLUMNS CHANGED: NONE**. Step 4 was killed by the OS for memory and is verifiably unnecessary — the forecast training window ends at 2024 and none of the forecast variables moved inside it. **Suite: 217 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.5**, clean-venv deploy check; scripts are staged. Carry forward: pages 02, 04 and 05 read their year lists from the data rather than from `YEAR_RANGE`. Harmless today because `complete_case()` keeps the index at 2024, but it is the same class of leak and belongs in Phase 3. Also unverified: whether `[pipeline]` installs from scratch — prophet/pmdarima were already present here. |
 | 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |

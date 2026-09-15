@@ -17,8 +17,9 @@ These outlive it.
 | R3 | The `pipeline` extra is unverified as an install | Medium | OPEN |
 | R4 | The forecast step exhausts memory on this machine | Medium | OPEN |
 | R5 | `src/` is 15 % covered; the index formulas have no tests | **High** | OPEN |
-| R6 | The 67-render check lives in a scratch directory, not the repo | Medium | OPEN |
-| R7 | A fresh deploy installs major versions the app was never tested against | **High** | OPEN |
+| R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
+| R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
+| R8 | `folium_static` is deprecated and will be removed | Medium | OPEN |
 
 ---
 
@@ -178,6 +179,16 @@ T4.4 (`tests/test_pages_render.py`) is its slot in the plan, at the very end of 
 scheduled last. Every phase after this one changes the UI, which is precisely what this
 check covers.
 
+### CLOSED 2026-09-16
+
+T4.4 pulled forward and landed as `tests/test_pages_render.py` — **81 tests in 14 s**, inside
+the default suite. Wider than the scratch script it replaces: it also covers an empty risk
+selection and a single-class selection on every page, parametrises years off `YEAR_RANGE` so
+the sweep widens when provenance does, asserts each page rendered *something* (a page that
+returned early used to pass silently), and includes two meta-tests proving the harness can
+actually fail — one script that raises, one that renders nothing. Without those, 81 green
+ticks could mean 81 renders or a broken harness.
+
 ---
 
 ## R7 — A fresh deploy installs major versions the app was never tested against
@@ -217,11 +228,62 @@ The cap is one line per package and turns a silent production break into a visib
 resolution failure. The check is already scripted — see R6, which is the same gap wearing a
 different hat: the verification exists but lives nowhere the project can re-run it.
 
+### ACCEPTED 2026-09-16 — option B taken, residual risk remains
+
+Caps applied to `requirements.txt` and mirrored into `pyproject.toml`, with
+`test_every_requirement_caps_the_next_major` and a new test asserting the two files agree on
+*specifiers*, not merely on package names.
+
+Every cap sits **above** what T2.5 resolved and verified, so this is not a downgrade:
+
+| Package | Verified | Cap |
+|---|---|---|
+| pandas | 3.0.5 works | `>=2.3.3,<4` |
+| numpy | 2.5.3 works | `>=1.26.2,<3` |
+| streamlit | 1.64.0 works | `>=1.55.0,<2` |
+| plotly | 7.1.0 works | `>=6.6.0,<8` |
+| pyarrow | 25.0.1 works | `>=23.0.1,<26` |
+| folium, streamlit-folium, branca | 0.x | `<1` |
+
+**Why this is ACCEPTED and not CLOSED.** Two gaps survive. The 0.x packages get `<1`, which
+still admits breaking *minor* bumps — the 0.x convention means 0.21 may break what 0.20 did,
+and `folium` is the one drawing the map. And a cap only converts a silent break into a
+visible resolution failure; it does not tell anyone the app was never tested on what got
+installed. That needs the clean-environment check to run on a schedule, not once per phase.
+
+**Revisit when:** a deploy fails to resolve, or before any release that matters.
+
 **Note on `requests`:** the clean install contains it as a transitive dependency of
 streamlit, which is correct and expected — T2.1's criterion is that it is absent from
 `requirements.txt`, not from the environment. It emits a `RequestsDependencyWarning` about
 `charset_normalizer` in that venv. Harmless: the import graph confirms no page imports
 `requests`.
+
+---
+
+## R8 — `folium_static` is deprecated and will be removed
+
+**Severity: Medium.** A scheduled removal on the one component that draws the map.
+
+`src/ui/choropleth.py:361` calls `folium_static(m, width=None, height=height)`. Surfaced by
+T4.4: every page render that draws the map emits
+
+    DeprecationWarning: folium_static is deprecated and will be removed in a future
+    release, or simply replaced with st_folium which always passes
+    returned_objects=[] to the component.
+
+Thirteen warnings across the render sweep. Nothing is broken — but "will be removed" plus
+`streamlit-folium` capped only at `<1` (see R7) means a future minor release deletes the
+function and the choropleth stops rendering.
+
+The migration is not a rename. `st_folium` returns interaction state to Python and triggers
+a rerun on map events unless `returned_objects=[]` is passed; getting that wrong turns every
+pan and zoom into a full page re-render. `folium_static` exists precisely to avoid that.
+
+**Recommendation:** migrate to `st_folium(m, returned_objects=[], ...)` deliberately, during
+Phase 3 while the map is already being touched (T3.9 adds the "Om kartan" expander), and
+confirm through `tests/test_pages_render.py` that render counts and timing do not change.
+Not urgent, but do not let it be discovered by a broken deploy.
 
 ---
 
