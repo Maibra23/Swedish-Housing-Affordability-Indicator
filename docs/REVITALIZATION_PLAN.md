@@ -6,8 +6,8 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phase 1 complete · Phase 2 at T2.5 · 16 / 34 tasks
-**Current phase:** Phase 2 · next task **T2.5**
+**Status:** IN PROGRESS — **Phases 1 and 2 complete** · 17 / 34 tasks
+**Current phase:** Phase 3 · next task **T3.1**
 **Test suite:** 217 passed, 0 failed, 1 skipped · 67/67 page renders clean
 
 ---
@@ -62,6 +62,9 @@ If you are picking this up cold, read in this order:
    original audit; N and Q are the substantive ones and both concern orientation or
    distribution of the index.
 4. **§4 Progress** — the single table showing where work stopped.
+5. **`docs/OPEN_RISKS.md`** — hazards and pending decisions that outlive this plan.
+   R1 (Version B re-bases on every refresh) and R7 (unpinned majors reach production)
+   are both High and both currently held shut by a guard rather than fixed.
 5. The phase section for the first task whose status is not `DONE`.
 
 **What the tests now guard**, so you know what will catch you:
@@ -415,7 +418,7 @@ everything to `.shai-*`.
 | T2.2 | Split build-only deps into optional group; clean `pyproject.toml` | 2 | **DONE** |
 | T2.3 | Fix README troubleshooting + deployment docs | 2 | **DONE** |
 | T2.4 | **OPTIONAL (O1)** refresh component series to 2025 | 2 | **DONE** |
-| T2.5 | Verify clean-environment deploy | 2 | TODO |
+| T2.5 | Verify clean-environment deploy | 2 | **DONE** |
 | T3.1 | Add `src/ui/labels.py`; extract all Swedish strings | 3 | TODO |
 | T3.2 | Normalise all CSS classes to `.shai-*` | 3 | TODO |
 | T3.3 | Split `css.py` (902 lines) into token/layout/component modules | 3 | TODO |
@@ -863,7 +866,9 @@ being removed.
 
 **Goal:** the app installs and cold-starts reliably on Streamlit Community Cloud.
 **Exit criterion:** a clean environment installs only what the running app needs, and the
-app boots.
+app boots. — **MET.** Verified 2026-09-15: 39 distributions, no compilers, 67/67 renders
+inside the clean venv. The remaining gap is confirmation on Streamlit Cloud itself, which
+needs the account owner.
 **Shippable:** yes, independently.
 
 ---
@@ -1018,15 +1023,34 @@ income. Inside that window the only column that moved is `bostadsratt_price_sek`
 
 ---
 
-### T2.5 — Verify a clean-environment deploy · TODO
+### T2.5 — Verify a clean-environment deploy · DONE
 
 **Depends on:** T2.1, T2.2
 
 **Acceptance**
-- [ ] Fresh venv, `pip install -r requirements.txt`, `streamlit run app.py` boots
-- [ ] Every page navigates without error
-- [ ] Map renders with tiles
-- [ ] Deployed Streamlit Cloud app confirmed working
+- [x] Fresh venv, `pip install -r requirements.txt` — installs clean, 39 distributions,
+      no compilers invoked. `prophet`, `pmdarima`, `statsmodels` and `pytest` all absent
+- [x] Every page navigates without error — **67/67 renders clean inside that venv**
+- [x] Map renders with tiles — the Esri basemap host answers HTTP 200 from the clean venv
+      and `render_choropleth` builds without error on every page render. (A headless check
+      cannot prove the browser paints them; this is as far as it reaches.)
+- [ ] **Deployed Streamlit Cloud app confirmed working** — needs the account owner. Everything
+      testable locally passes; this is the one criterion I cannot reach.
+
+This also closes T2.1's deferred third criterion: a fresh install from `requirements.txt`
+does run the app.
+
+**It found a High-severity issue — recorded as R7 in `docs/OPEN_RISKS.md`.** The bounds are
+lower-only, so a clean install today resolves to **pandas 3.0.5** and **numpy 2.5.3** against
+the 2.3.3 / 1.26.2 the app is verified on — both major-version boundaries — plus streamlit
+1.64.0, plotly 7.1.0 and pyarrow 25.0.1. All 67 renders pass on that set, so nothing is
+broken. But a deploy today runs against versions no test here has exercised, and the next
+resolver shift happens without anyone choosing it. The failure mode is the bad one: works
+for the maintainer on pandas 2.3.3, breaks in production on a rebuild nobody triggered.
+Recommendation in R7 is to cap the majors and make this check part of the release routine.
+
+`requests` is present in the clean venv as a transitive dependency of streamlit. That is
+correct — T2.1's criterion is absence from `requirements.txt`, not from the environment.
 
 ---
 
@@ -1359,6 +1383,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T2.5 | **DONE — Phase 2 closed.** Clean venv, `requirements.txt` only: 39 distributions, no compilers, pipeline packages absent, **67/67 renders clean inside it**, Esri tile host HTTP 200. Also closes T2.1's deferred third criterion. The check earned its keep immediately: lower-only bounds resolve a fresh deploy to **pandas 3.0.5** and **numpy 2.5.3** against the 2.3.3 / 1.26.2 this app is verified on — two major-version boundaries. Everything passes on them, so nothing is broken, but production runs versions no test here has exercised and the next resolver shift is nobody's decision. Logged as **R7 (High)**. Started `docs/OPEN_RISKS.md` for this class of finding — seven entries, R1 and R7 High. | Next: **T3.1**, Phase 3. Read `docs/OPEN_RISKS.md` first: **R2** (three pages read year lists from data, not `YEAR_RANGE`) belongs with T3.7, and **R6** (the 67-render check is still a scratch script) argues for pulling **T4.4** forward before Phase 3 starts changing the UI it verifies. One criterion is genuinely open: nobody has confirmed the deployed Streamlit Cloud app, which needs the account owner. |
 | 2026-09-15 | T2.4, O1 | **DONE.** O1 answered: run it. The refresh itself was the small part. Two defects it exposed: (1) `kolada_client.fetch_unemployment` defaulted to `end_year=2024` and so never asked for 2025, which Kolada has had all along — ceiling now resolved at fetch time, `tests/test_kolada_year_range.py` (7); (2) once unemployment 2025 landed, a forward-filled-income 2025 row survived into the index and, because `compute_version_b` pools its component z-scores across the whole frame, re-based `version_b` for every historical year — 1816 rank changes, 19 class changes, from a year no page can render. `step_compute_indices` now filters through `complete_case()`; `tests/test_index_complete_case.py` (6). With both fixed the refresh is purely additive: **INDEX CONTRACT COLUMNS CHANGED: NONE**. Step 4 was killed by the OS for memory and is verifiably unnecessary — the forecast training window ends at 2024 and none of the forecast variables moved inside it. **Suite: 217 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.5**, clean-venv deploy check; scripts are staged. Carry forward: pages 02, 04 and 05 read their year lists from the data rather than from `YEAR_RANGE`. Harmless today because `complete_case()` keeps the index at 2024, but it is the same class of leak and belongs in Phase 3. Also unverified: whether `[pipeline]` installs from scratch — prophet/pmdarima were already present here. |
 | 2026-09-15 | T2.1, T2.2, T2.3 | **All DONE.** Runtime set split from the pipeline toolchain: `requirements.txt` is eight packages with no compilers, and `prophet`, `pmdarima`, `statsmodels`, `requests` moved to a `pipeline` extra. `tests/test_runtime_dependencies.py` (8) derives the expected set by walking the import graph from `app.py` and `pages/*.py`, so a new import on a page fails the suite rather than the next cold start. Three defects surfaced beyond the listed scope: `requires-python` was `>=3.11,<3.12`, which would have refused this task's own `pip install -e` on the verified interpreter; `packages.find` described a src-layout the project does not use; and **bare `pytest` could not collect the suite at all** (6 errors) — it worked only under `python -m pytest`, the form §0 documents, which injects the CWD. `pythonpath` now carries `.` and `src`, with a subprocess test on the bare invocation. `pytest` left the runtime deps for a `dev` extra alongside `pytest-cov` and `scipy` (previously undeclared). Docs: both install paths in both files, Finding E's ragged-panel table in `DEPLOYMENT.md`, echarts note gone; `tests/test_docs_install_paths.py` (16) reads the vintage from provenance so the prose cannot outlive the data. **Suite: 204 passed, 0 failed, 1 skipped. 67/67 renders clean.** | **T2.4 is gated on O1 and I have not started it.** T2.5 does not depend on it. Note the `[pipeline]` install is only dry-run verified so far; T2.4's own first acceptance criterion is that those extras genuinely install, and T2.5 is the clean-venv check for the runtime set. `docs/prompts.md` and `docs/UX_UI_GAP_ANALYSIS.md` still name ECharts — left for T4.6. |
 | 2026-09-15 | T1.9, T1.10 | **Both DONE — Phase 1 closed.** T1.9: dropped the YoY delta on the high-risk count and relabelled it a relative position within the year, with no split figure in the copy (D6). Widened mid-task — the count was read from the *risk-filtered* frame while the row's other three cards read the unfiltered year, so deselecting "Hög" showed the national high-risk count as 0; now counted on `mun_year`. `tests/test_risk_kpi.py` (8). T1.10: nineteen literal `290` / `2014–2024` / "11 år" across nine files replaced with provenance reads; `_panel_facts()` resolves them per call in `components.py`. `tests/test_no_hardcoded_counts.py` (47), including a behavioural check against a relabelled panel (277 kommuner, 2009–2019). Fixed a false-green in my own fixture: `render_landing_steps` emits via `st.html`, so a markdown-only capture returned an empty string and passed every absence assertion vacuously. Also corrected the step's claim that values are z-standardised "över hela panelen" — D5 made that false. **Suite: 172 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.1**. Note for this machine: the §0 `python3.11` rule is macOS-specific — on Windows the default `python` is 3.12.10 and collects the full suite, though `pyproject.toml` still declares `requires-python = ">=3.11,<3.12"`, which T2.2 should reconcile. Deferred, not done: `21 län` is still a literal (provenance carries no county count), and `06_Metodologi.py` still hardcodes the measured "16 av N kommuner" class-change figure — both belong to T4.1. |

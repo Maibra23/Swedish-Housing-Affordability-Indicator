@@ -88,6 +88,7 @@ troubleshooting reference.
 | `docs/PRD.md` | Product requirements |
 | `docs/DESIGN_SYSTEM.md` | KRI design tokens and component patterns |
 | `docs/PLAYBOOK_v2.md` | Development playbook |
+| `docs/OPEN_RISKS.md` | Known hazards and pending decisions, with recommendations |
 
 ## Troubleshooting
 
