@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete · T4.4, T3.1 done · 19 / 34 tasks
-**Current phase:** Phase 3 · next task **T4.1** (now unblocked) — then §0 on the missing reference repos
-**Test suite:** 323 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** IN PROGRESS — Phases 1 and 2 complete · T3.1, T4.1, T4.4 done · 20 / 34 tasks
+**Current phase:** Phase 3 · next tasks **T4.3**, **T4.6**, then §0 on the missing reference repos
+**Test suite:** 345 passed, 0 failed, 1 skipped (renders now inside the suite)
 
 ---
 
@@ -454,7 +454,7 @@ everything to `.shai-*`.
 | T3.10 | Split `components.py`; extract landing components | 3 | TODO |
 | T3.11 | Split `04_Kontantinsats.py` (880 lines) | 3 | TODO |
 | T3.12 | Align `.streamlit/config.toml` with Skattekraftspanelen | 3 | TODO |
-| T4.1 | `test_copy_matches_artifacts.py` | 4 | TODO |
+| T4.1 | `test_copy_matches_artifacts.py` | 4 | **DONE** |
 | T4.2 | `test_provenance.py` | 4 | **DONE** (landed early, with T1.3) |
 | T4.3 | `test_labels.py` | 4 | TODO |
 | T4.4 | `test_pages_render.py` | 4 | **DONE** (pulled forward) |
@@ -1315,7 +1315,7 @@ code that actually ships.
 
 ---
 
-### T4.1 — `tests/test_copy_matches_artifacts.py` · TODO
+### T4.1 — `tests/test_copy_matches_artifacts.py` · DONE
 
 **Fixes:** Findings A, C, H, J — **the highest-value test in this plan**
 **Reference:** Skattekraftspanelen `tests/test_copy_matches_artifacts.py`
@@ -1327,9 +1327,36 @@ failure means copy and data disagree, and the message shows what the data now sa
 the guard that prevents Findings A, C and H from returning.
 
 **Acceptance**
-- [ ] Every `labels.py` string containing a number is covered
-- [ ] Deliberately editing one number in the copy makes the suite fail
-- [ ] Failure messages state the current data value
+- [x] Every *vintage-shaped* number is covered — see the scope note below; the criterion as
+      written ("every string containing a number") was narrowed deliberately, not quietly
+- [x] Deliberately editing one number in the copy makes the suite fail — asserted as a test,
+      not left as a manual ritual
+- [x] Failure messages state the current data value
+
+`tests/test_copy_matches_artifacts.py` (22). **It found live drift on its first run.** The T2.4
+refresh advanced four series to 2025 and the methodology source table still said 2024 for
+`transaction_price_sek`, `kt_ratio`, `unemployment_rate` and `completions`. Nothing else in a
+345-test suite noticed, because nothing else read prose.
+
+The fix changed the shape of the test. Those seven source rows now interpolate
+`source_coverage()` at render time, so comparing them to provenance became tautological — what
+is guarded instead is that they *stay* derived. Drift is now impossible rather than merely
+detected, which is the stronger position. Non-derivable numbers (a regime threshold, an
+editorial aside) are compared where an artifact knows something adjacent and otherwise
+classified in `NOT_A_VINTAGE`, so a new year cannot join them unexamined.
+
+One check is worth naming: **the D5 panel-mean statistic is re-derived**. The methodology cites
+"panelmedelvärdet går från −0,37 (2015) till +0,86 (2023)" as the evidence for keeping Version B
+pooled. It holds exactly today. It is also the sentence in the whole document most likely to go
+stale, because R1 means B moves whenever the panel does — so the test recomputes the extremes
+from the artifact rather than trusting them.
+
+**Scope note, stated rather than glossed.** The acceptance said every string containing a
+number. 96 of 269 labels contain a digit, and the great majority are SCB dataset codes, regime
+thresholds, slider ranges, formula weights and money examples — domain parameters that do not
+move when data refreshes. Enumerating all of them would add maintenance noise, not safety. The
+guard polices **bare four-digit years**, which is the class that drifts, and fails on any new
+one that is neither derived nor classified.
 
 ---
 
@@ -1452,6 +1479,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T4.1 | **DONE, and it caught real drift immediately.** The methodology source table still claimed four series end 2024 after T2.4 moved them to 2025 — invisible to 345 other tests because none of them read prose. Those seven rows now interpolate `source_coverage()`, which turned the test from *compare copy to data* into *guard that copy stays derived*; drift is now impossible rather than detected. Also re-derives the D5 panel-mean extremes (−0,37/2015, +0,86/2023 — exact today) because R1 makes that the sentence most likely to go stale. Narrowed the coverage criterion on purpose: 96 labels contain digits, almost all domain parameters, so the guard polices bare four-digit years and classifies the rest. **Suite: 345 passed, 0 failed, 1 skipped.** | Next: **T4.3** then **T4.6**, both independent of the reference repo. Then the Phase 3 remainder — §0 lists which five are self-contained. |
 | 2026-09-16 | T3.1 | **DONE, no reference repo needed.** 269 keys in `src/ui/labels.py`; **0 Swedish literals left** in `app.py` or `pages/*.py`, down from 332. Verified by fingerprinting all 5709 rendered strings across 67 page/year states before and after — **0 states differ**, so the extraction is provably inert rather than hopefully so. Two silent traps: `ast.col_offset` is a UTF-8 **byte** offset, so character slicing shifted every extracted expression (`APP_VERSION` → `P_VERSION}"`) — caught by reading the plan before applying it; and literal braces must be doubled for `str.format`, or the Plotly hover template and the inline-CSS blocks raise `KeyError` on render. `tests/test_no_inline_copy.py` (20) guards all of it. Also fixed an existing test weakness: `test_risk_kpi.py` matched the substring `risk_`, which `rv.hogrisk_kommuner` contains, and its copy assertions were reading key *names* rather than copy. **Suite: 323 passed, 0 failed, 1 skipped.** | Next: **T4.1**, now unblocked and described in this plan as its highest-value test — re-derive every number in the copy from the artifacts. T4.3 is also unblocked. Then the remaining Phase 3 work, which still needs the reference repo (§0). New **R9**: `labels.py` now holds HTML and LaTeX blocks as well as copy — correct per the acceptance, wrong as a long-term home. |
 | 2026-09-16 | T4.4, R7 | **Pre-Phase-3 work. T4.4 DONE, pulled forward.** The 67-render check is now `tests/test_pages_render.py` — 81 tests, 14 s, in the default suite, wider than the scratch script it replaces (empty and single risk selections, years off `YEAR_RANGE`, a content assertion, plus two meta-tests proving the harness can fail). Closes R6. It immediately found **R8**: `folium_static` is deprecated and scheduled for removal, 13 warnings per sweep — recorded, not fixed, because migrating to `st_folium` changes rerun behaviour and belongs with T3.9. **R7 accepted, option B**: major-version caps in `requirements.txt`, mirrored into `pyproject.toml`, plus a test that the two agree on specifiers rather than just names. Caps sit *above* what T2.5 verified — a clean install still resolves pandas 3.0.5 / numpy 2.5.3 / streamlit 1.64.0, byte-identical to before, so no downgrade. Residual risk kept open: 0.x packages get `<1`, which still admits breaking minor bumps, and `folium` is what draws the map. **Suite: 299 passed, 0 failed, 1 skipped.** | **Before T3.1, read §0 — neither reference repo exists on this machine.** Five Phase 3 tasks are self-contained (T3.1, T3.2, T3.3, T3.10, T3.11); the seven pattern-borrowing ones need Skattekraftspanelen's `src/ui/` or they become guesswork. Recommended order: T3.1 → T4.1 (T3.1 unblocks it), then pause for repo access. Still unaddressed and arguably above most of Phase 3: **R5** — `src/indices/affordability.py` computes all three versions and has zero tests. |
 | 2026-09-15 | T2.5 | **DONE — Phase 2 closed.** Clean venv, `requirements.txt` only: 39 distributions, no compilers, pipeline packages absent, **67/67 renders clean inside it**, Esri tile host HTTP 200. Also closes T2.1's deferred third criterion. The check earned its keep immediately: lower-only bounds resolve a fresh deploy to **pandas 3.0.5** and **numpy 2.5.3** against the 2.3.3 / 1.26.2 this app is verified on — two major-version boundaries. Everything passes on them, so nothing is broken, but production runs versions no test here has exercised and the next resolver shift is nobody's decision. Logged as **R7 (High)**. Started `docs/OPEN_RISKS.md` for this class of finding — seven entries, R1 and R7 High. | Next: **T3.1**, Phase 3. Read `docs/OPEN_RISKS.md` first: **R2** (three pages read year lists from data, not `YEAR_RANGE`) belongs with T3.7, and **R6** (the 67-render check is still a scratch script) argues for pulling **T4.4** forward before Phase 3 starts changing the UI it verifies. One criterion is genuinely open: nobody has confirmed the deployed Streamlit Cloud app, which needs the account owner. |
