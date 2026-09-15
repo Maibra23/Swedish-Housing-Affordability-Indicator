@@ -10,7 +10,9 @@ import re
 import streamlit as st
 
 from src.provenance import complete_case_max_year, first_year, n_kommuner
-from src.ui.css import COLORS
+from src.provenance import generated_at
+from src.ui.labels import L
+from src.ui.tokens import COLORS
 
 
 def _panel_facts(
@@ -198,12 +200,92 @@ def risk_pill(level: str) -> str:
 def footer_note(
     source: str = "SCB, Riksbanken, Kolada",
     version: str = "SHAI v1.3",
+    updated: str | None = None,
 ) -> None:
-    """Render the standard page footer."""
+    """Render the standard page footer.
+
+    Args:
+        source: Attribution line.
+        version: App version.
+        updated: ISO timestamp of the data build. Defaults to the provenance
+            artifact; pass a value only to override it in a test.
+    """
+    stamp = (updated or generated_at())[:10]
     html = f"""
     <div class="shai-footer-note">
         <span><strong>KÄLLA:</strong> {source}</span>
+        <span>{L("ui.data_uppdaterad_v0", v0=stamp)}</span>
         <span><code>{version}</code></span>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+
+
+# ── Explanation, glossary and vintage ─────────────────────────────────
+
+
+def explanation(text: str) -> None:
+    """Render a prose line explaining the numbers directly above it.
+
+    A dashboard's default failure is a confident number with no statement of what
+    it means or what it cannot show. Every KPI row, chart and stat strip in this
+    app now carries one of these. See T3.4.
+
+    Args:
+        text: The explanation, from `SWEDISH_LABELS`. Interpolate any figure it
+            quotes from the data — a number typed into an explanation is the
+            defect T4.1 exists to catch, one layer down.
+    """
+    st.markdown(f'<div class="shai-explanation">{text}</div>', unsafe_allow_html=True)
+
+
+def help_badge(*terms: str) -> str:
+    """Return a "?" affordance revealing definitions for `terms`.
+
+    Replaces bare `title=` tooltips, which are invisible to keyboard users and to
+    anyone on a touch screen. The popover is plain markup: it needs no JavaScript,
+    opens on focus as well as hover, and carries an aria-label so a screen reader
+    announces it as a definition list rather than a stray question mark.
+
+    Args:
+        terms: Glossary keys, each `SWEDISH_LABELS["glossary.<term>"]`.
+
+    Returns:
+        HTML for inclusion in a card header.
+
+    Raises:
+        KeyError: If a term has no glossary entry — loudly, because a silent miss
+            renders a "?" that explains nothing.
+    """
+    if not terms:
+        return ""
+    items = "".join(
+        f"<dt>{L(f'glossary.{term}.term')}</dt><dd>{L(f'glossary.{term}.def')}</dd>"
+        for term in terms
+    )
+    label = L("ui.forklaring_av_begrepp")
+    return (
+        '<span class="shai-help">'
+        f'<button class="shai-help-mark" type="button" aria-label="{label}">?</button>'
+        f'<span class="shai-help-pop" role="note"><dl>{items}</dl></span>'
+        "</span>"
+    )
+
+
+def vintage_badge(updated: str | None = None) -> None:
+    """Render the data vintage as a visible badge.
+
+    Finding C was the app claiming freshness from `date.today()`. T1.5 fixed the
+    source; this makes the answer visible rather than a sidebar footnote, so a
+    reader knows how old the numbers are without going looking.
+
+    Args:
+        updated: ISO timestamp. Defaults to the provenance artifact's
+            `generated_at` — when the *data* was built, never when the page ran.
+    """
+    stamp = (updated or generated_at())[:10]
+    st.markdown(
+        f'<div class="shai-vintage"><span class="shai-vintage-dot"></span>'
+        f'{L("ui.data_uppdaterad_v0", v0=stamp)}</div>',
+        unsafe_allow_html=True,
+    )

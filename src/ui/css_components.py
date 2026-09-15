@@ -254,4 +254,87 @@ CSS = """/* ---- Page header (full row) ---- */
     border-radius: 3px;
 }
 
+/* ---- Explanation line (T3.4) ---- */
+/* Prose under a bare number. Muted and smaller than body text: it explains the
+   figure above, it does not compete with it. */
+.shai-explanation {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #6B7280;
+    margin: 6px 0 2px 0;
+    max-width: 78ch;
+}
+
+/* ---- Glossary badge (T3.5) ---- */
+/* CSS-only popover: opens on hover AND on keyboard focus, so it is reachable
+   without a pointer. `title=` attributes, which this replaces, are neither
+   focusable nor visible on touch. */
+.shai-help { position: relative; display: inline-block; margin-left: 6px; }
+
+.shai-help-mark {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid #C4A35A;
+    background: transparent;
+    color: #C4A35A;
+    font-size: 11px;
+    line-height: 1;
+    cursor: help;
+    padding: 0;
+}
+
+.shai-help-mark:focus-visible { outline: 2px solid #C4A35A; outline-offset: 2px; }
+
+.shai-help-pop {
+    position: absolute;
+    top: 22px;
+    left: 0;
+    z-index: 40;
+    min-width: 240px;
+    max-width: 340px;
+    padding: 10px 12px;
+    background: #FFFFFF;
+    border: 1px solid #E3E6EC;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(11, 31, 63, 0.12);
+    font-size: 12px;
+    line-height: 1.5;
+    color: #1A1A2E;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease;
+}
+
+.shai-help:hover .shai-help-pop,
+.shai-help-mark:focus + .shai-help-pop,
+.shai-help-mark:focus-visible + .shai-help-pop { opacity: 1; visibility: visible; }
+
+.shai-help-pop dl { margin: 0; }
+.shai-help-pop dt { font-weight: 600; margin-top: 6px; }
+.shai-help-pop dt:first-child { margin-top: 0; }
+.shai-help-pop dd { margin: 2px 0 0 0; color: #6B7280; }
+
+/* ---- Data vintage badge (T3.6) ---- */
+/* Finding C: the app used to claim freshness from the clock. This states the
+   artifact's build date, where a reader will actually see it. */
+.shai-vintage {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px;
+    border: 1px solid #E3E6EC;
+    border-radius: 999px;
+    background: #FFFFFF;
+    font-size: 11.5px;
+    color: #6B7280;
+    letter-spacing: 0.01em;
+}
+
+.shai-vintage-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2E7D5B;
+}
 """

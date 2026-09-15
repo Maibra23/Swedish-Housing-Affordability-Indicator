@@ -21,6 +21,7 @@ import plotly.graph_objects as go
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
+    vintage_badge,
     page_title, kpi_card, render_kpi_row, format_sek, format_pct,
     card_header, footer_note,
 )
@@ -322,4 +323,5 @@ with col_table:
 with st.expander(L("sc.forklaring")):
     st.markdown(L("sc.version_c_realversion_beraknas_som_text"))
 
+vintage_badge()
 footer_note()
