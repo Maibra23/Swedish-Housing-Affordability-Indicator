@@ -5,9 +5,48 @@ correct, deployable, and visually consistent state after five months of drift.
 
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
+**Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
 **Status:** IN PROGRESS — 10 / 34 tasks complete
 **Current phase:** Phase 1 · next task **T1.9**
 **Test suite:** 117 passed, 0 failed, 1 skipped — green for the first time since the audit
+
+---
+
+## 0. Working state — read this first
+
+Everything below assumes you are set up as follows. Two of these cost real time this session.
+
+| | |
+|---|---|
+| **Branch** | `revitalization/phase-1`. `main` is five commits behind and still has the 2024 defects. `git checkout revitalization/phase-1` before anything. |
+| **Python** | **`python3.11`**, always. The machine's default `python3` is 3.9 and cannot import `tomllib`, which `src/ui/sidebar.py` needs. Under 3.9 `pytest` still reports green — it silently fails to collect the UI tests, so a 3.9 pass is not evidence. |
+| **Test command** | `python3.11 -m pytest tests/ -q` → expect **117 passed, 0 failed, 1 skipped**. |
+| **Render check** | `streamlit.testing.v1.AppTest` driven from `app.py` with `switch_page` — 6 pages × 11 years + landing = **67 renders**, all clean. Driving a page as its own entrypoint fails on `st.page_link("app.py")`; that is an AppTest artifact, not a defect. |
+| **Refresh** | `python3.11 -c "import sys;sys.path.insert(0,'.');from scripts.refresh_data import step_compute_indices;step_compute_indices()"` rebuilds the affordability parquets **and** the provenance artifact. No API calls. |
+
+### ⚠ This file gets overwritten from outside the session
+
+Edits applied to this document have been observed **reverting**: a header line, a
+progress-table status cell and an entire session-log row present in `git show HEAD` vanished
+from the working tree, and the markdown tables came back re-aligned with padded cells the
+committed version does not have. No Claude Code hooks are configured, so it is external —
+most likely this file is open in an editor with format-on-save writing a stale buffer.
+
+**Consequences:** verify edits to this file immediately after making them, and commit without
+delay. If content goes missing, `git checkout HEAD -- docs/REVITALIZATION_PLAN.md` and
+re-apply the whole post-commit set in one pass rather than patching a half-clobbered file.
+Any script editing these tables must match table rows on the first cell (`startswith`/regex),
+never on an exact space count — `HEAD` is unpadded, the working tree may be padded.
+
+### Where the work stopped
+
+Phase 1 is **10 of 10 correctness tasks minus two**: T1.1–T1.8 are `DONE`, **T1.9** and
+**T1.10** remain, and **neither is blocked**. Phase 1 has no open decisions left — O2 and O4
+were answered and locked as D5 and D6.
+
+Start at **T1.9**. One constraint carried over from D6: T1.9's labels must **not** quote a
+class-split figure, because the log transform moved it (≈19/51/30 → ≈23/48/28) and any number
+hardcoded into copy will drift again.
 
 ---
 
@@ -18,8 +57,26 @@ If you are picking this up cold, read in this order:
 1. **§1 Locked decisions** — settled; do not relitigate.
 2. **§2 Open decisions** — must be answered before the tasks that depend on them.
 3. **§3 Evidence** — the audit findings with file:line references. Every task traces to one.
+   Findings **N**, **O**, **P** and **Q** were discovered *during* the work, not in the
+   original audit; N and Q are the substantive ones and both concern orientation or
+   distribution of the index.
 4. **§4 Progress** — the single table showing where work stopped.
 5. The phase section for the first task whose status is not `DONE`.
+
+**What the tests now guard**, so you know what will catch you:
+
+| File | Guards |
+|---|---|
+| `test_ranked_artifact.py` (15) | the artifact carries `z_*`/`rank_*`/`risk_*` for every year, with the orientation contract |
+| `test_pages_no_recompute.py` (14) | no page re-derives a z-score, rank or risk class |
+| `test_provenance.py` (18) | the vintage artifact matches the panel it describes |
+| `test_year_range.py` (16) | the selector offers exactly the years the index can compute |
+| `test_choropleth.py` (21) | the map's colour domain comes from data; the tile host is reachable |
+| `test_normalization_convention.py` (16) | both normalisation axes (D5 window, D6 transform) |
+
+Three of these assert against **executable source** via `tests/sourcetools.py`, which strips
+comments and docstrings — prose explaining a fixed defect must not trip a guard against that
+defect.
 
 **Update protocol:** when a task completes, change its status marker in both the phase
 section and the §4 progress table, and append a line to §9 Session log. Keep the header
