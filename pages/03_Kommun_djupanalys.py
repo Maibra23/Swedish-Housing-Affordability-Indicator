@@ -1,7 +1,7 @@
 """Sida 03 — Kommun djupanalys.
 
 Prognos och detaljanalys per kommun med Prophet och ARIMA.
-Historisk SHAI 2014–2024 + prognos 2025–2030.
+Historisk SHAI över indexets hela period + prognos sex år framåt.
 """
 
 import streamlit as st
@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import page_title, card_header, footer_note, kpi_card, render_kpi_row, format_pct
@@ -25,6 +26,12 @@ from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
 
 inject_css()
 selections = render_sidebar(page_key="kd")
+
+# Period and panel size come from the provenance artifact: a literal
+# "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+PERIOD = f"{PERIOD_START}–{PERIOD_END}"
+N_YEARS = PERIOD_END - PERIOD_START + 1
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -118,7 +125,7 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 # ── Caveat callout ───────────────────────────────────────────────────
 st.warning(
-    "**Prognoser baseras på 11 årliga observationer (2014–2024).** "
+    f"**Prognoser baseras på {N_YEARS} årliga observationer ({PERIOD}).** "
     "Konfidensintervall vidgas snabbt efter år 3. "
     "Tolka långtidsprognoser med försiktighet."
 )
@@ -239,7 +246,7 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
-        card_header("Komponentuppdelning", f"{selected_kommun} · 2014–2024", "KOMPONENTER"),
+        card_header("Komponentuppdelning", f"{selected_kommun} · {PERIOD}", "KOMPONENTER"),
         unsafe_allow_html=True,
     )
 

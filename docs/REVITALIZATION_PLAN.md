@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — 10 / 34 tasks complete
-**Current phase:** Phase 1 · next task **T1.9**
-**Test suite:** 117 passed, 0 failed, 1 skipped — green for the first time since the audit
+**Status:** IN PROGRESS — **Phase 1 complete** · 12 / 34 tasks
+**Current phase:** Phase 2 · next task **T2.1**
+**Test suite:** 172 passed, 0 failed, 1 skipped · 67/67 page renders clean
 
 ---
 
@@ -40,13 +40,14 @@ never on an exact space count — `HEAD` is unpadded, the working tree may be pa
 
 ### Where the work stopped
 
-Phase 1 is **10 of 10 correctness tasks minus two**: T1.1–T1.8 are `DONE`, **T1.9** and
-**T1.10** remain, and **neither is blocked**. Phase 1 has no open decisions left — O2 and O4
-were answered and locked as D5 and D6.
+**Phase 1 is complete.** T1.1–T1.10 are all `DONE`, with T4.2 and T4.5 landed early alongside
+them. The app no longer presents a number it cannot support: risk classes are right way up,
+every offered year renders, the vintage is the artifact's rather than the clock's, the map
+scale comes from the data, both normalisation axes are settled, the one KPI that carried a
+meaningless trend has lost it, and no displayed count or period is typed into the source.
 
-Start at **T1.9**. One constraint carried over from D6: T1.9's labels must **not** quote a
-class-split figure, because the log transform moved it (≈19/51/30 → ≈23/48/28) and any number
-hardcoded into copy will drift again.
+Start at **T2.1** (runtime-only `requirements.txt`). Phase 2 has no blocked tasks; **O1** is
+the only open decision and only T2.4 depends on it, with a documented default of `SKIPPED`.
 
 ---
 
@@ -408,8 +409,8 @@ everything to `.shai-*`.
 | T1.6 | Fix map basemap (CARTO → Esri) | 1 | **DONE** |
 | T1.7 | Fix map colour domain (fixed ±2.5 → empirical percentiles) | 1 | **DONE** |
 | T1.8 | Unify normalisation convention across A/B/C (window **and** transform) | 1 | **DONE** |
-| T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | TODO |
-| T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | TODO |
+| T1.9 | Reframe the risk-class KPI (drop meaningless YoY delta) | 1 | **DONE** |
+| T1.10 | Derive hardcoded `290` / `2014–2024` from data | 1 | **DONE** |
 | T2.1 | Add runtime-only `requirements.txt` | 2 | TODO |
 | T2.2 | Split build-only deps into optional group; clean `pyproject.toml` | 2 | TODO |
 | T2.3 | Fix README troubleshooting + deployment docs | 2 | TODO |
@@ -792,7 +793,7 @@ say so: the Finding N3 lesson applied prospectively.
 
 ---
 
-### T1.9 — Reframe the risk-class KPI · TODO
+### T1.9 — Reframe the risk-class KPI · DONE
 
 **Fixes:** Finding F
 **Files:** `pages/01_Riksoversikt.py:110-150`
@@ -806,13 +807,25 @@ metric as a relative position. If an absolute measure of national affordability 
 it must come from a level series (e.g. median Version C in real terms), not from the class counts.
 
 **Acceptance**
-- [ ] No YoY delta on any count derived from the ±0.67σ cut
-- [ ] Label and tooltip state that the class is a relative position within the year
-- [ ] If a national trend KPI is added, it reads from a level series
+- [x] No YoY delta on any count derived from the ±0.67σ cut — the previous-year count is
+      not computed at all, so there is nothing left to subtract
+- [x] Label and tooltip state that the class is a relative position within the year, with no
+      split figure quoted (D6)
+- [x] If a national trend KPI is added, it reads from a level series — asserted for every
+      card on the row, not just this one
+
+`tests/test_risk_kpi.py` (8). The name tracking closes over assignment: `delta = n_hog -
+n_hog_prev` never mentions `risk_c` itself, and a guard stopping at the direct binding waved
+through exactly the subtraction this task removes.
+
+Widened once during the work. The count was read from `df_ranked`, the frame the risk pills
+had **already filtered**, while the other three cards on the row read the unfiltered year —
+so deselecting "Hög" rendered the national high-risk count as 0. A filter state was being
+presented as a fact about Sweden. Now counted on `mun_year`.
 
 ---
 
-### T1.10 — Derive hardcoded constants from data · TODO
+### T1.10 — Derive hardcoded constants from data · DONE
 
 **Fixes:** Finding H
 **Files:** `app.py:43,68`, `pages/01_Riksoversikt.py:92,140,145`, `pages/04_Kontantinsats.py:90,114`, `src/ui/components.py:204,244,359,430`
@@ -821,9 +834,28 @@ it must come from a level series (e.g. median Version C in real terms), not from
 Replace every literal `290` and `2014–2024` with provenance-derived values.
 
 **Acceptance**
-- [ ] `grep -rn "\b290\b" app.py pages/ src/ui/` returns only genuine non-count uses
-- [ ] Hero stat strip period reads from provenance
-- [ ] Changing the data changes the displayed counts with no code edit
+- [x] `grep -rn "\b290\b" app.py pages/ src/ui/` returns two hits, both comments
+      explaining the fix — `tests/sourcetools.py` strips those, so the guard can tell
+      prose from code
+- [x] Hero stat strip period reads from provenance, as does its year *count* ("11 år")
+- [x] Changing the data changes the displayed counts with no code edit — asserted
+      behaviourally against a relabelled panel (277 municipalities, 2009–2019), not by
+      reading the source
+
+`tests/test_no_hardcoded_counts.py` (47). Nineteen literals across nine files. Scope
+reached beyond the listed lines: `02_Lan_jamforelse.py` held the span as an empty-data
+fallback, and `03`/`06` stated "11 årliga observationer (2014–2024)" — the period's
+*length*, which drifts on the same refresh. Upstream source-coverage windows (`1981–2024`
+for prices, `2011–2024` for income) are deliberately untouched: they describe what SCB
+publishes, not what this index computes.
+
+Two things the behavioural test caught that a source-level one could not.
+`render_landing_steps` writes through `st.html`, not `st.markdown`, so the first capture
+fixture returned an empty string and satisfied every "the old literal is absent"
+assertion without rendering anything; the fixture now patches both sinks and fails on
+empty output. And that same step's copy claimed values are z-standardised "över hela
+panelen", which D5 made false — corrected to "inom varje år" while the literals were
+being removed.
 
 ---
 
@@ -1246,6 +1278,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-15 | T1.9, T1.10 | **Both DONE — Phase 1 closed.** T1.9: dropped the YoY delta on the high-risk count and relabelled it a relative position within the year, with no split figure in the copy (D6). Widened mid-task — the count was read from the *risk-filtered* frame while the row's other three cards read the unfiltered year, so deselecting "Hög" showed the national high-risk count as 0; now counted on `mun_year`. `tests/test_risk_kpi.py` (8). T1.10: nineteen literal `290` / `2014–2024` / "11 år" across nine files replaced with provenance reads; `_panel_facts()` resolves them per call in `components.py`. `tests/test_no_hardcoded_counts.py` (47), including a behavioural check against a relabelled panel (277 kommuner, 2009–2019). Fixed a false-green in my own fixture: `render_landing_steps` emits via `st.html`, so a markdown-only capture returned an empty string and passed every absence assertion vacuously. Also corrected the step's claim that values are z-standardised "över hela panelen" — D5 made that false. **Suite: 172 passed, 0 failed, 1 skipped. 67/67 renders clean.** | Next: **T2.1**. Note for this machine: the §0 `python3.11` rule is macOS-specific — on Windows the default `python` is 3.12.10 and collects the full suite, though `pyproject.toml` still declares `requires-python = ">=3.11,<3.12"`, which T2.2 should reconcile. Deferred, not done: `21 län` is still a literal (provenance carries no county count), and `06_Metodologi.py` still hardcodes the measured "16 av N kommuner" class-change figure — both belong to T4.1. |
 | 2026-09-15 | T1.8, Findings O + P | **DONE.** O2 → D5 (within-year `z_*`; B's construction stays pooled), O4 → D6 (log-transform A and C). Implemented in `normalize.py`, artifacts regenerated, `rank_*` verified identical across all versions and years. `z_c` normality now holds every year (p = 0.34–0.83); 2024 split 19.7/50.3/30.0 → 23.4/48.3/28.3. METHODOLOGY §4 rewritten into window/transform/class subsections stating what B would lose under within-year. Finding O resolved (a near-tie boundary — Skåne is 6th by 0.7 points); Finding P corrected in both files. Histogram caption updated: on a log scale z = 0 is the median, not the mean. `tests/test_normalization_convention.py` (16). **Suite: 117 passed, 0 failed, 1 skipped — green for the first time.** 67/67 renders clean. | Next: **T1.9** — drop the YoY delta on the high-risk count; its labels must not quote a split figure, since D6 moved it. Then **T1.10**. Phase 1 has no blocked tasks left. |
 | 2026-09-15 | T1.8 (analysis only) | **BLOCKED, no code changed.** Investigating T1.7's colour domain exposed a larger issue: `version_c` is a ratio and therefore log-normal, but is z-scored raw and cut at ±0.67σ. Normality is rejected at p < 6e-15 in every year; under a log it passes in all eleven (p = 0.34–0.83). Recorded as **Finding Q**. This also proved **Finding F's own arithmetic wrong** — the split is ≈19/51/30 with 83–89 high-risk, not the "25/50/25, near 72" it claimed; F corrected in place. Split the normalisation question into two axes, window (**O2**) and transform (**O4**), widened T1.8 to own both, and marked it `BLOCKED`. Blast radius measured for the decision: ranks unchanged, 16 of 290 municipalities (6 %) change class. | **Answer O2 and O4 to unblock T1.8.** Until then the next workable task is **T1.9** (unblocked), then **T1.10**. Do not change the transform piecemeal — the numbers are currently self-consistent and a partial change is worse than either endpoint. |
 | 2026-09-15 | T1.6, T1.7, T4.5 | **All DONE.** Basemap moved to Esri `World_Light_Gray_Base` with attribution and a background fallback. Colour domain now built from the data: ends at min/max, neutral at the median, steps at the quartiles. Fixes a fault worse than KRI's — SHAI's `z_c` is left-skewed, so ±2.5 clipped 104 municipality-years off the green end *and* left the top 43 % of the red ramp unused. Clipping now zero. `tests/test_choropleth.py` (21) satisfies T4.5; extracted `tests/sourcetools.py` so the prose-vs-code stripper is shared. Suite: **100 passed, 1 failed, 1 skipped**; all 67 page renders still clean. | Next: **T1.8**, which is **blocked on O2** — confirm within-year normalisation for A/B/C. If O2 stays unanswered the documented default is within-year. T1.8 also owns two loose ends: Finding O (`test_skane_worst_v_c`, failing since before this work) and Finding P (`06_Metodologi.py:247` documents the imputation rule F9 replaced). T1.9 and T1.10 are unblocked if you would rather not wait on O2. |

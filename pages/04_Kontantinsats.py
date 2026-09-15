@@ -19,6 +19,7 @@ st.set_page_config(
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import n_kommuner
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -36,6 +37,10 @@ from src.kontantinsats.engine import REGIMES, compare_regimes
 
 inject_css()
 selections = render_sidebar(page_key="ki")
+
+# Granularity copy below quotes the municipality count; it reads the panel
+# rather than a literal so it cannot outlive the panel. See T1.10.
+N_KOMMUNER = n_kommuner()
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
@@ -87,7 +92,7 @@ else:
     st.info(
         "**Välj Pristyp:** Bostadsrättspriser (SCB BO0501C) analyseras på **länsnivå** "
         "(21 län) — SCB publicerar inga kommunspecifika bostadsrättspriser. "
-        "Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** (290 kommuner). "
+        f"Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** ({N_KOMMUNER} kommuner). "
         "När du väljer Bostadsrätt byter analysen automatiskt till länsnivå."
     )
 
@@ -111,7 +116,7 @@ with st.container(border=True):
             index=0,
             key="ki_pristyp",
             help=(
-                "Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå (290 kommuner). "
+                f"Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå ({N_KOMMUNER} kommuner). "
                 "Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt — **länsnivå** (21 län). "
                 "SCB publicerar inga kommunspecifika bostadsrättspriser."
             ),
