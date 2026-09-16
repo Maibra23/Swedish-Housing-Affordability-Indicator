@@ -112,9 +112,12 @@ def test_unknown_glossary_term_fails_loudly() -> None:
         help_badge("not_a_real_term")
 
 
-def test_glossary_is_applied_to_the_map_and_distribution_cards() -> None:
+def test_glossary_is_applied_to_the_map_distribution_and_ranking_cards() -> None:
+    """T3.5 names three cards. Two was the state before this test existed."""
     page = (ROOT / "pages" / "01_Riksoversikt.py").read_text(encoding="utf-8")
-    assert page.count("help_badge(") >= 2
+    assert page.count("help_badge(") >= 3, (
+        "the map, the distribution and the ranking tables each need the affordance"
+    )
 
 
 # ── T3.6 · data vintage badge ────────────────────────────────────────

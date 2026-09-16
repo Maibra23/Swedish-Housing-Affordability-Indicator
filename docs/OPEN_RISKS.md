@@ -16,7 +16,7 @@ These outlive it.
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | OPEN |
 | R3 | The `pipeline` extra is unverified as an install | Medium | OPEN |
 | R4 | The forecast step exhausts memory on this machine | Medium | OPEN |
-| R5 | `src/` is 15 % covered; the index formulas have no tests | **High** | OPEN |
+| R5 | Refresh-pipeline modules have no tests (44 % overall, was 15 %) | **High** | OPEN |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | OPEN |
@@ -140,29 +140,46 @@ peak RSS before choosing a fix.
 
 ---
 
-## R5 — `src/` is 15 % covered and the index formulas have no tests
+## R5 — Whole subsystems have no tests
 
-**Severity: High.** The most valuable code is the least verified.
+**Severity: High.** Improved substantially, not closed.
 
-Measured after Phase 1 (`pytest --cov=src`): **15 %** overall. At 0 %:
+Measured after Phase 1 this was **15 %** overall, with `src/indices/affordability.py` — the
+module computing Version A, B and C — at **0 %**. Both numbers are now out of date, which is
+itself worth noting: a risk register goes stale exactly like the prose T4.1 polices.
 
-- `src/data/` — every API client and `build_panel.py` (346 statements)
-- `src/forecast/` — both pipelines
-- `src/kontantinsats/engine.py`, `src/scenario/simulator.py`
-- **`src/indices/affordability.py`** — the module that computes Version A, B and C
+Measured after Phase 4:
 
-The suite is strong where it exists, but it is mostly *source-level guards*: assertions
-that a page does not recompute a z-score, that a literal is absent, that two files agree.
-Those prevent the specific regressions the audit found. They do not check that the
-formulas are right. Finding J is not meaningfully closed.
+| | After Phase 1 | Now |
+|---|---|---|
+| `src/` overall | 15 % | **44 %** |
+| `src/indices/affordability.py` | 0 % | 65 % |
+| `src/indices/normalize.py` | 62 % | 62 % |
+| `src/ui/` | ~45 % | 81–100 % |
 
-Note the coverage figure understates things — the 67-render AppTest check exercises the
-pages and much of `src/ui/` but does not run under `pytest`. See R6.
+Most of the gain is T4.4: putting the 67-render sweep inside the suite exercises every page and
+nearly all of `src/ui/`. The index formulas gained coverage incidentally, through T2.4's
+complete-case tests.
 
-**Recommendation:** prioritise `affordability.py` over the rest. It is 65 statements, it is
-the heart of the product, and R1 above was found by reading it rather than by a test
-failing. Property tests suit it well: orientation contracts, monotonicity in each input,
-behaviour at zero and negative real rates.
+**Still at 0 %:**
+
+| Module | Statements |
+|---|---|
+| `src/data/build_panel.py` | 346 |
+| `src/data/scb_client.py` | 241 |
+| `src/forecast/prophet_pipeline.py` | 110 |
+| `src/forecast/arima_pipeline.py` | 108 |
+| `src/data/riksbanken_client.py` | 67 |
+
+These are the refresh pipeline: the code that builds the artifacts everything else reads. It
+runs once or twice a year, by hand, and a mistake in it is invisible until a number looks wrong
+on a page. `build_panel.py` in particular holds income imputation, the ragged-panel joins and
+the forward-fill — the machinery behind D1, F9 and the `complete_case()` rule.
+
+**Recommendation unchanged in priority, narrowed in target:** `affordability.py` has coverage
+now but no *property* tests — orientation, monotonicity in each input, behaviour at zero and
+negative real rates. That is still where R1 came from, and it is 69 statements. After that,
+`build_panel.py`, which is also R10's blocker.
 
 ---
 
