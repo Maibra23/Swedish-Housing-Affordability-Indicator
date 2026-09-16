@@ -113,3 +113,50 @@ def test_no_hardcoded_absolute_path(path: Path) -> None:
         f"{path.name} hardcodes an absolute path: {offenders}. Resolve it from "
         "`Path(__file__)` instead."
     )
+
+
+# ── Documented test counts ───────────────────────────────────────────
+
+
+def test_per_file_test_counts_in_the_plan_are_accurate() -> None:
+    """`docs/REVITALIZATION_PLAN.md` cites how many tests each file holds.
+
+    Five of those were stale when this guard was written: one had never been
+    measured, and four had drifted upward as parametrisation expanded. A number
+    in prose that nothing checks is the defect this whole project has been
+    chasing — including, it turns out, in the document describing the chase.
+    """
+    import subprocess
+    import sys
+
+    plan = (ROOT / "docs" / "REVITALIZATION_PLAN.md").read_text(encoding="utf-8")
+    claimed = {
+        name: int(count)
+        for name, count in re.findall(r"`tests/(test_\w+\.py)`\s*\((\d+)\)", plan)
+    }
+    assert claimed, "the plan cites no per-file counts; has its format changed?"
+
+    collected = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/", "--collect-only", "-q"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=300,
+    ).stdout
+
+    actual: dict[str, int] = {}
+    for line in collected.splitlines():
+        match = re.match(r"tests[\/](test_\w+\.py)::", line)
+        if match:
+            actual[match.group(1)] = actual.get(match.group(1), 0) + 1
+
+    stale = {
+        name: (count, actual.get(name, 0))
+        for name, count in claimed.items()
+        if actual.get(name, 0) != count
+    }
+    assert not stale, (
+        "the plan cites test counts that no longer match, as claimed vs actual: "
+        f"{stale}"
+    )
