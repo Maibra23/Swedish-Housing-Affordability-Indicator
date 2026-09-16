@@ -21,6 +21,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -47,15 +48,15 @@ N_YEARS = PERIOD_END - PERIOD_START + 1
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
+        municipal = load_artifact("affordability_municipal.parquet")
 
         try:
-            forecast_prophet = pd.read_parquet("data/processed/forecast_prophet.parquet")
+            forecast_prophet = load_artifact("forecast_prophet.parquet")
         except FileNotFoundError:
             forecast_prophet = pd.DataFrame()
 
         try:
-            forecast_arima = pd.read_parquet("data/processed/forecast_arima.parquet")
+            forecast_arima = load_artifact("forecast_arima.parquet")
         except FileNotFoundError:
             forecast_arima = pd.DataFrame()
 except Exception as e:

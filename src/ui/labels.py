@@ -49,6 +49,7 @@ def L(key: str, **values: object) -> str:
 
 
 SWEDISH_LABELS: dict[str, str] = {
+    "rv.kartfilen_saknas": "Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.",
     "mt.expander_4_prognoser_prophet_vs_arima": "4. Prognoser (Prophet vs ARIMA)",
     "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats — regimhistorik",
     "mt.expander_7_datavalidering": "7. Datavalidering",

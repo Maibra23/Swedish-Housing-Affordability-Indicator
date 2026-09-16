@@ -18,6 +18,7 @@ st.set_page_config(
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -34,7 +35,7 @@ selections = render_sidebar(page_key="sc")
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        county_panel = pd.read_parquet("data/processed/panel_county.parquet")
+        county_panel = load_artifact("panel_county.parquet")
 except Exception as e:
     st.error(L("sc.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
@@ -89,7 +90,7 @@ _presets = {
 }
 
 with preset_col1:
-    if st.button("Riksbanken 2022", use_container_width=True, key="sc_preset_2022",
+    if st.button("Riksbanken 2022", width="stretch", key="sc_preset_2022",
                  help=L("sc.4pp_ranta_8pp_kpi_15_pris")):
         p = _presets["riksbanken_2022"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
@@ -98,7 +99,7 @@ with preset_col1:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col2:
-    if st.button("Deflationsrisk", use_container_width=True, key="sc_preset_deflation",
+    if st.button("Deflationsrisk", width="stretch", key="sc_preset_deflation",
                  help=L("sc.1pp_ranta_2pp_kpi_10_pris")):
         p = _presets["deflation_risk"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
@@ -107,7 +108,7 @@ with preset_col2:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col3:
-    if st.button(L("sc.loneboom_2"), use_container_width=True, key="sc_preset_wage",
+    if st.button(L("sc.loneboom_2"), width="stretch", key="sc_preset_wage",
                  help=L("sc.1pp_ranta_5_lon_10_pris")):
         p = _presets[L("sc.loneboom")]
         st.session_state["sc_rate_slider"] = float(p["rate"])
@@ -116,7 +117,7 @@ with preset_col3:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col4:
-    if st.button(L("sc.aterstall"), use_container_width=True, key="sc_preset_reset",
+    if st.button(L("sc.aterstall"), width="stretch", key="sc_preset_reset",
                  help=L("sc.nollstall_alla_scenariojusteringar_till")):
         p = _presets["reset"]
         st.session_state["sc_rate_slider"] = float(p["rate"])

@@ -20,6 +20,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -45,8 +46,8 @@ N_YEARS = PERIOD_END - PERIOD_START + 1
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
-        county_panel = pd.read_parquet("data/processed/panel_county.parquet")
+        municipal = load_artifact("affordability_municipal.parquet")
+        county_panel = load_artifact("panel_county.parquet")
 except Exception as e:
     st.error(L("lj.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")

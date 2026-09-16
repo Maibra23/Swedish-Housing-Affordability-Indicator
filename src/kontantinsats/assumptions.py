@@ -135,7 +135,7 @@ def render_assumptions(ctx: Context) -> None:
 
         st.dataframe(
             styled,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_order=[
                 "Regelverk",

@@ -19,9 +19,10 @@ These outlive it.
 | R5 | Refresh-pipeline modules have no tests (44 % overall, was 15 %) | **High** | OPEN |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
-| R8 | `folium_static` is deprecated and will be removed | Medium | OPEN |
+| R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN |
+| R11 | The map cache cannot hold every year x risk combination | Low | **ACCEPTED** |
 
 ---
 
@@ -304,6 +305,17 @@ Phase 3 while the map is already being touched (T3.9 adds the "Om kartan" expand
 confirm through `tests/test_pages_render.py` that render counts and timing do not change.
 Not urgent, but do not let it be discovered by a broken deploy.
 
+### CLOSED 2026-09-16 — and it took `streamlit-folium` with it
+
+Resolved by the performance work rather than by a migration. `folium_static` only ever
+wrapped `st.components.v1.html(m.get_root().render(), ...)`, and caching that render meant
+calling the two halves separately anyway. The deprecated call is gone, `st_folium` was never
+needed, and **the suite now emits zero deprecation warnings**, down from 13 per render sweep.
+
+Dropping it removed the last import of `streamlit-folium`, which `tests/test_runtime_dependencies.py`
+caught immediately — declared in `requirements.txt` but no longer reachable from any page. The
+runtime set is now **seven packages**.
+
 ---
 
 ## R9 — `labels.py` holds markup and LaTeX, not only copy
@@ -355,6 +367,31 @@ nothing in the suite would catch a mistake in moving it.
 **Recommendation:** tests before splitting, in that order. This is R5 wearing a second hat:
 the modules that most need to be broken up are the ones it is least safe to touch, and the
 way out is coverage, not courage.
+
+---
+
+## R11 — The map cache cannot hold every year × risk combination
+
+**Severity: Low.** A deliberate memory ceiling, recorded so the next reader knows it was chosen.
+
+The choropleth's rendered HTML is cached (`max_entries=24`), which took a year change from
+380 ms to 50 ms. The frame arrives already risk-filtered, so the full input space is 11 years
+× 7 risk combinations = **77 distinct maps**, and each document is ~1.2 MB:
+
+| Entries | Cache cost |
+|---|---|
+| 11 (years only, default filter) | 13 MB |
+| **24 (chosen)** | **29 MB** |
+| 77 (everything) | 93 MB |
+
+Caching all of it would spend roughly a tenth of a 1 GB Streamlit Cloud instance on an
+interaction nobody performs exhaustively. Year changes — the common move — fit comfortably;
+an unusual risk combination pays one 380 ms rebuild.
+
+**If this ever needs closing properly:** render all municipalities always and vary only the
+polygon *style* by risk class, so the map depends on the year alone and 11 entries suffice.
+That changes what the map shows — filtered municipalities would grey out rather than vanish —
+which is a design decision, not a performance one.
 
 ---
 
