@@ -53,6 +53,18 @@ streamlit run app.py
 pytest tests/
 ```
 
+## Auditing a release
+
+```bash
+python scripts/audit.py
+```
+
+Twenty-seven checks re-derived from the committed artifacts, independent of the test
+suite: the index contract and its orientation, the sidebar against the data, the
+methodology's quoted figures against what the data now says, and the docs against the
+code. Exit code 0 means everything agrees. **Run it after every data refresh** — that is
+when copy and data drift apart.
+
 ## Data refresh
 
 Source data is pre-built and committed as parquet files. To refresh after SCB/Kolada
