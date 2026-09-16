@@ -87,3 +87,29 @@ def test_the_archive_is_marked_as_unmaintained() -> None:
         "the README must say the archive is not current guidance, or a reader will "
         "treat a superseded analysis as live"
     )
+
+
+# ── Portability ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted((ROOT / "scripts").glob("*.py"))
+    + sorted((ROOT / "src").rglob("*.py"))
+    + [ROOT / "app.py"]
+    + sorted((ROOT / "pages").glob("*.py")),
+    ids=lambda p: p.name,
+)
+def test_no_hardcoded_absolute_path(path: Path) -> None:
+    """A path pinned to one machine is a file that runs nowhere else.
+
+    `scripts/generate_municipality_coords.py` wrote its output to an absolute
+    Windows path under one user's home directory. It would have failed on any
+    other machine, including the macOS one this project is also developed on.
+    """
+    text = path.read_text(encoding="utf-8")
+    offenders = re.findall(r'["\'](?:[A-Za-z]:[\/]|/Users/|/home/)[^"\']{4,}["\']', text)
+    assert not offenders, (
+        f"{path.name} hardcodes an absolute path: {offenders}. Resolve it from "
+        "`Path(__file__)` instead."
+    )
