@@ -21,6 +21,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from src.provenance import n_kommuner
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -54,7 +55,7 @@ selections = render_sidebar(page_key="rv")
 # except 2014. See tests/test_ranked_artifact.py.
 try:
     with st.spinner("Laddar data..."):
-        ranked = pd.read_parquet("data/processed/affordability_ranked.parquet")
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
     st.error(L("rv.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")

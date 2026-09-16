@@ -15,10 +15,17 @@ import branca.colormap as cm
 import folium
 import pandas as pd
 import streamlit as st
+
+from src.ui.labels import L
+from src.ui.map_labels import (
+    _label_latlon,
+    _mean_latlon_from_geometry,
+    _municipality_label_div,
+)
 from branca.element import MacroElement
 from folium.features import DivIcon
 from folium.template import Template
-from streamlit_folium import folium_static
+import streamlit.components.v1 as components
 
 from src.ui.css import DIVERGING_SCALE
 
@@ -92,53 +99,10 @@ def _load_geojson() -> dict | None:
         return None
 
 
-def _mean_latlon_from_geometry(geometry: dict) -> tuple[float, float] | None:
-    """Mean coordinate of GeoJSON Polygon/MultiPolygon rings (lon,lat → lat,lon)."""
-    if not geometry or "coordinates" not in geometry:
-        return None
-    lats: list[float] = []
-    lons: list[float] = []
-
-    def walk(node: object) -> None:
-        if isinstance(node, (list, tuple)) and node:
-            if isinstance(node[0], (int, float)) and len(node) >= 2:
-                lon, lat = float(node[0]), float(node[1])
-                lons.append(lon)
-                lats.append(lat)
-            else:
-                for child in node:
-                    walk(child)
-
-    walk(geometry["coordinates"])
-    if not lats:
-        return None
-    return sum(lats) / len(lats), sum(lons) / len(lons)
 
 
-def _label_latlon(feature: dict) -> tuple[float, float] | None:
-    props = feature.get("properties") or {}
-    gp = props.get("geo_point_2d")
-    if isinstance(gp, (list, tuple)) and len(gp) >= 2:
-        return float(gp[0]), float(gp[1])
-    geom = feature.get("geometry")
-    if geom:
-        return _mean_latlon_from_geometry(geom)
-    return None
 
 
-def _municipality_label_div(name: str) -> str:
-    """Small always-on label; halo keeps text legible on any fill colour."""
-    safe = html.escape(name or "", quote=True)
-    return (
-        '<div style="font-size:7.5px;line-height:1.05;color:#1A1A2E;'
-        "text-align:center;font-family:'Source Sans Pro',sans-serif;"
-        "font-weight:600;white-space:nowrap;max-width:96px;"
-        "overflow:hidden;text-overflow:ellipsis;"
-        "text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,"
-        '0 0 4px #fff;pointer-events:none;">'
-        + safe
-        + "</div>"
-    )
 
 
 def build_colormap(scores: pd.Series) -> cm.LinearColormap:
@@ -195,23 +159,40 @@ def build_colormap(scores: pd.Series) -> cm.LinearColormap:
     )
 
 
-def render_choropleth(
+# 24 entries x ~1.2 MB = ~29 MB, which is the deliberate ceiling. The full input
+# space is 11 years x 7 risk combinations = 77; caching all of it would cost
+# ~116 MB, too much to spend on a 1 GB Streamlit Cloud instance for an
+# interaction nobody performs exhaustively. Year changes — the common move — fit
+# comfortably; unusual risk combinations pay the rebuild once.
+@st.cache_data(show_spinner=False, max_entries=24)
+def _map_html(
     data: pd.DataFrame,
     value_col: str = "z_c",
     name_col: str = "region_name",
     risk_col: str = "risk_c",
     height: int = 480,
-    key: str = "shai_choropleth",
-) -> None:
-    """Render a full polygon choropleth of Swedish municipalities.
+) -> str:
+    """Build the map and return it as a standalone HTML document.
+
+    Cached because this is where the time goes: folium renders the map through
+    Jinja2 into a ~1.2 MB document, measured at 83 % of the choropleth cost, and
+    Streamlit re-executes the whole script on any widget change — so toggling a
+    risk pill used to rebuild a megabyte of HTML. Keyed on the dataframe, so a
+    year change rebuilds and nothing else does.
+
+    The frame arrives already risk-filtered, so each filter combination is its
+    own entry. That is the trade-off behind `max_entries`; see the note above.
 
     Args:
         data: One row per municipality with region_code and SHAI values.
-        value_col: Column with the numeric z-score to visualize.
-        name_col: Column with the municipality name.
+        value_col: Column holding the numeric z-score to visualise.
+        name_col: Column holding the municipality name.
         risk_col: Risk class column (lag/medel/hog).
         height: Map height in pixels.
-        key: Unique key for the component.
+
+    Returns:
+        The rendered map document, or an empty string when the GeoJSON is
+        missing — the caller turns that into a warning.
     """
     risk_labels = {"lag": "Låg", "medel": "Medel", "hog": "Hög"}
 
@@ -245,8 +226,7 @@ def render_choropleth(
     # Load and enrich GeoJSON
     _raw = _load_geojson()
     if _raw is None:
-        st.warning("Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.")
-        return
+        return ""
     geojson = json.loads(json.dumps(_raw))
 
     for feat in geojson["features"]:
@@ -358,4 +338,31 @@ def render_choropleth(
 
     colormap.add_to(m)
 
-    folium_static(m, width=None, height=height)
+    return m.get_root().render()
+
+
+def render_choropleth(
+    data: pd.DataFrame,
+    value_col: str = "z_c",
+    name_col: str = "region_name",
+    risk_col: str = "risk_c",
+    height: int = 480,
+    key: str = "shai_choropleth",
+) -> None:
+    """Render a full polygon choropleth of Swedish municipalities.
+
+    Args:
+        data: One row per municipality with region_code and SHAI values.
+        value_col: Column with the numeric z-score to visualize.
+        name_col: Column with the municipality name.
+        risk_col: Risk class column (lag/medel/hog).
+        height: Map height in pixels.
+        key: Unique key for the component.
+    """
+    html = _map_html(data, value_col, name_col, risk_col, height)
+    if not html:
+        st.warning(L("rv.kartfilen_saknas"))
+        return
+    # `st.components.v1.html` directly, rather than `folium_static`, which is
+    # deprecated and scheduled for removal (R8). This is what it did anyway.
+    components.html(html, height=height, scrolling=False)

@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENTS = ROOT / "requirements.txt"
 
 # PyPI distribution names for import names that differ.
-DISTRIBUTION = {"streamlit_folium": "streamlit-folium"}
+DISTRIBUTION: dict[str, str] = {}
 
 # Required at runtime but never imported by name, so the graph cannot see them.
 # Each entry has to justify itself in `test_indirect_dependencies_are_justified`.
@@ -215,7 +215,9 @@ def test_indirect_dependencies_are_justified() -> None:
 def test_the_graph_walker_sees_transitive_imports() -> None:
     """A walker that stopped at the entrypoints would miss most of the truth.
 
-    `folium`, `branca` and `streamlit_folium` are imported only by
-    `src/ui/choropleth.py`, two hops from `app.py`.
+    `folium` and `branca` are imported only by `src/ui/choropleth.py`, two hops
+    from `app.py`. `streamlit_folium` used to be the third name here; dropping
+    `folium_static` for `st.components.v1.html` removed the last import of it,
+    and the guard above caught that the distribution was still declared.
     """
-    assert {"folium", "branca", "streamlit_folium"} <= runtime_third_party()
+    assert {"folium", "branca"} <= runtime_third_party()

@@ -29,7 +29,6 @@ pandas>=2.3.3,<4
 numpy>=1.26.2,<3
 plotly>=6.6.0,<8
 folium>=0.20.0,<1
-streamlit-folium>=0.27.1,<1
 branca>=0.8.2,<1
 
 # Not imported anywhere — pandas needs it to read the .parquet artifacts.
