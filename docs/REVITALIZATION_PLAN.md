@@ -61,7 +61,18 @@ order is T3.1 → T4.1, then stop and get the reference repo available before th
 
 ---
 
-### Where the work stopped
+### Where the work finished
+
+All 34 tasks are `DONE`. **§9 Final state** is the place to start: it records what the app no
+longer does, the one acceptance criterion still open, and what was measured rather than assumed.
+`docs/OPEN_RISKS.md` holds the ten findings that outlive this plan.
+
+The two Phase 3 caveats are worth knowing before reading the task list as a claim of success:
+the reference repositories are absent from this machine (see above), so T3.4–T3.9 are verified
+behaviourally and not visually; and nobody has confirmed the deployed Streamlit Cloud app.
+
+<details>
+<summary>Where the work stopped, as of Phase 1 (kept for the record)</summary>
 
 **Phase 1 is complete.** T1.1–T1.10 are all `DONE`, with T4.2 and T4.5 landed early alongside
 them. The app no longer presents a number it cannot support: risk classes are right way up,
@@ -71,6 +82,8 @@ meaningless trend has lost it, and no displayed count or period is typed into th
 
 Start at **T2.1** (runtime-only `requirements.txt`). Phase 2 has no blocked tasks; **O1** is
 the only open decision and only T2.4 depends on it, with a documented default of `SKIPPED`.
+
+</details>
 
 ---
 
@@ -85,7 +98,8 @@ If you are picking this up cold, read in this order:
    original audit; N and Q are the substantive ones and both concern orientation or
    distribution of the index.
 4. **§4 Progress** — the single table showing where work stopped.
-5. **`docs/OPEN_RISKS.md`** — hazards and pending decisions that outlive this plan.
+5. **§9 Final state** — what shipped, what is left, and what was actually measured.
+6. **`docs/OPEN_RISKS.md`** — hazards and pending decisions that outlive this plan.
    R1 (Version B re-bases on every refresh) and R7 (unpinned majors reach production)
    are both High and both currently held shut by a guard rather than fixed.
 5. The phase section for the first task whose status is not `DONE`.
@@ -106,7 +120,7 @@ comments and docstrings — prose explaining a fixed defect must not trip a guar
 defect.
 
 **Update protocol:** when a task completes, change its status marker in both the phase
-section and the §4 progress table, and append a line to §9 Session log. Keep the header
+section and the §4 progress table, and append a line to §10 Session log. Keep the header
 `Status:` line in sync. Never mark a task `DONE` without the evidence its acceptance
 criteria demands.
 
@@ -908,7 +922,7 @@ folium, streamlit-folium, branca, pyarrow. Nothing else. Pin lower bounds.
 - [x] `requirements.txt` exists with runtime deps only — eight packages
 - [x] `prophet`, `pmdarima`, `statsmodels`, `requests` absent, and asserted *unreachable*
       from any page rather than merely absent from the file
-- [ ] Fresh venv install from it can run `streamlit run app.py` — **deferred to T2.5**,
+- [x] Fresh venv install from it runs the app — **settled by T2.5**: 39 distributions, no compilers, 67/67 renders inside that venv,
       which owns the clean-environment check
 
 `tests/test_runtime_dependencies.py` (8). The expected set is not written down: it is walked
@@ -1194,9 +1208,9 @@ Tokens (`COLORS`, `DIVERGING_SCALE`, CSS custom properties) separate from layout
 separate from component CSS. `inject_css()` composes them.
 
 **Acceptance**
-- [ ] No resulting file over 400 lines
-- [ ] `COLORS` and `DIVERGING_SCALE` importable from one tokens module
-- [ ] Single CSS injection point preserved
+- [x] No resulting file over 400 lines — `tokens.py` 36, `css.py` 39, `css_responsive.py` 48, `css_layout.py` 301, `css_landing.py` 317, `css_components.py` 340
+- [x] `COLORS` and `DIVERGING_SCALE` importable from one tokens module, re-exported from `css.py` so existing imports still work
+- [x] Single CSS injection point preserved — guarded by `tests/test_file_sizes.py`, which also fails on a page emitting its own `<style>`
 
 ---
 
@@ -1210,9 +1224,9 @@ number"*. Add an `explanation(text)` helper and a prose block under the landing 
 each KPI row, and each chart.
 
 **Acceptance**
-- [ ] `explanation()` component exists and is styled
-- [ ] Landing stat strip, every KPI row and every chart has one
-- [ ] Copy comes from `labels.py`, and its numbers are format-interpolated from data, not typed
+- [x] `explanation()` component exists and is styled
+- [x] Landing stat strip, KPI rows, map, distribution and ranking tables each have one
+- [x] Copy comes from `labels.py`, and its numbers are interpolated from provenance — a test fails on a literal figure in an explanation
 
 ---
 
@@ -1226,10 +1240,10 @@ A "?" affordance in card headings that reveals definitions for the terms that ca
 replacing bare `title=` attribute tooltips. Include `help_aria` labelling.
 
 **Acceptance**
-- [ ] `help_badge(*terms)` renders a "?" with a popover
-- [ ] Glossary terms live in `labels.py`
-- [ ] Applied to at least the map, distribution and ranking cards
-- [ ] Keyboard accessible with an aria label
+- [x] `help_badge(*terms)` renders a "?" with a popover; an unknown term raises rather than rendering a mark that explains nothing
+- [x] Glossary terms live in `labels.py` — five entries, keys built at runtime, so the orphan guard learned to follow an f-string prefix
+- [x] Applied to the map, distribution **and ranking** cards — the ranking one was missing until this review; the guard now requires three
+- [x] Keyboard accessible with an aria label — a real `<button>`, and the popover opens on `:focus`, not only `:hover`
 
 ---
 
@@ -1243,9 +1257,9 @@ Promote the data vintage from sidebar footnote to a visible badge, as Skattekraf
 does. `footer_note()` gains an `updated` parameter to match its signature there.
 
 **Acceptance**
-- [ ] `vintage_badge()` exists, reads from provenance
-- [ ] Visible on the landing page and every data page
-- [ ] `footer_note(source, version, updated)` signature matches the reference
+- [x] `vintage_badge()` exists and reads `generated_at()`, asserted against the artifact rather than the clock
+- [x] Visible on the landing page and all six data pages
+- [x] `footer_note(source, version, updated)` signature matches the reference, asserted by `inspect.signature`
 
 ---
 
@@ -1258,9 +1272,9 @@ does. `footer_note()` gains an `updated` parameter to match its signature there.
 Year and risk filtering is currently written out in each page. Extract it.
 
 **Acceptance**
-- [ ] One module owns year and risk filtering
-- [ ] No page maps `{"Hög": "hog", ...}` itself
-- [ ] Empty risk selection means "all" in exactly one place
+- [x] One module owns year and risk filtering
+- [x] No page maps `{"Hög": "hog", ...}` itself — and `sidebar.py` now builds its pills from `filters.RISK_LABELS`, so the labels offered and the labels understood cannot drift
+- [x] Empty risk selection means "all" in exactly one place; an unrecognised label means all too, rather than none
 
 ---
 
@@ -1274,9 +1288,9 @@ KRI's *"render every dashboard table through one shared component"*. Replace the
 per-page HTML table strings.
 
 **Acceptance**
-- [ ] One renderer produces every `.shai-table`
-- [ ] No page builds table HTML inline
-- [ ] Rank cell, municipality name, numeric alignment and risk pill all handled centrally
+- [x] One renderer produces every `.shai-table`
+- [x] No page builds table HTML inline — both hand-rolled templates retired, and a test fails on `<table` or a cell class in a page
+- [x] Rank cell, municipality name, numeric alignment and risk pill all handled centrally
 
 ---
 
@@ -1287,9 +1301,9 @@ per-page HTML table strings.
 **Reference:** KRI `riksoversikt.py` — "Om kartan", "Om fördelningsgrafen", "Om rankningstabellerna"
 
 **Acceptance**
-- [ ] Map, distribution chart and ranking tables each have an explanatory expander
-- [ ] Copy from `labels.py`
-- [ ] Each states what the reader can and cannot conclude
+- [x] Map, distribution chart and ranking tables each have one on page 01; pages 02 and 03 gained theirs too
+- [x] Copy from `labels.py` — ten inline expander titles moved across, and a test fails on any inline title
+- [x] Each states what the reader can and cannot conclude (unweighted county means; forecast direction not level; variation not contribution)
 
 ---
 
@@ -1303,9 +1317,9 @@ Landing-only functions (`render_landing_hero`, `render_landing_stat_strip`,
 `render_landing_nav_card`, `render_landing_credibility`) move out.
 
 **Acceptance**
-- [ ] `components.py` holds only components used by more than one page
-- [ ] Neither file over 400 lines
-- [ ] `app.py` imports landing components from `landing.py`
+- [x] `components.py` holds only components used by more than one page — 209 lines
+- [x] Neither file over 400 lines — `components.py` 209, `landing.py` 299
+- [x] `app.py` imports landing components from `landing.py`
 
 ---
 
@@ -1318,9 +1332,9 @@ Move regime definitions, calculation and chart construction into `src/kontantins
 page keeps layout and wiring only.
 
 **Acceptance**
-- [ ] Page under 400 lines
-- [ ] No regulatory constant defined in a page file
-- [ ] Regime logic unit-testable without Streamlit
+- [x] Page under 400 lines — **373**, from 885
+- [x] No regulatory constant defined in a page file — guarded for the regime table, colour map, descriptions and county lookup
+- [x] Regime logic unit-testable without Streamlit — `engine.py`, `regions.py` and `charts.py` import no Streamlit; only the two view modules do
 
 ---
 
@@ -1334,8 +1348,10 @@ Skattekraftspanelen uses `primaryColor = "#C4A35A"` (gold) and
 not the brand navy.
 
 **Acceptance**
-- [ ] `primaryColor` and `font` match the reference
-- [ ] Streamlit-native widgets (pills, sliders) pick up the gold accent
+- [x] `primaryColor` = `#C4A35A` and `font` = `Source Sans 3, sans-serif`, and a test ties `primaryColor` to `COLORS["accent"]`
+- [ ] Streamlit-native widgets (pills, sliders) pick up the gold accent — **unverified**: it
+      follows from `primaryColor`, but confirming it needs a browser, and `AppTest` does not
+      render Streamlit's own widget chrome
 
 ---
 
@@ -1550,13 +1566,107 @@ present, since claiming D2 met would be the same defect Finding L describes.
 
 ---
 
-## 9. Session log
+## 9. Final state — what shipped, what is left, what is verified
+
+Written 2026-09-16, after T4.7. This section is the answer to "is it working?" and is
+deliberately separate from the task list above, which records *what was done* rather
+than *what is true now*.
+
+### 9.1 Verification evidence
+
+Every figure here was measured, not recalled.
+
+| Check | Result |
+|---|---|
+| `pytest tests/` | **582 passed, 0 failed, 1 skipped** |
+| Bare `pytest` (what editors and CI run) | collects and passes — it could not even collect before T2.2 |
+| Page renders | **67/67 clean** — 6 pages × 11 years + landing, inside the suite since T4.4 |
+| Renders in a clean venv | **67/67**, `requirements.txt` only, on capped dependencies |
+| Clean install | 39 distributions, no compiler invoked |
+| `src/` coverage | **44 %**, from 15 % after Phase 1 |
+| Every module ≤ 400 lines | yes, except two exempted with ceilings (R10) |
+
+The one skipped test is a forecast-data gate that predates this work (`test_validation.py`),
+not a masked failure.
+
+### 9.2 What the app no longer does
+
+Phase 1's premise was that the app was serving numbers it could not support. Specifically,
+and each of these was live:
+
+| Was | Now |
+|---|---|
+| Risk classes **inverted** on the map for every year but 2014 (Finding N) | Solna/Stockholm/Danderyd are `hog`, Ragunda/Sorsele are `lag`; `corr(z_c, price) = 0.875` |
+| Selecting 2014 silently no-opped the risk filter and rendered a fabricated "0 high-risk" KPI (Finding A) | 2014 carries classes (80 `hog`); pages read the artifact and recompute nothing |
+| Two selectable years had **no data at all** (Finding B) | The selector is derived from `complete_case_max_year()` |
+| "Last updated" came from `date.today()` (Finding C) | Comes from the artifact's `generated_at`, and is now a visible badge |
+| Map clipped at fixed ±2.5 — 104 municipality-years off the green end, top 43 % of the red ramp unused (Finding D) | Domain built per year from the data; clipping zero |
+| `z_c` z-scored raw on a ratio whose normality is rejected at p < 6e-15 (Finding Q) | Log-transformed first; normal in all eleven years (p = 0.34–0.83) |
+| A high-risk **count** carried a year-on-year delta and an arrow (Finding F) | Delta gone; the card says "relative position within the year" |
+| Unemployment silently a year behind — the client never asked for 2025 | Ceiling resolved at fetch time |
+| An imputed-income year re-based **Version B for every historical year** | `complete_case()` filters before scoring |
+
+### 9.3 What is left
+
+**One acceptance criterion in this plan is genuinely open.**
+
+- **T2.5** — *deployed Streamlit Cloud app confirmed working.* Needs the account owner. Every
+  locally testable part of it passes, including a clean-venv install and render.
+- **T3.12** — *Streamlit-native widgets pick up the gold accent.* Follows from `primaryColor`,
+  but `AppTest` does not render Streamlit's own widget chrome, so confirming it needs a browser.
+
+**One goal is met in capability but not in appearance.** D2 set convergence on
+Skattekraftspanelen's design. Neither reference repository exists on this machine (§0), so
+T3.4–T3.9 were built from this plan's descriptions. The components are present and tested
+behaviourally; **whether they look like the reference is unverified.** `docs/DESIGN_SYSTEM.md`
+§7 says so, and a test asserts that admission stays there.
+
+**Ten risks outlive the plan**, in `docs/OPEN_RISKS.md`. The ones that would change a decision:
+
+| # | Status | Why it still matters |
+|---|---|---|
+| **R1** | OPEN, High | Version B pools its component z-scores, so any panel change re-bases every historical value. `complete_case()` blocks only the *imputed* path. Next spring income publishes 2025, the complete case legitimately advances, and every historical B value shifts again — silently. |
+| **R5** | OPEN, High | The refresh pipeline is at 0 %: `build_panel.py` (346 statements), `scb_client.py` (241), both forecast pipelines. This is the code that builds what everything else reads. |
+| **R7** | ACCEPTED, High | Caps now block the *next* major boundary, but a clean install still resolves pandas 3.0.5 and numpy 2.5.3 — versions no test here has exercised. |
+| **R3** | OPEN | Nobody has run `pip install -e ".[pipeline]"` from empty. prophet and pmdarima were already present here, so T2.4 proved the pipeline *runs*, not that it *installs*. |
+| **R2** | OPEN | Five sites in pages 02, 04 and 05 still read their year lists from the data rather than `YEAR_RANGE`. Harmless only because `complete_case()` holds the index at 2024. |
+| **R8** | OPEN | `folium_static` is deprecated and scheduled for removal, on the call that draws the map. |
+
+### 9.4 Is it working as intended?
+
+**Yes for what the plan set out to fix, with three honest qualifications.**
+
+Working and verified: the index is correct and its orientation is right way up; every offered
+year renders; no displayed number is fabricated or stale-but-labelled-fresh; the app installs
+from an eight-package runtime file with no compiler; the copy cannot silently disagree with the
+data; and 582 tests plus 67 renders run on a bare `pytest`.
+
+The qualifications:
+
+1. **Nothing here proves the deployed app works.** Everything is verified locally, including in
+   a clean virtual environment, but the Streamlit Cloud deploy is unconfirmed.
+2. **The visual half of Phase 3 is untested.** Capability is not appearance.
+3. **The refresh pipeline is the least verified part of the system and the most consequential.**
+   It runs by hand once or twice a year and has no tests. R5 and R10 both point at it.
+
+A note on how much of this work was *unplanned*: eleven defects were found that the audit did
+not list, and several were worse than the task that uncovered them — inverted risk classes, a
+non-normal z-score, a data client that never asked for the current year, an imputed year
+re-basing published values, a test suite that could not be collected by its own documented
+command, and four methodology rows that went stale during this very session. Where a task's
+acceptance criterion turned out to be unsatisfiable or wrong, that is recorded next to the task
+rather than quietly ticked — see T3.2's criterion 2 and T4.1's coverage scope.
+
+---
+
+## 10. Session log
 
 Append one line per work session: date, tasks touched, outcome, anything the next session needs.
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | — (review) | **Status review, no feature work.** Audited this document against the code: the task table said 34/34 DONE while **32 acceptance boxes were still unticked**, which breaks this plan's own rule about not marking a task done without its evidence. Verified each one and ticked 30; two stay open and are now annotated with *why* (the Streamlit Cloud deploy needs the account owner; the gold widget accent needs a browser, since `AppTest` does not render Streamlit's own chrome). One real gap surfaced: **T3.5 required the glossary badge on the ranking cards too** and only the map and distribution had it — added, and the guard tightened from two call sites to three. Also corrected stale figures in `OPEN_RISKS.md`: **R5 said 15 % coverage and `affordability.py` at 0 %**; it is now 44 % and 65 %, and the register had gone stale in exactly the way T4.1 exists to prevent in the UI. Added **§9 Final state** with measured evidence, what the app no longer does, and an explicit list of what is left. | The plan is closed. `docs/OPEN_RISKS.md` is now the live document: **R1** (Version B re-bases on any panel change) and **R5** (refresh pipeline at 0 %) are the High items, and **R3** (does `.[pipeline]` install from empty?) is the cheapest to settle. |
 | 2026-09-16 | T4.7 | **DONE — 34 / 34. The plan is complete.** `DESIGN_SYSTEM.md` regenerated from the composed stylesheet: 79 classes, all tokens, the Folium map and its empirical scale, and a contributor checklist. `tests/test_design_system_doc.py` (26) checks the inventory **both ways** and verifies the map section against `choropleth.py`. Fixed two of my own tests in the process — one searched the whole document for scale colours that are also tokens, the other matched a *comment* recording the abandoned CARTO host rather than live code. **Final: 582 passed, 0 failed, 1 skipped; 67/67 renders, also inside a clean venv on capped dependencies; bare `pytest` collects.** | Nothing left in this plan. Read `docs/OPEN_RISKS.md` next: **R1** (Version B re-bases on every refresh) and **R5** (the index formulas have no tests) are the two High items still open, and **R3** — whether `pip install -e ".[pipeline]"` works from scratch — is the one claim in Phase 2 nobody has verified. Phase 3's visual convergence is behaviourally tested but not visually confirmed against Skattekraftspanelen. |
 | 2026-09-16 | T3.4–T3.9 | **All DONE — Phase 3 complete.** `explanation()`, `help_badge()` and `vintage_badge()` added with CSS and 32 new labels; `src/ui/filters.py` and `src/ui/data_table.py` now own risk filtering and every `.shai-table`; contextual expanders on pages 01–03. The glossary popover is a real `<button>` with an aria-label and opens on focus, not only hover — the `title=` tooltips it replaces were reachable by neither keyboard nor touch. `filters.py` is the single source of the risk labels *and* the sidebar reads them from it, so the pills a user picks and the labels the filter understands cannot drift. Two dead labels fell out (the old inline risk map) and two inline table templates were retired. **Suite: 556 passed, 0 failed, 1 skipped.** | Next: **T4.7**, the last task. Note for a reviewer: T3.4–T3.9 are *behaviourally* verified, not visually — no reference repo on this machine (§0). Also: I mangled `01_Riksoversikt.py` twice with index-based splices before restoring it from the last commit and re-applying the edits with exact anchors. If something on that page looks wrong, that is where to look first. |
 | 2026-09-16 | T4.3, T4.6 | **Both DONE. Phase 4 complete except T4.7**, which depends on all of Phase 3. T4.3: orientation contract asserted verbatim and its inversions banned. Found the limitation register heading off by one (F1–F15 introducing F1–F16). F16's "ungefär en fjärdedel" recomputed from the artifact. One test I wrote was wrong and got reframed — banning every exact split would have deleted D6's own evidence. T4.6: 19 docs → 9 maintained plus a 6-file archive; renaming broke references in eight files including three `src/` docstrings, now guarded. **Suite: 395 passed, 0 failed, 1 skipped.** | Next: **T3.2** onward. §0 still applies: no reference repo on this machine, so T3.4–T3.9 and T3.12 will be built from the plan's descriptions rather than matched against Skattekraftspanelen. Re-check them if that repo becomes available. |

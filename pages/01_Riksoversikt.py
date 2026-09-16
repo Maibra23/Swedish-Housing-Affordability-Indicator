@@ -270,7 +270,7 @@ def _ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
             Column(L("rv.shai"), lambda row: f"{row.get('version_c', 0):.1f}", numeric=True),
             Column(L("rv.risk"), lambda row: risk_pill(row.get("risk_c", "medel")), kind="pill"),
         ],
-        title=title,
+        title=title + help_badge("rang", "version_c", "riskklass"),
         subtitle=f"Version C · {selected_year}",
         tag=L("rv.ranking"),
     )
