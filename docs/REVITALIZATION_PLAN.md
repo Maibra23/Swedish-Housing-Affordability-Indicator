@@ -6,9 +6,9 @@ correct, deployable, and visually consistent state after five months of drift.
 **Created:** 2026-09-15
 **Baseline commit:** `1b17dab` (fix: sidebar always visible — hide toggle buttons, responsive on mobile)
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
-**Status:** IN PROGRESS — Phases 1 and 2 complete; Phase 4 complete except T4.7 · **Phase 3 complete** · 33 / 34 tasks
-**Current phase:** Phase 4 · last task **T4.7**
-**Test suite:** 556 passed, 0 failed, 1 skipped (renders now inside the suite)
+**Status:** **COMPLETE — 34 / 34 tasks.** All four phases done.
+**Current phase:** — · see `docs/OPEN_RISKS.md` for what outlives this plan
+**Test suite:** 582 passed, 0 failed, 1 skipped · 67/67 renders, also in a clean venv
 
 ---
 
@@ -460,7 +460,7 @@ everything to `.shai-*`.
 | T4.4 | `test_pages_render.py` | 4 | **DONE** (pulled forward) |
 | T4.5 | `test_choropleth.py` | 4 | **DONE** (landed early, with T1.6/T1.7) |
 | T4.6 | Delete superseded docs; consolidate | 4 | **DONE** |
-| T4.7 | Rewrite `DESIGN_SYSTEM.md` to match shipped code | 4 | TODO |
+| T4.7 | Rewrite `DESIGN_SYSTEM.md` to match shipped code | 4 | **DONE** |
 
 ---
 
@@ -1344,6 +1344,9 @@ not the brand navy.
 **Goal:** the Phase 1 defects become structurally unable to recur, and the docs describe the
 code that actually ships.
 **Exit criterion:** the copy-vs-data test passes, pages render under test, superseded docs gone.
+— **MET.** T4.1 caught live drift on its first run; T4.4 put the 67-render sweep inside the
+suite; 19 documents became 9 plus an archive; `DESIGN_SYSTEM.md` is now generated from the
+stylesheet and checked both ways.
 
 ---
 
@@ -1512,7 +1515,7 @@ parametrised test now fails on any code comment citing a document that does not 
 
 ---
 
-### T4.7 — Rewrite `DESIGN_SYSTEM.md` · TODO
+### T4.7 — Rewrite `DESIGN_SYSTEM.md` · DONE
 
 **Fixes:** Finding L
 **Files:** `docs/DESIGN_SYSTEM.md`
@@ -1524,10 +1527,26 @@ components (`help_badge`, `explanation`, `vintage_badge`, `data_table`) and the 
 map scale. Add a maintenance rule requiring this document to change with the CSS.
 
 **Acceptance**
-- [ ] Every documented class exists in the CSS
-- [ ] Every CSS class is documented
-- [ ] Map section describes Folium and the empirical colormap
-- [ ] Contributor verification checklist included
+- [x] Every documented class exists in the CSS
+- [x] Every CSS class is documented — all **79**, checked in *both* directions
+- [x] Map section describes Folium and the empirical colormap, and is checked against
+      `choropleth.py` rather than trusted
+- [x] Contributor verification checklist included, with every test it names asserted to exist
+
+`tests/test_design_system_doc.py` (26). The document was generated *from* the composed
+stylesheet, so it could not be wrong on the day it was written; the tests are what stop it
+going wrong later. The previous version described a Plotly `go.Scattergeo` map that commit
+`4f98a23` had already replaced — Finding L exactly.
+
+Two of my own tests were wrong and got fixed rather than accommodated. The scale-order check
+searched the whole document, where several scale colours also appear as tokens; it now reads
+only the scale line. And the "CARTO is gone" check matched a **comment** in `choropleth.py`
+recording the tile host that had to be abandoned — it now runs against executable source via
+`tests/sourcetools.py`, the same distinction that file was extracted to make.
+
+Section 7 states what the document cannot verify: **visual equivalence with Skattekraftspanelen
+is unchecked**, because the reference is not on this machine. A test asserts that admission is
+present, since claiming D2 met would be the same defect Finding L describes.
 
 ---
 
@@ -1538,6 +1557,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
+| 2026-09-16 | T4.7 | **DONE — 34 / 34. The plan is complete.** `DESIGN_SYSTEM.md` regenerated from the composed stylesheet: 79 classes, all tokens, the Folium map and its empirical scale, and a contributor checklist. `tests/test_design_system_doc.py` (26) checks the inventory **both ways** and verifies the map section against `choropleth.py`. Fixed two of my own tests in the process — one searched the whole document for scale colours that are also tokens, the other matched a *comment* recording the abandoned CARTO host rather than live code. **Final: 582 passed, 0 failed, 1 skipped; 67/67 renders, also inside a clean venv on capped dependencies; bare `pytest` collects.** | Nothing left in this plan. Read `docs/OPEN_RISKS.md` next: **R1** (Version B re-bases on every refresh) and **R5** (the index formulas have no tests) are the two High items still open, and **R3** — whether `pip install -e ".[pipeline]"` works from scratch — is the one claim in Phase 2 nobody has verified. Phase 3's visual convergence is behaviourally tested but not visually confirmed against Skattekraftspanelen. |
 | 2026-09-16 | T3.4–T3.9 | **All DONE — Phase 3 complete.** `explanation()`, `help_badge()` and `vintage_badge()` added with CSS and 32 new labels; `src/ui/filters.py` and `src/ui/data_table.py` now own risk filtering and every `.shai-table`; contextual expanders on pages 01–03. The glossary popover is a real `<button>` with an aria-label and opens on focus, not only hover — the `title=` tooltips it replaces were reachable by neither keyboard nor touch. `filters.py` is the single source of the risk labels *and* the sidebar reads them from it, so the pills a user picks and the labels the filter understands cannot drift. Two dead labels fell out (the old inline risk map) and two inline table templates were retired. **Suite: 556 passed, 0 failed, 1 skipped.** | Next: **T4.7**, the last task. Note for a reviewer: T3.4–T3.9 are *behaviourally* verified, not visually — no reference repo on this machine (§0). Also: I mangled `01_Riksoversikt.py` twice with index-based splices before restoring it from the last commit and re-applying the edits with exact anchors. If something on that page looks wrong, that is where to look first. |
 | 2026-09-16 | T4.3, T4.6 | **Both DONE. Phase 4 complete except T4.7**, which depends on all of Phase 3. T4.3: orientation contract asserted verbatim and its inversions banned. Found the limitation register heading off by one (F1–F15 introducing F1–F16). F16's "ungefär en fjärdedel" recomputed from the artifact. One test I wrote was wrong and got reframed — banning every exact split would have deleted D6's own evidence. T4.6: 19 docs → 9 maintained plus a 6-file archive; renaming broke references in eight files including three `src/` docstrings, now guarded. **Suite: 395 passed, 0 failed, 1 skipped.** | Next: **T3.2** onward. §0 still applies: no reference repo on this machine, so T3.4–T3.9 and T3.12 will be built from the plan's descriptions rather than matched against Skattekraftspanelen. Re-check them if that repo becomes available. |
 | 2026-09-16 | T4.1 | **DONE, and it caught real drift immediately.** The methodology source table still claimed four series end 2024 after T2.4 moved them to 2025 — invisible to 345 other tests because none of them read prose. Those seven rows now interpolate `source_coverage()`, which turned the test from *compare copy to data* into *guard that copy stays derived*; drift is now impossible rather than detected. Also re-derives the D5 panel-mean extremes (−0,37/2015, +0,86/2023 — exact today) because R1 makes that the sentence most likely to go stale. Narrowed the coverage criterion on purpose: 96 labels contain digits, almost all domain parameters, so the guard polices bare four-digit years and classifies the rest. **Suite: 345 passed, 0 failed, 1 skipped.** | Next: **T4.3** then **T4.6**, both independent of the reference repo. Then the Phase 3 remainder — §0 lists which five are self-contained. |
