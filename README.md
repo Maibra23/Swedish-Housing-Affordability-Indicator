@@ -99,6 +99,7 @@ troubleshooting reference.
 | `docs/DEPLOYMENT.md` | Install paths, data vintage, refresh, file inventory, troubleshooting |
 | `docs/REVITALIZATION_PLAN.md` | The work plan this codebase is being brought back through |
 | `docs/OPEN_RISKS.md` | Known hazards and pending decisions, with recommendations |
+| `docs/OPTIMIZATION_PLAN.md` | Payload, caching and coverage work, with measurements |
 | `docs/DESIGN_SYSTEM.md` | CSS tokens and component patterns |
 | `docs/CHOROPLETH_MAP_REFERENCE.md` | Folium map implementation reference |
 | `docs/PRD.md` | Product requirements |
