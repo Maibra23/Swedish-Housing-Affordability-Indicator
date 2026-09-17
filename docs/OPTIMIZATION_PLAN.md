@@ -17,7 +17,7 @@ which is the only part of the system with none.
 **Tech Stack:** Streamlit 1.55, folium/branca, pandas, pyarrow, pytest. No additions.
 
 **Created:** 2026-09-17, after the Windows performance audit (commit `5d0ec1e`).
-**Status:** IN PROGRESS — 3 / 8 tasks. Phase B complete; D1 done.
+**Status:** IN PROGRESS — 5 / 8 tasks. Phases A and B complete; D1 done.
 **Prerequisite:** `pytest tests/` (645 passed) and `python scripts/audit.py` (27 passed) must
 be green before starting, so any regression is attributable.
 
@@ -97,7 +97,7 @@ and this is a considered exception, not an oversight.
 | # | Question | Blocks | Recommendation |
 |---|----------|--------|----------------|
 | | *Open decisions are `Q`; locked ones are `L`; tasks are `A1`–`D3`. An earlier draft numbered decisions `D1`/`D2`, which collided with Tasks D1 and D2.* | | |
-| **Q1** | **Should the risk-pill filter change the map at all?** | A1, A2 | **No — the map is the national picture; the pills filter the lists.** Three reasons, not one. (a) It is already broken: an excluded municipality gets `_z = 0.0`, which paints `#e6e5e6` against a real median's `#e5e7eb` — indistinguishable, so filtering to "Hög" currently shows ~200 municipalities *lying* about being median. (b) The colour scale is currently built from the filtered subset, so the legend silently rescales when you touch a pill, and the same colour means different things. (c) It collapses the cache input space from 77 to 11. If you would rather the filter *did* affect the map, then A1 changes: keep passing `df_ranked`, and instead set `_z` to `None` for municipalities absent from the frame and return a neutral grey from `_style` when it is `None` — so an excluded municipality reads as excluded rather than as median. The colormap must still be built from the whole year, or the legend keeps rescaling. Accept that the cache holds 24 of 77 combinations and that R11 stays open. |
+| ~~**Q1**~~ | **ANSWERED 2026-09-17: No.** The map is the national picture; the pills filter the lists. Phase A proceeds as written. Should the risk-pill filter change the map at all? | A1, A2 | **No — the map is the national picture; the pills filter the lists.** Three reasons, not one. (a) It is already broken: an excluded municipality gets `_z = 0.0`, which paints `#e6e5e6` against a real median's `#e5e7eb` — indistinguishable, so filtering to "Hög" currently shows ~200 municipalities *lying* about being median. (b) The colour scale is currently built from the filtered subset, so the legend silently rescales when you touch a pill, and the same colour means different things. (c) It collapses the cache input space from 77 to 11. If you would rather the filter *did* affect the map, then A1 changes: keep passing `df_ranked`, and instead set `_z` to `None` for municipalities absent from the frame and return a neutral grey from `_style` when it is `None` — so an excluded municipality reads as excluded rather than as median. The colormap must still be built from the whole year, or the legend keeps rescaling. Accept that the cache holds 24 of 77 combinations and that R11 stays open. |
 | Q2 | Enable `server.enableStaticServing` for the stylesheet? | C1 only | **Yes, with an inline fallback.** 24 KB per page load becomes one cached request. But it is unverified on Community Cloud, so the fallback is not optional. If C1 proves unreliable, mark it `SKIPPED` — this is the least valuable phase. |
 
 ---
@@ -165,8 +165,8 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 
 | Task | Title | Phase | Status |
 |------|-------|-------|--------|
-| A1 | Map shows every municipality; cache keyed on year | A | TODO |
-| A2 | Assert the map is independent of the risk filter | A | TODO |
+| A1 | Map shows every municipality; cache keyed on year | A | **DONE** |
+| A2 | Assert the map is independent of the risk filter | A | **DONE** |
 | B1 | `scripts/shrink_geojson.py` — 5 dp + minify | B | **DONE** |
 | B2 | Payload ceiling test and render equivalence | B | **DONE** |
 | C1 | Serve the stylesheet statically, with fallback | C | TODO |
@@ -180,12 +180,14 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 
 **Goal:** the map tells the truth, and depends on the year alone.
 **Exit criterion:** toggling a risk pill does not rebuild the map; no municipality is
-painted a colour it did not earn.
-**Gated by:** Q1. Do not start until answered.
+painted a colour it did not earn. — **MET.** Risk toggles cost ~45 ms, down from ~370 ms;
+no "Saknas" placeholder reaches the map; all 290 municipalities drawn on a stable, year-wide
+colour scale. R11 closed.
+**Gated by:** Q1 — **answered No on 2026-09-17**, so this phase is unblocked.
 
 ---
 
-### Task A1 — Map shows every municipality; cache keyed on year · TODO
+### Task A1 — Map shows every municipality; cache keyed on year · DONE
 
 **Files:**
 - Modify: `src/ui/choropleth.py` (the `_map_html` signature and `build_colormap` call)
@@ -331,7 +333,7 @@ git commit -m "fix: map renders the whole year, not the risk-filtered subset"
 
 ---
 
-### Task A2 — Assert the map is independent of the risk filter · TODO
+### Task A2 — Assert the map is independent of the risk filter · DONE
 
 **Files:**
 - Modify: `tests/test_choropleth_cache.py`

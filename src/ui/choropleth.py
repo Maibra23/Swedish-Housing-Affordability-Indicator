@@ -246,6 +246,10 @@ def _map_html(
         feat["properties"]["Arbetslöshet"] = d.get("unemp_fmt", "Saknas")
         feat["properties"]["_z"] = d.get("z_score", 0.0)
 
+    # This must be the whole year, not a filtered subset. When it was the subset,
+    # moving a risk pill rescaled the legend and the same colour meant different
+    # things before and after the click — Stockholm went #c56f43 to #b94a48 with
+    # its z_c unchanged. See Q1 in docs/OPTIMIZATION_PLAN.md.
     colormap = build_colormap(sub[value_col].astype(float))
 
     # Basemap — light polygons only (no OSM placenames: a labelled basemap shows
