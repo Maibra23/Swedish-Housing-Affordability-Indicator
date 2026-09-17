@@ -87,3 +87,23 @@ def _rings(node: object) -> list[list]:
     for child in node:
         rings.extend(_rings(child))
     return rings
+
+
+def test_the_rendered_map_document_shrank_with_it() -> None:
+    """The file matters because it is embedded in what crosses to the browser.
+
+    folium inlines the GeoJSON into the map HTML, so this is not an asset the
+    browser fetches once and caches — it rides inside every distinct render.
+    """
+    import pandas as pd
+
+    from src.ui.choropleth import _map_html
+
+    ranked = pd.read_parquet("data/processed/affordability_ranked.parquet")
+    html = _map_html(ranked[ranked["year"] == ranked["year"].max()])
+    kb = len(html.encode("utf-8")) / 1024
+    assert kb < 900, (
+        f"the rendered map is {kb:.0f} KB. It was 1 234 KB before B1 and should be "
+        "roughly 800 KB after; if it has grown back, check whether something is "
+        "re-adding precision or embedding the geometry twice."
+    )
