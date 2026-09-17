@@ -22,7 +22,7 @@ These outlive it.
 | R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN |
-| R11 | The map cache cannot hold every year x risk combination | Low | **ACCEPTED** |
+| R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 
 ---
@@ -393,6 +393,19 @@ an unusual risk combination pays one 380 ms rebuild.
 polygon *style* by risk class, so the map depends on the year alone and 11 entries suffice.
 That changes what the map shows — filtered municipalities would grey out rather than vanish —
 which is a design decision, not a performance one.
+
+### CLOSED 2026-09-17
+
+Dissolved rather than mitigated. Decision Q1 was answered **No**: the map is the national
+picture and the risk pills filter the lists below it, so the map depends on the year alone.
+The input space is 11 entries, not 77, and `max_entries=24` is comfortable headroom rather
+than a rationed ceiling.
+
+The memory table above is kept because it is the reasoning that led to the design change, not
+because the ceiling still binds.
+
+Measured after the change: **toggling a risk pill costs ~45 ms, down from ~370 ms**, because
+the map no longer rebuilds at all. That was the most common interaction on the page.
 
 ---
 
