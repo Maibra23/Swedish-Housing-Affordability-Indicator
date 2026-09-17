@@ -22,12 +22,18 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Extracted in T-D2: the same forward-fill was written three times, once per
+# panel level. Re-exported so existing importers keep working.
+from src.data.panel_income import (  # noqa: E402
+    IMPUTED_INCOME_GROWTH_RATE,
+    impute_income_forward,
+)
+
 RAW_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
 OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "processed"
 
 # 3% nominal income growth applied when forward-filling imputed years (audit F9).
 # Shared by municipal, county, and national panel builders.
-IMPUTED_INCOME_GROWTH_RATE = 0.03
 
 
 # ---------------------------------------------------------------------------
@@ -308,21 +314,7 @@ def build_municipal_panel() -> pd.DataFrame:
     # Zero-growth was a pessimistic assumption per audit finding F9.
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
-    if max_income_year < current_year:
-        logger.info(
-            "Income lag detected: latest income year %d, current year %d. "
-            "Forward-filling with %.0f%% nominal growth/year.",
-            max_income_year, current_year, IMPUTED_INCOME_GROWTH_RATE * 100,
-        )
-        for fill_year in range(max_income_year + 1, current_year + 1):
-            fill = panel[panel["year"] == max_income_year].copy()
-            fill["year"] = fill_year
-            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
-            fill["median_income"] = fill["median_income"] * growth_factor
-            if "median_income_tkr" in fill.columns:
-                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
-            fill["is_imputed_income"] = True
-            panel = pd.concat([panel, fill], ignore_index=True)
+    panel = impute_income_forward(panel, through_year=current_year)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)
     panel["is_imputed_income"] = panel["is_imputed_income"].fillna(False).astype(bool)
 
@@ -442,16 +434,7 @@ def build_county_panel() -> pd.DataFrame:
     # Forward-fill income (same 3% nominal growth as municipal panel)
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
-    if max_income_year < current_year:
-        for fill_year in range(max_income_year + 1, current_year + 1):
-            fill = panel[panel["year"] == max_income_year].copy()
-            fill["year"] = fill_year
-            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
-            fill["median_income"] = fill["median_income"] * growth_factor
-            if "median_income_tkr" in fill.columns:
-                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
-            fill["is_imputed_income"] = True
-            panel = pd.concat([panel, fill], ignore_index=True)
+    panel = impute_income_forward(panel, through_year=current_year)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)
     panel["is_imputed_income"] = panel["is_imputed_income"].fillna(False).astype(bool)
 
@@ -534,16 +517,7 @@ def build_national_panel() -> pd.DataFrame:
     # Forward-fill income (same 3% nominal growth as municipal panel)
     max_income_year = panel["year"].max()
     current_year = pd.Timestamp.now().year
-    if max_income_year < current_year:
-        for fill_year in range(max_income_year + 1, current_year + 1):
-            fill = panel[panel["year"] == max_income_year].copy()
-            fill["year"] = fill_year
-            growth_factor = (1 + IMPUTED_INCOME_GROWTH_RATE) ** (fill_year - max_income_year)
-            fill["median_income"] = fill["median_income"] * growth_factor
-            if "median_income_tkr" in fill.columns:
-                fill["median_income_tkr"] = fill["median_income_tkr"] * growth_factor
-            fill["is_imputed_income"] = True
-            panel = pd.concat([panel, fill], ignore_index=True)
+    panel = impute_income_forward(panel, through_year=current_year)
     panel["is_imputed_income"] = panel.get("is_imputed_income", False)
     panel["is_imputed_income"] = panel["is_imputed_income"].fillna(False).astype(bool)
 
