@@ -35,7 +35,7 @@ These are not preferences. Each one has already caused a defect in this project.
 | **`st.cache_data` hashes its arguments.** | Hashing a DataFrame costs time proportional to its size, so caching a cheap function on a large frame can be slower than not caching. Measure. |
 | **`st.cache_data` returns a copy.** | Safe against caller mutation, but it means the cached value is serialised — a 1.2 MB HTML string costs 1.2 MB per entry. |
 | **Components are iframes with `srcdoc`.** | The whole map document crosses to the browser per distinct render. Payload size is the lever, not CPU. |
-| **No client-side state without extra libraries.** | A filter cannot be applied in the browser. Either the server rebuilds, or the filter must not affect that element. This is the whole of Decision D1. |
+| **No client-side state without extra libraries.** | A filter cannot be applied in the browser. Either the server rebuilds, or the filter must not affect that element. This is the whole of Decision Q1. |
 | **`server.enableStaticServing` is `False` by default.** | Files under `./static/` are served at `/app/static/...` only when it is enabled. Needed for Task C1. |
 
 ### Two constraints specific to `build_panel.py`, found by reading it
@@ -88,7 +88,7 @@ and this is a considered exception, not an oversight.
 |---|----------|--------|-----------|
 | L1 | How to shrink the GeoJSON | **Coordinate precision, not topology simplification** | 5 decimal places is ~1.1 m, which is far below one screen pixel at national zoom, and costs **nothing**. Topology simplification needs `shapely` or `mapshaper` — a runtime dependency for a build-time job, against T2.1. Measured: 842 KB → 430 KB, −49 %. |
 | L2 | Where the shrink happens | **A committed build script, output committed** | The app must not simplify geometry at request time. `data/geo/` is committed precisely so the server does no work. |
-| L3 | Whether to keep `max_entries=24` | **Yes, but it stops mattering** | Under D1 the map depends on the year alone, so 11 entries cover everything and 24 is comfortable headroom. |
+| L3 | Whether to keep `max_entries=24` | **Yes, but it stops mattering** | Under Q1 the map depends on the year alone, so 11 entries cover everything and 24 is comfortable headroom. |
 
 ---
 
@@ -96,8 +96,9 @@ and this is a considered exception, not an oversight.
 
 | # | Question | Blocks | Recommendation |
 |---|----------|--------|----------------|
-| **D1** | **Should the risk-pill filter change the map at all?** | A1, A2 | **No — the map is the national picture; the pills filter the lists.** Three reasons, not one. (a) It is already broken: an excluded municipality gets `_z = 0.0`, which paints `#e6e5e6` against a real median's `#e5e7eb` — indistinguishable, so filtering to "Hög" currently shows ~200 municipalities *lying* about being median. (b) The colour scale is currently built from the filtered subset, so the legend silently rescales when you touch a pill, and the same colour means different things. (c) It collapses the cache input space from 77 to 11. If you would rather the filter *did* affect the map, do A1-alt instead and accept `max_entries` thrashing. |
-| D2 | Enable `server.enableStaticServing` for the stylesheet? | C1 only | **Yes, with an inline fallback.** 24 KB per page load becomes one cached request. But it is unverified on Community Cloud, so the fallback is not optional. If C1 proves unreliable, mark it `SKIPPED` — this is the least valuable phase. |
+| | *Open decisions are `Q`; locked ones are `L`; tasks are `A1`–`D3`. An earlier draft numbered decisions `D1`/`D2`, which collided with Tasks D1 and D2.* | | |
+| **Q1** | **Should the risk-pill filter change the map at all?** | A1, A2 | **No — the map is the national picture; the pills filter the lists.** Three reasons, not one. (a) It is already broken: an excluded municipality gets `_z = 0.0`, which paints `#e6e5e6` against a real median's `#e5e7eb` — indistinguishable, so filtering to "Hög" currently shows ~200 municipalities *lying* about being median. (b) The colour scale is currently built from the filtered subset, so the legend silently rescales when you touch a pill, and the same colour means different things. (c) It collapses the cache input space from 77 to 11. If you would rather the filter *did* affect the map, then A1 changes: keep passing `df_ranked`, and instead set `_z` to `None` for municipalities absent from the frame and return a neutral grey from `_style` when it is `None` — so an excluded municipality reads as excluded rather than as median. The colormap must still be built from the whole year, or the legend keeps rescaling. Accept that the cache holds 24 of 77 combinations and that R11 stays open. |
+| Q2 | Enable `server.enableStaticServing` for the stylesheet? | C1 only | **Yes, with an inline fallback.** 24 KB per page load becomes one cached request. But it is unverified on Community Cloud, so the fallback is not optional. If C1 proves unreliable, mark it `SKIPPED` — this is the least valuable phase. |
 
 ---
 
@@ -180,7 +181,7 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 **Goal:** the map tells the truth, and depends on the year alone.
 **Exit criterion:** toggling a risk pill does not rebuild the map; no municipality is
 painted a colour it did not earn.
-**Gated by:** D1. Do not start until answered.
+**Gated by:** Q1. Do not start until answered.
 
 ---
 
@@ -206,7 +207,7 @@ subset, the legend rescaled whenever a pill moved: the same colour meant
 different things before and after a click.
 
 Making the map take the whole year fixes both and collapses the cache input space
-from 11 years x 7 risk combinations to 11. See Decision D1.
+from 11 years x 7 risk combinations to 11. See Decision Q1.
 """
 
 from __future__ import annotations
@@ -225,12 +226,29 @@ def year_frame() -> pd.DataFrame:
     return ranked[ranked["year"] == ranked["year"].max()]
 
 
-def test_map_is_identical_whatever_the_risk_filter(year_frame: pd.DataFrame) -> None:
-    """The user-facing claim: touching a risk pill must not redraw the map."""
+def test_a_filtered_frame_produces_a_different_map(year_frame: pd.DataFrame) -> None:
+    """`_map_html` renders what it is handed — that is correct and worth pinning.
+
+    An earlier draft of this test asserted the opposite: that filtering could not
+    change the output. It can, and it should. The function is not where the fix
+    lives; the fix is that the *page* stops handing it a filtered frame, which
+    `test_the_page_does_not_hand_the_map_a_filtered_frame` asserts structurally.
+
+    Keeping this test the right way round matters: if it ever starts passing,
+    `_map_html` has begun ignoring its input.
+    """
     full = _map_html(year_frame)
     high_only = _map_html(year_frame[year_frame["risk_c"] == "hog"])
-    assert full == high_only, (
-        "the map changed when the risk filter did; it should render the whole year"
+    assert full != high_only, "_map_html ignored its data argument"
+
+
+def test_a_full_year_produces_one_cache_entry_per_year() -> None:
+    """The point of Q1: eleven inputs, not seventy-seven."""
+    ranked = pd.read_parquet(ARTIFACT)
+    years = sorted(ranked["year"].unique())
+    documents = {_map_html(ranked[ranked["year"] == year]) for year in years}
+    assert len(documents) == len(years), (
+        "two years rendered identically; the map is not varying with its data"
     )
 
 
@@ -269,7 +287,7 @@ change to `choropleth.py` logic. Add only a comment there, above the existing
 ```python
     # This must be the whole year, not a filtered subset. When it was the subset,
     # moving a risk pill rescaled the legend and the same colour meant different
-    # things before and after the click. See D1 in docs/OPTIMIZATION_PLAN.md.
+    # things before and after the click. See Q1 in docs/OPTIMIZATION_PLAN.md.
 ```
 
 Then change the call site in `pages/01_Riksoversikt.py` from
@@ -284,7 +302,7 @@ to
             # The whole year, not `df_ranked`: the map is the national picture and the
             # risk pills filter the lists below it. Passing the filtered frame painted
             # excluded municipalities in the median colour and rescaled the legend on
-            # every pill click. See Decision D1 in docs/OPTIMIZATION_PLAN.md.
+            # every pill click. See Decision Q1 in docs/OPTIMIZATION_PLAN.md.
             render_choropleth(mun_year, key="rv_choropleth")
 ```
 
@@ -361,7 +379,7 @@ and append to its section:
 ```markdown
 ### CLOSED 2026-09-17
 
-Dissolved rather than mitigated. Decision D1 made the map depend on the year alone, so the
+Dissolved rather than mitigated. Decision Q1 made the map depend on the year alone, so the
 input space is 11 entries rather than 77 and `max_entries=24` is comfortable headroom
 instead of a rationed ceiling. The memory table above is kept because it is the reasoning
 that led to the design change.
@@ -562,6 +580,13 @@ def main() -> None:
         feature["geometry"]["coordinates"] = round_coordinates(
             feature["geometry"]["coordinates"]
         )
+        # `geo_point_2d` is a coordinate too — it anchors the municipality name
+        # labels (`src/ui/map_labels._label_latlon`). Rounding the geometry but
+        # not this leaves 580 high-precision values in the file, which fails
+        # tests/test_geojson_payload.py because that scans the whole document.
+        point = feature["properties"].get("geo_point_2d")
+        if point is not None:
+            feature["properties"]["geo_point_2d"] = round_coordinates(point)
 
     GEOJSON.write_text(
         json.dumps(geo, ensure_ascii=False, separators=(",", ":")),
@@ -679,7 +704,7 @@ git commit -m "test: pin the map payload ceiling"
 **Goal:** stop sending 24 KB of CSS inline on every page load.
 **Exit criterion:** the stylesheet is a cacheable request when static serving is available,
 and inline when it is not.
-**Gated by:** D2. **This is the least valuable phase** — if it fights, skip it.
+**Gated by:** Q2. **This is the least valuable phase** — if it fights, skip it.
 
 ---
 
@@ -1087,48 +1112,62 @@ def impute_income_forward(
     panel: pd.DataFrame,
     through_year: int,
     *,
-    group_col: str = "region_code",
     growth_rate: float = IMPUTED_INCOME_GROWTH_RATE,
 ) -> pd.DataFrame:
-    """Extend `median_income` to `through_year` with compound nominal growth.
+    """Extend the panel to `through_year` with compound nominal income growth.
+
+    A faithful extraction of the three inlined loops, including two details that
+    are easy to get wrong and were wrong in this plan's first draft:
+
+    **The anchor year is global, not per region.** The original takes
+    `panel["year"].max()` once and copies every row at that year. A per-region
+    anchor would be different behaviour — arguably better, since it would also
+    fill a region whose series ended early — but it is a change, not a move, and
+    on today's data every region ends at the same year, so an artifact diff would
+    *not* catch the difference. Do not silently improve it here.
+
+    **`median_income_tkr` is scaled by the same factor.** Omitting it leaves the
+    thousands-column at the ungrown value while `median_income` moves, breaking
+    the 1000x relationship the panel maintains.
 
     Args:
-        panel: Frame with `group_col`, `year` and `median_income`.
-        through_year: Last year to fill, inclusive. No rows are added when it is
-            at or below the last observed year.
-        group_col: Region identifier to group by.
+        panel: Frame with `year`, `median_income`, and optionally
+            `median_income_tkr` and `is_imputed_income`.
+        through_year: Last year to fill, inclusive. Nothing is added when it is at
+            or below the panel's last year.
         growth_rate: Annual nominal growth, as a fraction.
 
     Returns:
-        The input plus one filled row per group per missing year, with
-        `is_imputed_income` True on filled rows and False on observed ones.
-        Observed values are never modified.
+        The input plus a copy of the final year's rows for each missing year,
+        income scaled compoundly and `is_imputed_income` True. Observed rows are
+        never modified.
     """
     result = panel.copy()
-    if "is_imputed_income" not in result.columns:
-        result["is_imputed_income"] = False
-    result["is_imputed_income"] = result["is_imputed_income"].fillna(False).astype(bool)
-
-    observed = result[~result["is_imputed_income"]]
-    if observed.empty:
+    if result.empty:
         return result
 
-    filled: list[pd.DataFrame] = []
-    for _, group in observed.groupby(group_col):
-        last_year = int(group["year"].max())
-        anchor = group.loc[group["year"].idxmax()]
-        for year in range(last_year + 1, through_year + 1):
-            row = anchor.copy()
-            row["year"] = year
-            row["median_income"] = float(anchor["median_income"]) * (
-                (1 + growth_rate) ** (year - last_year)
-            )
-            row["is_imputed_income"] = True
-            filled.append(row.to_frame().T)
+    anchor_year = int(result["year"].max())
+    for fill_year in range(anchor_year + 1, through_year + 1):
+        fill = result[result["year"] == anchor_year].copy()
+        fill["year"] = fill_year
+        factor = (1 + growth_rate) ** (fill_year - anchor_year)
+        fill["median_income"] = fill["median_income"] * factor
+        if "median_income_tkr" in fill.columns:
+            fill["median_income_tkr"] = fill["median_income_tkr"] * factor
+        fill["is_imputed_income"] = True
+        result = pd.concat([result, fill], ignore_index=True)
 
-    if not filled:
-        return result
-    return pd.concat([result, *filled], ignore_index=True)
+    result["is_imputed_income"] = (
+        result.get("is_imputed_income", False)
+        if "is_imputed_income" in result.columns
+        else False
+    )
+    result["is_imputed_income"] = (
+        pd.Series(result["is_imputed_income"], index=result.index)
+        .fillna(False)
+        .astype(bool)
+    )
+    return result
 ```
 
 - [ ] **Step 4: Point the three call sites at it**
@@ -1147,6 +1186,11 @@ definition, then replace each of the three inlined loops with
 ```
 
 using whatever frame variable each function already has.
+
+**One detail to preserve:** the original rebuilds `fill` from `panel` on each
+iteration *after* the previous iteration appended to it. Because it always selects
+`year == anchor_year`, and appended rows have later years, the selection is stable
+— so the loop above is equivalent. Verify with Step 5 rather than by reading.
 
 - [ ] **Step 5: Regenerate and prove the output is identical**
 
@@ -1242,18 +1286,43 @@ def test_observed_values_are_never_modified() -> None:
     assert kept["median_income"].tolist() == [400.0, 300.0]
 
 
-def test_each_region_is_filled_from_its_own_last_year() -> None:
-    """A region with a shorter series must not inherit another's anchor."""
+def test_the_anchor_year_is_global_not_per_region() -> None:
+    """Pins the behaviour that exists, not the one that sounds right.
+
+    The original takes `panel["year"].max()` once and copies every row at that
+    year, so a region whose series ended earlier is **not** filled. That is
+    arguably a flaw — but it is the shipped behaviour, and on current data every
+    region ends at the same year, so an artifact diff cannot tell the two apart.
+    Changing it is a decision for `docs/OPEN_RISKS.md`, not a detail to fix while
+    extracting.
+    """
     ragged = pd.DataFrame({
         "region_code": ["0180", "2463"],
         "year": [2024, 2022],
         "median_income": [400.0, 300.0],
     })
     result = impute_income_forward(ragged, through_year=2025)
-    by_region = result.set_index(["region_code", "year"])["median_income"]
-    assert float(by_region[("2463", 2023)]) == pytest.approx(309.0)
-    assert float(by_region[("0180", 2025)]) == pytest.approx(412.0)
-    assert ("0180", 2023) not in by_region.index
+    filled = result[result["is_imputed_income"]]
+
+    assert filled["region_code"].tolist() == ["0180"], (
+        "a region below the global anchor year was filled; that is a behaviour "
+        "change, not an extraction"
+    )
+    assert float(filled["median_income"].iloc[0]) == pytest.approx(412.0)
+
+
+def test_the_thousands_column_is_scaled_with_the_income() -> None:
+    """Omitting this leaves median_income_tkr ungrown and breaks the 1000x ratio."""
+    frame = pd.DataFrame({
+        "region_code": ["0180"],
+        "year": [2024],
+        "median_income": [533800.0],
+        "median_income_tkr": [533.8],
+    })
+    result = impute_income_forward(frame, through_year=2025)
+    filled = result[result["is_imputed_income"]].iloc[0]
+    assert float(filled["median_income"]) == pytest.approx(549814.0)
+    assert float(filled["median_income_tkr"]) == pytest.approx(549.814)
 
 
 def test_nothing_is_added_when_the_target_year_is_already_covered() -> None:
@@ -1343,4 +1412,4 @@ needs.
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
-| 2026-09-17 | — | Plan written from the Windows audit. No code changed. | **Answer D1 before starting Phase A.** Phases B and D are independent of it and of each other; D is the highest value. Start from a green suite (645 passed) and a green audit (27 passed). |
+| 2026-09-17 | — | Plan written from the Windows audit. No code changed. | **Answer Q1 before starting Phase A.** Phases B and D are independent of it and of each other; D is the highest value. Start from a green suite (645 passed) and a green audit (27 passed). |
