@@ -231,7 +231,7 @@ app needs is already in `data/processed/`.
 
 | File | Description |
 |------|-------------|
-| `kommuner.geojson` | 290 municipality polygons for choropleth map (843 KB) |
+| `kommuner.geojson` | 290 municipality polygons for the choropleth (428 KB, coordinates at 5 dp — regenerate with `python scripts/shrink_geojson.py`) |
 
 ---
 

@@ -17,7 +17,7 @@ which is the only part of the system with none.
 **Tech Stack:** Streamlit 1.55, folium/branca, pandas, pyarrow, pytest. No additions.
 
 **Created:** 2026-09-17, after the Windows performance audit (commit `5d0ec1e`).
-**Status:** NOT STARTED — 0 / 8 tasks.
+**Status:** IN PROGRESS — 2 / 8 tasks. Phase B complete.
 **Prerequisite:** `pytest tests/` (645 passed) and `python scripts/audit.py` (27 passed) must
 be green before starting, so any regression is attributable.
 
@@ -167,8 +167,8 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 |------|-------|-------|--------|
 | A1 | Map shows every municipality; cache keyed on year | A | TODO |
 | A2 | Assert the map is independent of the risk filter | A | TODO |
-| B1 | `scripts/shrink_geojson.py` — 5 dp + minify | B | TODO |
-| B2 | Payload ceiling test and render equivalence | B | TODO |
+| B1 | `scripts/shrink_geojson.py` — 5 dp + minify | B | **DONE** |
+| B2 | Payload ceiling test and render equivalence | B | **DONE** |
 | C1 | Serve the stylesheet statically, with fallback | C | TODO |
 | D1 | Property tests for `affordability.py` | D | TODO |
 | D2 | De-triplicate the imputation into one pure function | D | TODO |
@@ -406,11 +406,13 @@ git commit -m "test: pin the map's independence from the risk filter; close R11"
 
 **Goal:** the largest asset in the app stops being 842 KB.
 **Exit criterion:** the GeoJSON is under 450 KB with 290 features intact, and the rendered
-map document shrinks accordingly.
+map document shrinks accordingly. — **MET.** 842 KB → **428 KB** (−49.2 %), and the rendered
+map document 1 234 KB → **860 KB** (−30 %). All 290 features, every property, no collapsed
+ring. 102 choropleth and render tests still pass.
 
 ---
 
-### Task B1 — `scripts/shrink_geojson.py` · TODO
+### Task B1 — `scripts/shrink_geojson.py` · DONE
 
 **Files:**
 - Create: `scripts/shrink_geojson.py`
@@ -637,7 +639,7 @@ git commit -m "perf: shrink kommuner.geojson 49% by coordinate precision alone"
 
 ---
 
-### Task B2 — Payload ceiling and render equivalence · TODO
+### Task B2 — Payload ceiling and render equivalence · DONE
 
 **Files:**
 - Modify: `tests/test_geojson_payload.py`
@@ -1412,4 +1414,5 @@ needs.
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
+| 2026-09-17 | B1, B2 | **Phase B DONE.** GeoJSON 842 KB → 428 KB (−49.2 %), map document 1 234 KB → 860 KB (−30 %), idempotent, 290 features intact. The `geo_point_2d` correction from the plan review mattered: rounding geometry alone would have left 580 high-precision values and failed the test. `tests/test_geojson_payload.py` (6). | Phase D is next and is ungated. **Phase A still needs Q1.** |
 | 2026-09-17 | — | Plan written from the Windows audit. No code changed. | **Answer Q1 before starting Phase A.** Phases B and D are independent of it and of each other; D is the highest value. Start from a green suite (645 passed) and a green audit (27 passed). |
