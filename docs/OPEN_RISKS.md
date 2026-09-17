@@ -24,6 +24,7 @@ These outlive it.
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN (reduced) |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
+| R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 
 ---
 
@@ -457,6 +458,36 @@ not a tidy-up — the same reasoning that made D6 a locked decision rather than 
 **Recommendation:** guard it the next time the formula is being changed for another reason,
 so the re-publication is paid once. A `price <= 0` row should yield `NaN`, joining the nulls
 that `complete_case()` already drops, rather than `inf`.
+
+---
+
+## R13 — 24 KB of CSS is inlined on every page load
+
+**Severity: Low.** Accepted because Streamlit leaves no alternative, not because it is ideal.
+
+`inject_css()` writes the whole 24 KB stylesheet into every page render. A `<link>` to a
+static file would be fetched once and cached instead.
+
+**Task C1 tried exactly that and it cannot work.** Streamlit's `server.enableStaticServing`
+does serve `./static/`, but with the wrong media type:
+
+```
+GET /app/static/shai.css    HTTP 200   25.1 KB
+  Content-Type: text/plain
+  X-Content-Type-Options: nosniff
+```
+
+`nosniff` instructs the browser not to infer a better type, so a stylesheet link pointing
+there is ignored and the page renders unstyled. Streamlit exposes no setting for the media
+type. The work was implemented in full, measured, and reverted.
+
+**Why it is Low.** 24 KB gzips to a few KB on the wire, it is the same bytes every time so an
+HTTP/2 connection handles it cheaply, and it is dwarfed by the 860 KB map document that rides
+in the same response. Fixing the map payload mattered; this does not.
+
+**Revisit if:** Streamlit gains a media-type mapping for static files, or the app moves off
+Community Cloud to a host where a reverse proxy can serve `/static` itself. Flipping it back
+on is a small change — the reasoning is recorded in `src/ui/css.py:inject_css`.
 
 ---
 

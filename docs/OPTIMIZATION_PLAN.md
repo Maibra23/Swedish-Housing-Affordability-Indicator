@@ -17,7 +17,7 @@ which is the only part of the system with none.
 **Tech Stack:** Streamlit 1.55, folium/branca, pandas, pyarrow, pytest. No additions.
 
 **Created:** 2026-09-17, after the Windows performance audit (commit `5d0ec1e`).
-**Status:** IN PROGRESS — 7 / 8 tasks. Phases A, B and D complete. Only C1 remains, gated on Q2.
+**Status:** COMPLETE — 7 done, 1 **SKIPPED** with cause. Phases A, B and D shipped; C1 proved impossible on Streamlit.
 **Prerequisite:** `pytest tests/` (645 passed) and `python scripts/audit.py` (27 passed) must
 be green before starting, so any regression is attributable.
 
@@ -98,7 +98,7 @@ and this is a considered exception, not an oversight.
 |---|----------|--------|----------------|
 | | *Open decisions are `Q`; locked ones are `L`; tasks are `A1`–`D3`. An earlier draft numbered decisions `D1`/`D2`, which collided with Tasks D1 and D2.* | | |
 | ~~**Q1**~~ | **ANSWERED 2026-09-17: No.** The map is the national picture; the pills filter the lists. Phase A proceeds as written. Should the risk-pill filter change the map at all? | A1, A2 | **No — the map is the national picture; the pills filter the lists.** Three reasons, not one. (a) It is already broken: an excluded municipality gets `_z = 0.0`, which paints `#e6e5e6` against a real median's `#e5e7eb` — indistinguishable, so filtering to "Hög" currently shows ~200 municipalities *lying* about being median. (b) The colour scale is currently built from the filtered subset, so the legend silently rescales when you touch a pill, and the same colour means different things. (c) It collapses the cache input space from 77 to 11. If you would rather the filter *did* affect the map, then A1 changes: keep passing `df_ranked`, and instead set `_z` to `None` for municipalities absent from the frame and return a neutral grey from `_style` when it is `None` — so an excluded municipality reads as excluded rather than as median. The colormap must still be built from the whole year, or the legend keeps rescaling. Accept that the cache holds 24 of 77 combinations and that R11 stays open. |
-| Q2 | Enable `server.enableStaticServing` for the stylesheet? | C1 only | **Yes, with an inline fallback.** 24 KB per page load becomes one cached request. But it is unverified on Community Cloud, so the fallback is not optional. If C1 proves unreliable, mark it `SKIPPED` — this is the least valuable phase. |
+| ~~Q2~~ | **ANSWERED by measurement: no, it cannot work.** Enable `server.enableStaticServing` for the stylesheet? | C1 only | **Yes, with an inline fallback.** 24 KB per page load becomes one cached request. But it is unverified on Community Cloud, so the fallback is not optional. If C1 proves unreliable, mark it `SKIPPED` — this is the least valuable phase. |
 
 ---
 
@@ -169,7 +169,7 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 | A2 | Assert the map is independent of the risk filter | A | **DONE** |
 | B1 | `scripts/shrink_geojson.py` — 5 dp + minify | B | **DONE** |
 | B2 | Payload ceiling test and render equivalence | B | **DONE** |
-| C1 | Serve the stylesheet statically, with fallback | C | TODO |
+| C1 | Serve the stylesheet statically, with fallback | C | **SKIPPED** |
 | D1 | Property tests for `affordability.py` | D | **DONE** |
 | D2 | De-triplicate the imputation into one pure function | D | **DONE** |
 | D3 | Test the extracted function; drop the size exemption | D | **DONE** |
@@ -707,12 +707,38 @@ git commit -m "test: pin the map payload ceiling"
 
 **Goal:** stop sending 24 KB of CSS inline on every page load.
 **Exit criterion:** the stylesheet is a cacheable request when static serving is available,
-and inline when it is not.
+and inline when it is not. — **NOT MET, and cannot be.** Streamlit's static file server
+returns `.css` as `Content-Type: text/plain` with `X-Content-Type-Options: nosniff`, so a
+browser refuses to apply it. Implemented, measured, reverted. Details below.
+
+> ### Outcome: SKIPPED, 2026-09-17
+>
+> The task was built as written — static file extracted, `stylesheet_href()` accessor, inline
+> fallback, config flag, six tests. All of it passed. Then Step 7, the browser check no test
+> can perform, returned this:
+>
+> ```
+> GET /app/static/shai.css    HTTP 200   25.1 KB
+>   Content-Type: text/plain
+>   X-Content-Type-Options: nosniff
+> ```
+>
+> Streamlit *does* serve the file. It serves it as plain text, and sets `nosniff`, which tells
+> the browser not to second-guess that. A `<link rel="stylesheet">` pointing at it is therefore
+> ignored and **the app renders completely unstyled**. There is no Streamlit option to set the
+> media type.
+>
+> Everything was reverted: `static/`, the accessor, the config flag and the test file. What
+> remains is a comment in `src/ui/css.py:inject_css` recording why the 24 KB is inlined, so the
+> next person to notice the payload finds the answer instead of repeating the experiment.
+>
+> This was the phase the plan called "the least valuable" and said to skip if it fought. It
+> fought.
 **Gated by:** Q2. **This is the least valuable phase** — if it fights, skip it.
 
 ---
 
-### Task C1 — Serve the stylesheet statically, with fallback · TODO
+### Task C1 — Serve the stylesheet statically, with fallback · SKIPPED
 
 **Files:**
 - Create: `static/shai.css`
@@ -1420,6 +1446,7 @@ needs.
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
+| 2026-09-17 | C1 | **SKIPPED with cause, after implementing it.** Streamlit serves `./static/*.css` as `text/plain` with `nosniff`, so the browser refuses the stylesheet and the page renders unstyled. Built it, measured it, reverted it; kept only a comment in `inject_css` so nobody repeats the experiment. The plan's insistence that the inline fallback was "not optional" turned out to be the whole task. | **The plan is finished.** 7 shipped, 1 impossible. Remaining work lives in `docs/OPEN_RISKS.md`: R5 (nine `_clean_*` readers and the forecast pipelines at 0 %), R10 (`build_panel.py` 615 lines), R12 (unguarded zero price), and R1/R3/R7 unchanged. |
 | 2026-09-17 | Q1, A1, A2, D2, D3 | **Phases A and D done.** Q1 answered **No**, so the map takes the whole year: risk-pill toggles went ~370 ms → **~45 ms** and R11 closed outright. The imputation is one function reproducing the shipped panel exactly (580 rows, zero delta). Extracting it surfaced a pandas `FutureWarning` the original carried invisibly. | Only **C1** left, gated on Q2. `build_panel.py` is 615 lines — R10 reduced, not closed. |
 | 2026-09-17 | B1, B2 | **Phase B DONE.** GeoJSON 842 KB → 428 KB (−49.2 %), map document 1 234 KB → 860 KB (−30 %), idempotent, 290 features intact. The `geo_point_2d` correction from the plan review mattered: rounding geometry alone would have left 580 high-precision values and failed the test. `tests/test_geojson_payload.py` (6). | Phase D is next and is ungated. **Phase A still needs Q1.** |
 | 2026-09-17 | — | Plan written from the Windows audit. No code changed. | **Answer Q1 before starting Phase A.** Phases B and D are independent of it and of each other; D is the highest value. Start from a green suite (645 passed) and a green audit (27 passed). |

@@ -33,6 +33,13 @@ GLOBAL_CSS = _LAYOUT + _COMPONENTS + _LANDING + _RESPONSIVE
 def inject_css() -> None:
     """Inject the composed stylesheet into the current Streamlit page.
 
+    Inlined, at ~24 KB per page load, because Streamlit cannot serve it any other
+    way. Task C1 tried: `server.enableStaticServing` does serve `./static/`, but
+    it returns `.css` as `Content-Type: text/plain` alongside
+    `X-Content-Type-Options: nosniff`, so a browser refuses to apply the
+    stylesheet and the app renders unstyled. Measured, not assumed — see C1 in
+    docs/OPTIMIZATION_PLAN.md.
+
     `GLOBAL_CSS` already carries its own `<style>` wrapper, so it is emitted
     verbatim rather than wrapped again.
     """
