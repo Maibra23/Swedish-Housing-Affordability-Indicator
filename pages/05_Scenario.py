@@ -30,7 +30,7 @@ from src.ui.chart_theme import get_chart_layout
 from src.scenario.simulator import simulate
 
 inject_css()
-selections = render_sidebar(page_key="sc")
+selections = render_sidebar()
 
 # ── Load data ────────────────────────────────────────────────────────
 try:

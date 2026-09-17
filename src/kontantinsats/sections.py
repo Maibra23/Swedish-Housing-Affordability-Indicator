@@ -33,6 +33,7 @@ from src.ui.components import (
     card_header,
     format_pct,
     format_sek,
+    format_sek_compact,
     kpi_card,
     page_title,
     render_kpi_row,
@@ -296,7 +297,7 @@ def render_regime_cards(ctx: Context) -> None:
 
                     st.metric(
                         "Kontantinsats",
-                        f"{format_sek(res['required_cash'])} SEK",
+                        format_sek_compact(res["required_cash"]),
                         delta=fmt_delta_sek(delta_cash) if key != "latt_2026" else None,
                         delta_color="inverse",
                         help=L("ki.kontantinsats_ar_eget_kapital_insats_som"),

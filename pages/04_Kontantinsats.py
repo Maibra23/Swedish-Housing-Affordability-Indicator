@@ -59,7 +59,7 @@ from src.kontantinsats.regions import (
 )
 
 inject_css()
-selections = render_sidebar(page_key="ki")
+selections = render_sidebar()
 
 # Granularity copy below quotes the municipality count; it reads the panel
 # rather than a literal so it cannot outlive the panel. See T1.10.

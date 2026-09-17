@@ -97,10 +97,13 @@ CSS = """/* ---- Page header (full row) ---- */
 .shai-kpi-value {
     font-family: 'Source Sans 3', sans-serif;
     font-weight: 700;
-    font-size: 32px;
+    /* Fluid rather than a fixed 32px: four KPI cards in a row at tablet width
+       left too little room for the value, so the unit broke mid-word and
+       "47 252 SEK" rendered as "47 252 S" above a stray "EK". */
+    font-size: clamp(18px, 2.3vw, 32px);
     color: #1A1A2E;
     font-variant-numeric: tabular-nums;
-    line-height: 1.1;
+    line-height: 1.15;
 }
 .shai-kpi-unit {
     font-size: 14px;
@@ -118,6 +121,31 @@ CSS = """/* ---- Page header (full row) ---- */
 .shai-kpi-delta.down { color: #2E7D5B; }
 .shai-kpi-delta.flat { color: #6B7280; }
 .shai-kpi-card--tipped { cursor: help; }
+
+/* ---- Streamlit metric widget: wrap long values rather than clipping them ----
+   Streamlit sets white-space:nowrap and text-overflow:ellipsis on a <p> nested
+   inside stMetricValue, not on the container, so a rule aimed at the container
+   alone loses the cascade. On the five-across regime cards (sida 04) that hid
+   part of the largest kontantinsats below roughly 1400px, showing "2 041 3" and
+   an ellipsis instead of the number. A value that wraps is always better than a
+   value the reader cannot see.
+   Selectors here are attribute-based rather than class-based, so the shai-
+   prefix rule these sheets are checked against does not apply to them. */
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] *,
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] *,
+[data-testid="stMetricDelta"],
+[data-testid="stMetricDelta"] * {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-overflow: clip !important;
+}
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] * {
+    font-size: clamp(15px, 1.8vw, 24px) !important;
+    line-height: 1.2 !important;
+}
 
 /* ---- Generic card ---- */
 .shai-card {

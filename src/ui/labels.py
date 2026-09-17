@@ -58,6 +58,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.varde": "Värde",
     "lj.ranking": "RANKING",
     "lj.lansranking_v0": "Länsranking {v0}",
+    "lj.ranking_subtitle_v0": "{v0} · #1 = bäst överkomlighet",
     # ── Chrome, glossary, explanations, expanders, table headers ─────────
     "ui.forklaring_av_begrepp": "Förklaring av begrepp",
     "ui.data_uppdaterad_v0": "Data uppdaterad {v0}",

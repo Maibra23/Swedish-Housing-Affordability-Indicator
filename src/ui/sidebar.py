@@ -81,14 +81,14 @@ def _app_version() -> str:
 APP_VERSION = _app_version()
 
 
-def render_sidebar(page_key: str = "main") -> dict:
+def render_sidebar() -> dict:
     """Render the SHAI sidebar and return user selections.
 
-    Args:
-        page_key: Unique prefix for widget keys to avoid collisions.
+    The year and risk filter persist across page navigation. See the comment on
+    the year pills below for why one shared widget key is not enough on its own.
 
     Returns:
-        dict with keys: selected_year, risk_filter, selected_risks
+        dict with keys: selected_year, selected_risks
     """
     with st.sidebar:
         # ── Brand block ──────────────────────────────────────────
@@ -112,17 +112,31 @@ def render_sidebar(page_key: str = "main") -> dict:
             '<div class="shai-control-label">Valt år</div>',
             unsafe_allow_html=True,
         )
-        _default_year = default_year()
+        # Streamlit discards a widget's own session_state entry when the page
+        # that rendered it stops being the active page. A page-scoped key means
+        # every navigation lands on a widget that has never been touched, so the
+        # year silently reverted to default_year() and each page appeared to
+        # show different data. Sharing one key across pages does not fix it
+        # either: the shared key is simply recreated at its default on arrival.
+        # Verified empirically, not assumed.
+        #
+        # A plain (non-widget) session_state entry is not discarded that way, so
+        # the selection is mirrored into one and read back as `default` on the
+        # next page. That is what carries the year across navigation.
+        if "shai_selected_year" not in st.session_state:
+            st.session_state["shai_selected_year"] = default_year()
+
         selected_year = st.pills(
             "Välj år",
             options=YEAR_RANGE,
-            default=_default_year,
+            default=st.session_state["shai_selected_year"],
             label_visibility="collapsed",
-            key=f"{page_key}_year_pills",
+            key="shai_year_pills",
         )
         # Fallback if nothing selected
         if selected_year is None:
-            selected_year = _default_year
+            selected_year = st.session_state["shai_selected_year"]
+        st.session_state["shai_selected_year"] = selected_year
 
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
@@ -145,25 +159,22 @@ def render_sidebar(page_key: str = "main") -> dict:
         </div>
         """, unsafe_allow_html=True)
 
+        # Same persistence mechanism as the year pills above.
+        if "shai_selected_risks" not in st.session_state:
+            st.session_state["shai_selected_risks"] = []
+
         selected_risks = st.pills(
             "Riskfilter",
             options=list(RISK_LABELS),
             selection_mode="multi",
+            default=st.session_state["shai_selected_risks"],
             label_visibility="collapsed",
-            key=f"{page_key}_risk_pills",
+            key="shai_risk_pills",
         )
+        st.session_state["shai_selected_risks"] = selected_risks or []
         # Empty selection = show all
         if not selected_risks:
             selected_risks = list(RISK_LABELS)
-
-        # Map to filter key for backward compat
-        risk_map_rev = {"Hög": "Hög risk", "Medel": "Medel risk", "Låg": "Låg risk"}
-        if len(selected_risks) == 3:
-            risk_filter = "Alla"
-        elif len(selected_risks) == 1:
-            risk_filter = risk_map_rev.get(selected_risks[0], "Alla")
-        else:
-            risk_filter = "Alla"
 
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
@@ -173,12 +184,7 @@ def render_sidebar(page_key: str = "main") -> dict:
         # cannot enter.
         st.markdown(footer_html(), unsafe_allow_html=True)
 
-    # Persist to session state
-    st.session_state["selected_year"] = selected_year
-    st.session_state["selected_risks"] = selected_risks
-
     return {
         "selected_year": selected_year,
-        "risk_filter": risk_filter,
         "selected_risks": selected_risks,
     }

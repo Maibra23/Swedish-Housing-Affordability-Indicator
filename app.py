@@ -35,7 +35,7 @@ from src.ui.landing import (
 )
 
 inject_css()
-selections = render_sidebar(page_key="main")
+selections = render_sidebar()
 
 # ── Hero ──────────────────────────────────────────────────────────────
 render_landing_hero()
