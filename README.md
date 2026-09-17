@@ -1,123 +1,111 @@
-# SHAI — Swedish Housing Affordability Indicator
+# SHAI · Swedish Housing Affordability Indicator
 
-Streamlit dashboard analysing housing affordability across 290 Swedish municipalities
-using three econometric formulas (Version A/B/C), a kontantinsats engine covering
-four regulatory regimes, a scenario simulator, and 6-year ARIMA/Prophet forecasts.
+A Streamlit dashboard measuring structural housing affordability across Sweden's
+290 kommuner and 21 län, built on open data from SCB, Riksbanken and Kolada.
 
-**Version:** 1.3.0 · **Python:** 3.11+ · **Data:** SCB, Riksbanken, Kolada
+**Version:** 1.3.0 · **Python:** 3.11 · **Index period:** 2014–2024
 
-## Data vintage
+## Project overview
 
-The composite index covers **2014–2024**. It ends at 2024 because **median income**
-(SCB HE0110) ends at 2024, and all three formulas require it. Prices, the price index
-and unemployment already have 2025 published — refreshing them advances those component
-series but **cannot** move the index past 2024. The app reads its vintage from
-`data/processed/data_provenance.json` rather than from the clock, so what it shows is
-always the age of the data in front of you.
+Affordability is not one number. SHAI reports three, each answering a different
+question about the same market:
 
-## Setup
+| | Question it answers |
+|---|---|
+| **Version A** (bank) | Can a household carry the monthly cost at today's nominal rate? |
+| **Version B** (macro) | How much pressure is the market under, relative to its own history? |
+| **Version C** (real) | Version A adjusted for inflation, using the real rate. Recommended. |
 
-Two installs, because there are two audiences.
+Seven pages sit on top of that index:
 
-**To run the app** — this is what Streamlit Community Cloud performs on deploy:
+- **Riksöversikt** · choropleth map and score distribution across all 290 kommuner.
+- **Län jämförelse** · the 21 län ranked under each formula, #1 being the most affordable.
+- **Kommun djupanalys** · per-kommun history with ARIMA and Prophet forecasts to 2030.
+- **Kontantinsats** · down payment, savings time and monthly cost under the five Swedish
+  mortgage regimes, from pre-2010 to the 2026 easing, for houses or apartments.
+- **Scenariosimulator** · stress-test one län against rate, income, price and inflation shocks.
+- **Metodologi** · formulas, sources and every documented limitation.
 
-```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -U pip
-pip install -r requirements.txt
-```
+**Stack:** Streamlit · pandas · Plotly · Folium · statsmodels · pmdarima · Prophet · Parquet.
 
-Eight packages, no compilers. The app only reads the committed parquet artifacts.
+**Data vintage.** The index ends at 2024 because every formula divides by median
+inkomst, and 2024 is the last year SCB has published it. Prices, unemployment and the
+price index already reach 2025 and are used wherever they stand alone. A refresh will
+not move the index forward until SCB publishes a new income year.
 
-**To refresh the data** — adds the SCB/Riksbanken/Kolada clients and the forecast
-toolchain. `prophet` and `pmdarima` compile from source, so expect a slow first install;
-that is exactly why they are not in the runtime set:
+## Install
 
-```bash
-pip install -e ".[pipeline]"
-```
-
-Add `.[dev]` for the test suite; the extras combine: `pip install -e ".[pipeline,dev]"`.
-
-## Run locally
+Two audiences, two installs. Serving only reads committed Parquet, so it needs
+neither the API clients nor the forecast toolchain:
 
 ```bash
+pip install -r requirements.txt     # run the dashboard (what Streamlit Cloud installs)
+pip install -e ".[pipeline]"        # additionally refresh data from the APIs
 streamlit run app.py
 ```
 
-## Tests
+## Usage
+
+**Reading the dashboard.** Choose a year and an optional risk filter in the sidebar;
+both follow you between pages. Risk classes are relative to that year's national
+distribution, so "hög risk" means "against its peers this year", never "worse than 2014".
+
+**A worked example.** On Kontantinsats, Stockholm 2024, one income, 10 % sparkvot and a
+1.7 pp bank margin needs 859 700 SEK down and 16.1 years to save it, at 47 252 SEK a
+month. Switch Pristyp to Bostadsrätt and the analysis moves to län level, where the same
+household needs 420 600 SEK and 7.6 years, because SCB publishes apartment prices per
+län only.
+
+**Refreshing the data**, after SCB or Kolada publish a new year:
 
 ```bash
-pytest tests/
-```
-
-## Auditing a release
-
-```bash
-python scripts/audit.py
-```
-
-Twenty-seven checks re-derived from the committed artifacts, independent of the test
-suite: the index contract and its orientation, the sidebar against the data, the
-methodology's quoted figures against what the data now says, and the docs against the
-code. Exit code 0 means everything agrees. **Run it after every data refresh** — that is
-when copy and data drift apart.
-
-## Data refresh
-
-Source data is pre-built and committed as parquet files. To refresh after SCB/Kolada
-publish new annual data (typically Q1 each year):
-
-```bash
-# Full refresh — fetch APIs, rebuild panels, compute indices, regenerate forecasts
-python scripts/refresh_data.py
-
-# Faster options
+python scripts/refresh_data.py                  # fetch, rebuild, recompute, reforecast
 python scripts/refresh_data.py --no-fetch       # rebuild from cached raw data
-python scripts/refresh_data.py --no-forecast    # skip forecast step (~5–15 min saved)
+python scripts/refresh_data.py --no-forecast    # skip forecasts, saves 5-15 min
 ```
 
-After refreshing, commit the updated parquet files and push to redeploy:
+Commit the regenerated files in `data/processed/`; the raw API cache in `data/raw/` is
+gitignored. Run `python scripts/audit.py` to check the shipped artifacts independently,
+and `pytest -q` for the suite.
 
-```bash
-# data/raw/ is a local cache and is gitignored — only data/processed/ deploys
-git add data/processed/
-git commit -m "chore: refresh SHAI data — $(date +%Y-%m-%d)"
-git push
-```
+## Contributing
 
-See `docs/DEPLOYMENT.md` for the full deployment guide, file inventory, and
-troubleshooting reference.
+Bugs and pull requests go through
+[GitHub issues](https://github.com/Maibra23/Swedish-Housing-Affordability-Indicator/issues).
+
+- **Reporting a bug:** name the page, the selected year and the region, and say what you
+  expected the number to be. A number that looks wrong is the most valuable report here.
+- **Pull requests:** branch off `main` and keep the suite green. Anything touching a
+  formula, a normalisation rule or a regime definition needs a test: these carry an
+  orientation contract, rank 1 = best and higher z = worse, that is easy to invert by
+  accident and has been inverted before.
+- **User-facing copy** lives in `src/ui/labels.py`, not inline in the pages, and the suite
+  enforces that. Methodology changes need a matching edit to `docs/METHODOLOGY.md`. A
+  limitation that is known but undocumented is treated as a bug.
+
+## License
+
+MIT, copyright (c) 2026 Maibra23. Use, modify and redistribute it, commercially included,
+provided the copyright notice travels with it. See [`LICENSE`](LICENSE). Supplied without
+warranty.
+
+The data is not covered by this license: it belongs to SCB, Riksbanken and Kolada, under
+their terms.
 
 ## Documentation
 
 | File | Contents |
 |------|----------|
-| `docs/METHODOLOGY.md` | Formulas, variables, normalisation decisions, limitations F1–F16 |
-| `docs/DEPLOYMENT.md` | Install paths, data vintage, refresh, file inventory, troubleshooting |
-| `docs/REVITALIZATION_PLAN.md` | The work plan this codebase is being brought back through |
-| `docs/OPEN_RISKS.md` | Known hazards and pending decisions, with recommendations |
-| `docs/OPTIMIZATION_PLAN.md` | Payload, caching and coverage work, with measurements |
-| `docs/DESIGN_SYSTEM.md` | CSS tokens and component patterns |
-| `docs/CHOROPLETH_MAP_REFERENCE.md` | Folium map implementation reference |
+| `docs/METHODOLOGY.md` | Formulas, variables, limitations |
+| `docs/DEPLOYMENT.md` | Deployment, data refresh, file inventory |
+| `docs/REVITALIZATION_PLAN.md` | Work plan, audit findings, session log |
+| `docs/OPTIMIZATION_PLAN.md` | Performance work and its measurements |
+| `docs/OPEN_RISKS.md` | Known risks carried deliberately |
+| `docs/DEVIATIONS.md` | Where the build departs from the PRD, and why |
+| `docs/DESIGN_SYSTEM.md` | Design tokens and component patterns |
+| `docs/CHOROPLETH_MAP_REFERENCE.md` | Map implementation reference |
 | `docs/PRD.md` | Product requirements |
 | `docs/PLAYBOOK.md` | Development playbook |
-| `docs/DEVIATIONS.md` | Where the implementation departs from the PRD, and why |
-| `docs/archive/` | Build-time artifacts and superseded analyses, kept for reference only |
 
-`docs/archive/` is not maintained. Nothing outside it should link into it as current
-guidance.
-
-## Troubleshooting
-
-`docs/DEPLOYMENT.md` holds the operational troubleshooting reference.
-
-**A deploy installs a compiler toolchain, or times out.** Something is installing from
-`pyproject.toml` instead of `requirements.txt`. Only the latter is the runtime set;
-`prophet` and `pmdarima` live in the `pipeline` extra so they never reach the serving host.
-
-**The suite fails to collect.** Run it from the repository root. `pyproject.toml` puts
-both the root and `src` on `pythonpath`, which is what resolves `src.provenance` and
-`indices.real_rate`.
+`docs/archive/` holds superseded analyses. It is kept for provenance and is
+not maintained; do not read it as current guidance.
