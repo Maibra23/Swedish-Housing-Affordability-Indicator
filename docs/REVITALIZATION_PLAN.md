@@ -8,7 +8,7 @@ correct, deployable, and visually consistent state after five months of drift.
 **Branch:** `revitalization/phase-1` — **not `main`.** All Phase 1 work lives here.
 **Status:** **COMPLETE — 34 / 34 tasks.** All four phases done.
 **Current phase:** — · see `docs/OPEN_RISKS.md` for what outlives this plan
-**Test suite:** 670 passed, 0 failed, 1 skipped, 1 xfailed · 67/67 renders, also in a clean venv
+**Test suite:** 681 passed, 0 failed, 1 skipped, 1 xfailed · 67/67 renders, also in a clean venv
 **Release audit:** `python scripts/audit.py` — 27 checks, independent of the suite
 
 ---
@@ -1579,7 +1579,7 @@ Every figure here was measured, not recalled.
 
 | Check | Result |
 |---|---|
-| `pytest tests/` | **670 passed, 0 failed, 1 skipped, 1 xfailed** |
+| `pytest tests/` | **681 passed, 0 failed, 1 skipped, 1 xfailed** |
 | Bare `pytest` (what editors and CI run) | collects and passes — it could not even collect before T2.2 |
 | Page renders | **67/67 clean** — 6 pages × 11 years + landing, inside the suite since T4.4 |
 | Renders in a clean venv | **67/67**, `requirements.txt` only, on capped dependencies |
@@ -1641,7 +1641,7 @@ behaviourally; **whether they look like the reference is unverified.** `docs/DES
 Working and verified: the index is correct and its orientation is right way up; every offered
 year renders; no displayed number is fabricated or stale-but-labelled-fresh; the app installs
 from an eight-package runtime file with no compiler; the copy cannot silently disagree with the
-data; and 670 tests plus 67 renders run on a bare `pytest`.
+data; and 681 tests plus 67 renders run on a bare `pytest`.
 
 The qualifications:
 

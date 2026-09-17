@@ -17,7 +17,7 @@ which is the only part of the system with none.
 **Tech Stack:** Streamlit 1.55, folium/branca, pandas, pyarrow, pytest. No additions.
 
 **Created:** 2026-09-17, after the Windows performance audit (commit `5d0ec1e`).
-**Status:** IN PROGRESS — 5 / 8 tasks. Phases A and B complete; D1 done.
+**Status:** IN PROGRESS — 7 / 8 tasks. Phases A, B and D complete. Only C1 remains, gated on Q2.
 **Prerequisite:** `pytest tests/` (645 passed) and `python scripts/audit.py` (27 passed) must
 be green before starting, so any regression is attributable.
 
@@ -171,8 +171,8 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 | B2 | Payload ceiling test and render equivalence | B | **DONE** |
 | C1 | Serve the stylesheet statically, with fallback | C | TODO |
 | D1 | Property tests for `affordability.py` | D | **DONE** |
-| D2 | De-triplicate the imputation into one pure function | D | TODO |
-| D3 | Test the extracted function; drop the size exemption | D | TODO |
+| D2 | De-triplicate the imputation into one pure function | D | **DONE** |
+| D3 | Test the extracted function; drop the size exemption | D | **DONE** |
 
 ---
 
@@ -868,7 +868,11 @@ git commit -m "perf: serve the stylesheet statically, with an inline fallback"
 
 **Goal:** the code that produces every artifact stops being the only untested part.
 **Exit criterion:** `affordability.py` has property tests, `build_panel.py` has tests for
-imputation and the ragged-panel joins, and it is under 400 lines.
+imputation and the ragged-panel joins, and it is under 400 lines. — **PARTLY MET.**
+`affordability.py` has seven property tests (one found R12). The imputation is one tested
+function, 10 tests, verified to reproduce the shipped panel exactly. `build_panel.py` is 615
+lines, still over 400: its exemption ceiling ratcheted 641 → 615, and the remaining bulk is
+nine `_clean_*` readers that need `data/raw/` or fixtures. R10 reduced, not closed.
 
 This is the highest-value phase and the least glamorous. R5 is High for a reason: a mistake
 here is invisible until a number looks wrong on a page, and it runs by hand once or twice a
@@ -1048,7 +1052,7 @@ git commit -m "test: property tests for the three affordability formulas (R5)"
 
 ---
 
-### Task D2 — De-triplicate the imputation into one pure function · TODO
+### Task D2 — De-triplicate the imputation into one pure function · DONE
 
 **Files:**
 - Create: `src/data/panel_income.py`
@@ -1225,7 +1229,7 @@ git commit -m "refactor: one income-imputation function instead of three copies"
 
 ---
 
-### Task D3 — Test the extracted function; drop the size exemption · TODO
+### Task D3 — Test the extracted function; drop the size exemption · DONE
 
 **Files:**
 - Test: `tests/test_panel_income.py` (new)
@@ -1416,5 +1420,6 @@ needs.
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
+| 2026-09-17 | Q1, A1, A2, D2, D3 | **Phases A and D done.** Q1 answered **No**, so the map takes the whole year: risk-pill toggles went ~370 ms → **~45 ms** and R11 closed outright. The imputation is one function reproducing the shipped panel exactly (580 rows, zero delta). Extracting it surfaced a pandas `FutureWarning` the original carried invisibly. | Only **C1** left, gated on Q2. `build_panel.py` is 615 lines — R10 reduced, not closed. |
 | 2026-09-17 | B1, B2 | **Phase B DONE.** GeoJSON 842 KB → 428 KB (−49.2 %), map document 1 234 KB → 860 KB (−30 %), idempotent, 290 features intact. The `geo_point_2d` correction from the plan review mattered: rounding geometry alone would have left 580 high-precision values and failed the test. `tests/test_geojson_payload.py` (6). | Phase D is next and is ungated. **Phase A still needs Q1.** |
 | 2026-09-17 | — | Plan written from the Windows audit. No code changed. | **Answer Q1 before starting Phase A.** Phases B and D are independent of it and of each other; D is the highest value. Start from a green suite (645 passed) and a green audit (27 passed). |
