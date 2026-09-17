@@ -37,7 +37,7 @@ from src.ui.components import (
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
 
 inject_css()
-selections = render_sidebar(page_key="kd")
+selections = render_sidebar()
 
 # Period and panel size come from the provenance artifact: a literal
 # "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.

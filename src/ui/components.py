@@ -54,6 +54,21 @@ def format_sek(value: float, decimals: int = 0) -> str:
     return formatted.replace(",", "\u00A0").replace(".", ",")
 
 
+def format_sek_compact(value: float) -> str:
+    """Format a SEK value short: "Mkr" from 1 000 000, "tkr" from 10 000.
+
+    For places where the grouped form ("2 041 350 SEK") is wider than its
+    container, such as the five-across regime cards on sida 04. The CSS lets a
+    long value wrap rather than clip; this keeps it from needing to.
+    """
+    magnitude = abs(value)
+    if magnitude >= 1_000_000:
+        return f"{value / 1_000_000:.2f}".replace(".", ",") + " Mkr"
+    if magnitude >= 10_000:
+        return f"{value / 1_000:.0f}".replace(".", ",") + " tkr"
+    return format_sek(value) + " SEK"
+
+
 def format_pct(value: float, decimals: int = 1) -> str:
     """Format a percentage value Swedish style."""
     return f"{value:,.{decimals}f}".replace(".", ",") + "%"

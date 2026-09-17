@@ -27,7 +27,7 @@ from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import card_header, footer_note, page_title, vintage_badge
 
 inject_css()
-selections = render_sidebar(page_key="mt")
+selections = render_sidebar()
 
 # Period and panel size come from the provenance artifact: a literal
 # "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.

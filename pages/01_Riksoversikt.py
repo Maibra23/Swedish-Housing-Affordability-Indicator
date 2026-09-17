@@ -44,7 +44,7 @@ from src.ui.filters import by_risk
 from src.ui.chart_theme import get_chart_layout
 
 inject_css()
-selections = render_sidebar(page_key="rv")
+selections = render_sidebar()
 
 # ── Load data ────────────────────────────────────────────────────────
 # affordability_ranked carries every column of the municipal affordability

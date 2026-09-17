@@ -35,7 +35,7 @@ from src.ui.chart_theme import get_chart_layout
 from src.ui.data_table import Column, render_table
 
 inject_css()
-selections = render_sidebar(page_key="lj")
+selections = render_sidebar()
 
 # Period and panel size come from the provenance artifact: a literal
 # "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
@@ -199,8 +199,14 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
             vcol = info["col"]
 
             if len(year_data) > 0:
-                ascending = vcol != "version_b"
-                year_data = year_data.sort_values(vcol, ascending=ascending)
+                # Rank 1 = best affordability, in every tab. version_a and
+                # version_c read "higher is better" so they sort descending;
+                # version_b is a risk score, so it sorts ascending. Sorting all
+                # three the same way put the worst county at #1 while the
+                # caption above the table said the opposite.
+                year_data = year_data.sort_values(
+                    vcol, ascending=(vcol == "version_b")
+                )
                 year_data["rank"] = range(1, len(year_data) + 1)
 
                 st.markdown(
@@ -220,7 +226,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                             ),
                         ],
                         title=L("lj.lansranking_v0", v0=selected_year),
-                        subtitle=tab_name,
+                        subtitle=L("lj.ranking_subtitle_v0", v0=tab_name),
                         tag=L("lj.ranking"),
                     ),
                     unsafe_allow_html=True,
