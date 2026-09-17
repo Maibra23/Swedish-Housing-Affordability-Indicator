@@ -17,7 +17,7 @@ which is the only part of the system with none.
 **Tech Stack:** Streamlit 1.55, folium/branca, pandas, pyarrow, pytest. No additions.
 
 **Created:** 2026-09-17, after the Windows performance audit (commit `5d0ec1e`).
-**Status:** IN PROGRESS — 2 / 8 tasks. Phase B complete.
+**Status:** IN PROGRESS — 3 / 8 tasks. Phase B complete; D1 done.
 **Prerequisite:** `pytest tests/` (645 passed) and `python scripts/audit.py` (27 passed) must
 be green before starting, so any regression is attributable.
 
@@ -170,7 +170,7 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 | B1 | `scripts/shrink_geojson.py` — 5 dp + minify | B | **DONE** |
 | B2 | Payload ceiling test and render equivalence | B | **DONE** |
 | C1 | Serve the stylesheet statically, with fallback | C | TODO |
-| D1 | Property tests for `affordability.py` | D | TODO |
+| D1 | Property tests for `affordability.py` | D | **DONE** |
 | D2 | De-triplicate the imputation into one pure function | D | TODO |
 | D3 | Test the extracted function; drop the size exemption | D | TODO |
 
@@ -874,7 +874,7 @@ year.
 
 ---
 
-### Task D1 — Property tests for `affordability.py` · TODO
+### Task D1 — Property tests for `affordability.py` · DONE
 
 **Files:**
 - Test: `tests/test_affordability_properties.py` (new)

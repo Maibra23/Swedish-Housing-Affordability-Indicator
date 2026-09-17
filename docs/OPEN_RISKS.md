@@ -23,6 +23,7 @@ These outlive it.
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN |
 | R11 | The map cache cannot hold every year x risk combination | Low | **ACCEPTED** |
+| R12 | A zero price divides to infinity in Version C | Low | OPEN |
 
 ---
 
@@ -392,6 +393,39 @@ an unusual risk combination pays one 380 ms rebuild.
 polygon *style* by risk class, so the map depends on the year alone and 11 entries suffice.
 That changes what the map shows — filtered municipalities would grey out rather than vanish —
 which is a design decision, not a performance one.
+
+---
+
+## R12 — A zero price divides to infinity in Version C
+
+**Severity: Low.** Latent, not live. Found by the property tests in Task D1.
+
+`compute_version_c` divides by `transaction_price_sek` without guarding zero, so a zero
+price yields `inf`. That value would then flow into the within-year z-score, and because a
+standard deviation computed over an infinite value is `NaN`, **one bad row would silently
+void every other municipality's `z_c` for that year** — a whole year of the map going blank
+from a single cell.
+
+It is not reachable today:
+
+| Panel | Zeros | Nulls | Minimum |
+|---|---|---|---|
+| municipal | 0 | 290 | 260 000 SEK |
+| county | 0 | 21 | 930 000 SEK |
+| national | 0 | 1 | 2 050 000 SEK |
+
+Nulls are handled — they produce `NaN`, which `complete_case()` and the artifact build
+already exclude. Zero is the unguarded case, and SCB has never published one.
+
+**Left unfixed deliberately.** `tests/test_affordability_properties.py` marks the property
+`xfail(strict=True)`, so it documents the gap and will fail loudly if someone adds the guard
+without closing this entry. The reason for not simply fixing it: any change to
+`compute_version_c` alters every published `z_*`, which is a decision with a blast radius,
+not a tidy-up — the same reasoning that made D6 a locked decision rather than a patch.
+
+**Recommendation:** guard it the next time the formula is being changed for another reason,
+so the re-publication is paid once. A `price <= 0` row should yield `NaN`, joining the nulls
+that `complete_case()` already drops, rather than `inf`.
 
 ---
 
