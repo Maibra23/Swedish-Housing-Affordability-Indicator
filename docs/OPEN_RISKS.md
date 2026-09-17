@@ -21,7 +21,7 @@ These outlive it.
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
-| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN |
+| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN (reduced) |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 
@@ -368,6 +368,24 @@ nothing in the suite would catch a mistake in moving it.
 **Recommendation:** tests before splitting, in that order. This is R5 wearing a second hat:
 the modules that most need to be broken up are the ones it is least safe to touch, and the
 way out is coverage, not courage.
+
+### Progress 2026-09-17 — reduced, not closed
+
+D2 and D3 took the first bite. The income forward-fill, which was written three times inside
+`build_panel.py`, is now one tested function in `src/data/panel_income.py`:
+
+| | Before | After |
+|---|---|---|
+| `build_panel.py` | 641 lines | **615** |
+| its imputation logic | 3 copies, 0 tests | 1 function, **10 tests** |
+
+Still over the 400-line limit, so the exemption stands — but its **ceiling is now 615**, so
+the file cannot drift back up under cover of it. Ceilings ratchet downward only.
+
+The remaining bulk is nine `_clean_*` helpers, one per source series. Each reads from
+`data/raw/`, which is gitignored, so they cannot be tested as they stand; extracting them
+would need the same artifact-identity net D2 used. `scb_client.py` is untouched and keeps its
+474-line exemption.
 
 ---
 

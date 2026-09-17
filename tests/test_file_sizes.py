@@ -36,7 +36,10 @@ EXEMPT = {
 }
 
 # Their current lengths, so an exemption cannot quietly cover further growth.
-EXEMPT_CEILINGS = {"build_panel.py": 641, "scb_client.py": 474}
+# Ceilings ratchet downward only. D2 took build_panel.py from 641 to 615 by
+# extracting the triplicated income forward-fill; the exemption now covers
+# 615 and no more, so the file cannot drift back up under cover of it.
+EXEMPT_CEILINGS = {"build_panel.py": 615, "scb_client.py": 474}
 
 
 def _modules() -> list[Path]:

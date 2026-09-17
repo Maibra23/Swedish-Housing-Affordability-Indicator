@@ -75,5 +75,10 @@ def impute_income_forward(
 
     if "is_imputed_income" not in result.columns:
         result["is_imputed_income"] = False
-    result["is_imputed_income"] = result["is_imputed_income"].fillna(False).astype(bool)
+    # `.eq(True)` rather than `.fillna(False).astype(bool)`: the column arrives as
+    # object dtype when it was built by concat, and pandas deprecated the silent
+    # downcast that `fillna` then performs. Same result for True/False/NaN, no
+    # FutureWarning. The original carried this wart too — it was invisible because
+    # nothing exercised the code.
+    result["is_imputed_income"] = result["is_imputed_income"].eq(True)
     return result
