@@ -375,15 +375,66 @@ This is the series the methodology documents, it has deep history and the right
 geography, and it is still capped at 2024. It confirms that SCB has simply not
 published 2025 income on the annual tables yet.
 
-#### A documentation defect found along the way
+#### Direct answer: can the pipeline be repointed at `Kommun17g`?
 
-`docs/METHODOLOGY.md` and the Metodologi page both describe `median_income` as
+Technically yes, in about ten lines of `src/data/scb_client.py`. It should not be.
+The table would fetch cleanly, the panel would rebuild, the tests would pass and
+every number on the site would become unreliable, because the denominator would
+have quietly changed from "income of people who live here" to "salary of people
+employed by this local council". Nothing in the suite checks the *meaning* of a
+column, only its shape and orientation, so this is exactly the class of defect
+that would survive a green test run. That is the reason for the recommendation
+against, not the ten lines.
+
+#### A definition mismatch, and a bug underneath it
+
+`docs/METHODOLOGY.md` and the Metodologi page describe `median_income` as
 *sammanräknad förvärvsinkomst* (SCB HE0110). The pipeline actually requests
-`HE0110G/TabVX4bDispInkN`, whose title is *Disponibel inkomst för hushåll*.
-Those are different measures: gross earned income against household income after
-tax and transfers. The documented definition does not match the fetched one, and
-the fetched one is what every ratio in the app divides by. This should be
-corrected in the docs, or the source changed to match them. Recorded as a task.
+`HE0110G/TabVX4bDispInkN` with `Hushallstyp = E90`, whose title is *Disponibel
+inkomst för hushåll*, samtliga hushåll. Those are different measures on two axes
+at once: household rather than individual, and disposable rather than gross.
+
+Confirmed against the source, 2024 medians:
+
+| Kommun | Panel value (household disposable) | SamForvInk1 (individual gross) |
+|---|---|---|
+| Stockholm | 533 800 | 413 600 |
+| Malmö | 433 000 | 336 500 |
+| Åsele | 368 000 | 298 900 |
+
+The panel runs roughly 29 % above individual gross income, which is what a
+household measure should do. The documented definition is the wrong one.
+
+**The consequence is a live bug, not only a docs defect.**
+`pages/04_Kontantinsats.py:255` computes `income = _individual_income *
+household_multiplier`, where the multiplier is 2 for "Par (2 inkomster)". If
+`median_income` were individual, that would be correct. It is a household median
+already blending single- and dual-earner households, so selecting Par multiplies
+a household figure by two and produces an income no real household has:
+
+| Stockholm 2024, loan 7 737 300 kr | Income used | LTI |
+|---|---|---|
+| Singel, as shipped | 533 800 | 14.5 |
+| Par, as shipped | 1 067 600 | 7.2 |
+| Par, if income were truly individual | 827 200 | 9.4 |
+
+The Par case is understating the debt ratio by roughly a quarter. The page
+caption compounds it by stating "Inkomsten är individuell bruttoinkomst (SCB
+HE0110)", which is false on both axes.
+
+Three ways out, and the choice is a product decision rather than a technical one:
+
+1. **Switch the source to `HE0110A/SamForvInk1`**, the series everything already
+   claims to use. 290 kommuner, history to 1999, and it makes the couple
+   multiplier valid. Cost: income falls about 29 %, so every SHAI score, LTI and
+   affordability class on every page shifts.
+2. **Keep the household series and correct the surroundings**: fix the docs and
+   the caption, and drop the multiplier, since a household median already
+   includes both earners. Cost: the Par control loses its meaning.
+3. Leave it and document it, which is the current state.
+
+Neither 1 nor 2 moves the index past 2024. This is a correctness question, not a
+freshness one.
 
 ### Can the data be refreshed to a newer year?
 
@@ -508,6 +559,52 @@ at the moment it is produced. That closes recommendation 2.
   share of gross income, which reads as more saveable than it is. That closes
   recommendation 6 without a relabel.
 
+### How it behaves across the input space
+
+Exercised over a matrix rather than one example: six kommuner spanning the whole
+price range, both household types, three savings rates, and ten scenario
+combinations. Checked against invariants, not eyeballed.
+
+Kontantinsats, at a 5 % savings rate:
+
+| Kommun | Household | LTI | Cost share | Severity sequence |
+|---|---|---|---|---|
+| Stockholm | singel | 14.5 | 106 % | critical, critical, warning, good, note |
+| Stockholm | par | 7.2 | 53 % | critical, warning, warning, good |
+| Göteborg | singel | 13.3 | 98 % | critical, warning, warning, good, note |
+| Norrköping | singel | 7.8 | 57 % | critical, warning, warning, good, note |
+| Norrköping | par | 3.9 | 28 % | good, good, note, note |
+| Åsele | singel | 1.3 | 9 % | good, good, note, note, note |
+
+The gradient behaves: the panel escalates with price and de-escalates with a
+second income, and Åsele never trips a warning at any savings rate. Note that
+the Par rows inherit the multiplier bug described in section 4, so their LTI is
+optimistic.
+
+Scenario, Stockholms län 2024:
+
+| Scenario | Result | Real rate | Rate-without-CPI warning | Floor note |
+|---|---|---|---|---|
+| nothing moved | no change | 0.77 | no | no |
+| rate +4 only | -83.9 % | 4.77 | **yes** | no |
+| rate +4, CPI +8 | +54.0 % | 0.50 | no | yes |
+| rate -2 only | +54.0 % | 0.50 | **yes** | yes |
+| price -25 % | +33.3 % | 0.77 | no | no |
+| income -10 % | -10.0 % | 0.77 | no | no |
+| CPI +10 only | +54.0 % | 0.50 | no | yes |
+| all four at once | -94.9 % | 10.77 | no | no |
+
+Invariants asserted and holding: the warning fires whenever the rate moved
+without CPI and never when it did not; direction wording never contradicts the
+sign of the change; a critical finding always appears when the cost share reaches
+100 %; the single-income note never appears for a couple.
+
+**The matrix found one real defect.** A rate *cut* with inflation unchanged fired
+the warning correctly, but the copy read "en räntehöjning följs ofta av högre
+inflation", which is wrong for a cut. The text is now direction-neutral: "räntan
+och inflationen rör sig ofta åt samma håll". A single worked example would not
+have caught this, because the obvious example is a rate rise.
+
 ## 6. Summary of recommended work
 
 | # | Change | Page | Status |
@@ -521,10 +618,14 @@ at the moment it is produced. That closes recommendation 2.
 | 5 | Say what A and B are for, and that C drives the site | 02 | Open. Copy change |
 | 7 | Display or remove the unused A and B risk columns | 02, pipeline | Open. Six dead artifact columns |
 | 9 | Apply scenario shocks across all kommuner, not one län | 05 | Open. Large, scope separately |
-| 10 | Correct the income definition in the methodology docs | docs | Open. Docs say sammanräknad förvärvsinkomst; the pipeline fetches household disposable income |
+| 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | Open. A decision, not a task. See section 4 |
+| 12 | **The Par multiplier doubles an already-household median** | 04 | Open. Understates LTI by about a quarter. Blocked on 10 |
 | 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | Open. Viable for 2025 at kommun level, different definition, no overlap year to calibrate |
 
 Items 1 and 2 were the two that changed what a user concludes rather than how
-comfortable they are while concluding it. Both are now in place. Of what remains,
-10 is the one with a correctness dimension: the documented definition of the
-denominator does not match the one in use.
+comfortable they are while concluding it. Both are now in place.
+
+Of what remains, **12 is the only one that makes a displayed number wrong**, and
+it cannot be fixed independently of 10: whether the multiplier should be removed
+or made valid depends on which income series the project decides to carry. That
+decision is deferred; nothing in the pipeline has been changed.
