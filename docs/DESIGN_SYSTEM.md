@@ -68,7 +68,7 @@ The choropleth does **not** apply this scale at fixed breakpoints. See section 4
 
 ## 3. Class inventory
 
-Every `.shai-*` class in the composed stylesheet. 79 in total.
+Every `.shai-*` class in the composed stylesheet. 85 in total.
 
 | Class | Purpose |
 |-------|---------|
@@ -102,6 +102,12 @@ Every `.shai-*` class in the composed stylesheet. 79 in total.
 | `.shai-hero-eyebrow` | Hero eyebrow. Distinct from `.shai-eyebrow`, different type scale. |
 | `.shai-hero-inner` | Hero content column. |
 | `.shai-hero-lead` | Hero lead paragraph. |
+| `.shai-interpret` | One line of the result interpretation panel. |
+| `.shai-interpret--critical` | Interpretation line: blocking finding. |
+| `.shai-interpret--good` | Interpretation line: result within guideline. |
+| `.shai-interpret--note` | Interpretation line: context, no judgement. |
+| `.shai-interpret--warning` | Interpretation line: caution. |
+| `.shai-interpret-icon` | Severity marker on an interpretation line. |
 | `.shai-kommun-name` | Municipality name cell. |
 | `.shai-kpi-card` | KPI tile. |
 | `.shai-kpi-card--tipped` | KPI tile carrying a tooltip. |

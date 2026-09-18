@@ -304,6 +304,87 @@ recommendations, in order of confidence:
 
 Two different questions live here.
 
+### Investigated: can income be sourced to move the index past 2024?
+
+Three candidates were checked live against the SCB API on 2026-09-18. The short
+answer is that the index can move to 2025, but not with the table that looks like
+the obvious choice, and not without an explicit decision about definitions.
+
+#### Candidate 1: AM0106 `Kommun17g`, the table in the brief. Rejected.
+
+"Genomsnittlig månadslön inom kommuner efter kommun och kön, 2007 to 2025",
+published 2026-05-19. The year range is right and the release is recent, so it
+looks ideal. It is not, and the reason is in the phrase "inom kommuner".
+
+`Kommun17g` measures **the municipal sector as an employer**, not residents of a
+municipality. Verified from the table's own figures:
+
+| | Value | What it implies |
+|---|---|---|
+| Employees, Riket 2024 | 854 100 | Sweden's workforce is roughly 5.2 million. This is the municipal payroll, about 16 % |
+| Employees, Stockholm 2024 | 45 300 | Stockholm has well over 400 000 employed residents. This is the headcount of Stockholm kommun as an employer |
+| Region list | includes `Kommunalförbund` | A municipal federation is an employer, not a place |
+
+So "Stockholm" in this table means people employed *by* Stockholm kommun
+regardless of where they live: teachers, nurses, care staff, administrators. It
+is a public-sector payroll series, heavily weighted to one set of occupations and
+roughly 80 % women. It also reports gross monthly salary rather than annual
+income.
+
+Substituting it for a residence-based income measure would not extend the index.
+It would silently replace the denominator with a different population and make
+every ratio uninterpretable. **Do not use it for this.**
+
+#### Candidate 2: HE0110M `MistTab1`. Viable, with one real obstacle.
+
+Found while checking the first. "Individuell disponibel inkomst exkl.
+kapitalinkomst efter region, kön och ålder", preliminary monthly statistics.
+
+| Property | Value |
+|---|---|
+| Regions | **312**, the same granularity the panel uses |
+| Statistic | Median is published, not only the mean |
+| Coverage | **2025M01 to 2026M03**, monthly |
+| Status | Preliminary |
+
+This is genuinely current and at the right geography. A full calendar-year 2025
+figure is computable today, because all twelve months of 2025 are present.
+
+The obstacle is definitional, and it is not small. The panel's `median_income`
+currently comes from `HE0110G/TabVX4bDispInkN`, which is **household** disposable
+income. `MistTab1` is **individual** disposable income **excluding capital
+income**. Different unit of analysis and different income concept. For Stockholm
+the gap is about a third: roughly 335 kSEK annualised individual against 534 kSEK
+household for 2024.
+
+Worse, **the two series do not overlap**. `MistTab1` begins 2025M01;
+`TabVX4bDispInkN` ends 2024. There is no year in which both exist, so the ratio
+between them cannot be calibrated from data. Splicing would mean assuming a
+conversion factor, which is the same class of unverifiable assumption the project
+removed when it stopped forward-filling income at 3 %/yr.
+
+**Recommendation:** do not splice it into the index. Use it, if at all, as a
+clearly separated preliminary nowcast, labelled as a different series with its
+own definition, shown beside the index rather than inside it. That keeps the
+2014 to 2024 series internally consistent while giving a current reading.
+
+#### Candidate 3: HE0110A `SamForvInk1`. Correct definition, still 2024.
+
+"Sammanräknad förvärvsinkomst", 312 regions, median published, **1999 to 2024**.
+This is the series the methodology documents, it has deep history and the right
+geography, and it is still capped at 2024. It confirms that SCB has simply not
+published 2025 income on the annual tables yet.
+
+#### A documentation defect found along the way
+
+`docs/METHODOLOGY.md` and the Metodologi page both describe `median_income` as
+*sammanräknad förvärvsinkomst* (SCB HE0110). The pipeline actually requests
+`HE0110G/TabVX4bDispInkN`, whose title is *Disponibel inkomst för hushåll*.
+Those are different measures: gross earned income against household income after
+tax and transfers. The documented definition does not match the fetched one, and
+the fetched one is what every ratio in the app divides by. This should be
+corrected in the docs, or the source changed to match them. Recorded as a task.
+
 ### Can the data be refreshed to a newer year?
 
 Partly, and the limit is not technical.
@@ -353,19 +434,97 @@ Three cautions that are easy to learn the hard way:
 
 ---
 
-## 5. Summary of recommended work
+## 5. The result interpretation system (implemented)
 
-| # | Change | Page | Effort | Value |
-|---|---|---|---|---|
-| 1 | Warn when LTI exceeds a lendable ratio | 04 | Small | High. Stops the most serious misreading on the site |
-| 2 | Move the F15 inflation caveat next to the rate slider | 05 | Small | High. Intercepts a wrong conclusion at the moment it forms |
-| 3 | State that the simulator's number is not the map's number | 05 | Small | Medium |
-| 4 | Explain the deposit versus monthly cost trade-off | 04 | Small | Medium |
-| 5 | Say what A and B are for, and that C drives the site | 02 | Small | Medium |
-| 6 | Relabel savings rate as a share of gross income | 04 | Trivial | Medium |
-| 7 | Display or remove the unused A and B risk columns | 02, pipeline | Medium | Medium. Removes six dead artifact columns |
-| 8 | Reconsider the single-household default | 04 | Trivial | Medium |
-| 9 | Apply scenario shocks across all kommuner, not one län | 05 | Large | High, scope separately |
+Both pages now carry a panel that reads the user's own numbers and says what they
+mean. It lives in `src/ui/interpret.py`; all copy is in `SWEDISH_LABELS` and
+every figure it quotes is interpolated from the computed result, never written
+into the sentence.
 
-Items 1 and 2 are the two that change what a user concludes, rather than how
-comfortable they are while concluding it. If only two things are done, do those.
+### How it is built
+
+`interpret_kontantinsats()` and `interpret_scenario()` return a list of
+`Finding(level, text)`. Levels are `critical`, `warning`, `good` and `note`, and
+drive presentation only. `render_findings()` draws them, most serious first.
+Returning findings rather than rendering them means the rules can be asserted in
+a test with no Streamlit runtime.
+
+Each threshold names its own authority, because they are not equally binding:
+
+| Threshold | Value | Status |
+|---|---|---|
+| `LTI_LENDING_CEILING` | 5.5x | Typical Swedish bank practice. **Not** regulation, and labelled as such in the copy |
+| `LTI_FI_THRESHOLD` | 4.5x | Finansinspektionen's skärpt amorteringskrav trigger, in force Mar 2018 to Mar 2026 |
+| `HOUSING_COST_SHARE_GUIDELINE` | 30 % | Conventional budgeting guidance, not a rule |
+| Savings bands | 5 and 10 years | Matches the existing Tillgänglighet KPI, so the two cannot disagree |
+
+### What it says on Kontantinsats
+
+In order: whether the loan is lendable at all, whether the monthly cost is
+carryable, how long the deposit takes and under what assumption, which direction
+the 2026 easing moved cost *for this region*, and whether the single-income
+default is doing the damage.
+
+Stockholm 2024, one income, produces:
+
+> 🔴 **Lånet är sannolikt inte beviljningsbart.** Skuldkvoten blir 14,5 gånger
+> hushållets årsinkomst. Svenska banker beviljar sällan bolån över omkring 5,5
+> gånger inkomsten, oavsett vilket regelverk som gäller. Siffrorna nedan beskriver
+> alltså en uträkning, inte ett köp som går att genomföra på den här inkomsten.
+>
+> 🔴 **Boendekostnaden överstiger inkomsten.** Den tar 106 % av månadsinkomsten.
+>
+> 🟠 Att spara ihop kontantinsatsen tar 16,1 år vid 10 % sparkvot. Sparkvoten
+> räknas på bruttoinkomsten, så det som faktiskt kan sparas efter skatt är
+> normalt lägre och tiden därmed längre.
+
+That first line is the finding this document opened with, now stated on the page
+instead of buried in a detail table. It also closes recommendation 1.
+
+### What it says on Scenariosimulator
+
+Direction in words rather than a signed number, then the real rate as the
+mechanism, then a warning if the rate was moved without inflation, then the scale
+note. A +2 pp rate shock with inflation left alone produces:
+
+> 🟠 Scenariot **försämrar** överkomligheten med 72,2 %, från 25,6 till 7,1.
+>
+> • Drivkraften är realräntan, som går från 0,77 % till 2,77 %.
+>
+> 🟠 **Obs:** du har ändrat räntan med 2,00 procentenheter men lämnat inflationen
+> oförändrad. Hela ränteändringen räknas då som en real förändring. Prova
+> KPI-chock för ett mer realistiskt scenario.
+
+The warning fires exactly on the interaction that produces the wrong conclusion,
+at the moment it is produced. That closes recommendation 2.
+
+### Deliberate design choices
+
+- **Severity ordering, not chronology.** The lendability finding outranks the
+  savings horizon because it determines whether the horizon means anything.
+- **Every rule of thumb is labelled.** The 5.5x ceiling says "banker beviljar
+  sällan", not "får inte". Presenting bank practice as law would be its own defect.
+- **The gross-income caveat travels with the savings figure.** The slider is a
+  share of gross income, which reads as more saveable than it is. That closes
+  recommendation 6 without a relabel.
+
+## 6. Summary of recommended work
+
+| # | Change | Page | Status |
+|---|---|---|---|
+| 1 | Warn when LTI exceeds a lendable ratio | 04 | **Done.** Delivered by the interpretation panel |
+| 2 | Move the F15 inflation caveat next to the rate slider | 05 | **Done.** Fires only when the rate moved without CPI |
+| 3 | State that the simulator's number is not the map's number | 05 | **Done.** Scale note in the panel |
+| 4 | Explain the deposit versus monthly cost trade-off | 04 | **Done.** Computed per region, so it states the direction that applies here |
+| 6 | Flag that the savings rate is a share of gross income | 04 | **Done.** Caveat travels with the savings figure |
+| 8 | Surface the single-income assumption | 04 | **Done.** Panel names it and points at the Par control |
+| 5 | Say what A and B are for, and that C drives the site | 02 | Open. Copy change |
+| 7 | Display or remove the unused A and B risk columns | 02, pipeline | Open. Six dead artifact columns |
+| 9 | Apply scenario shocks across all kommuner, not one län | 05 | Open. Large, scope separately |
+| 10 | Correct the income definition in the methodology docs | docs | Open. Docs say sammanräknad förvärvsinkomst; the pipeline fetches household disposable income |
+| 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | Open. Viable for 2025 at kommun level, different definition, no overlap year to calibrate |
+
+Items 1 and 2 were the two that changed what a user concludes rather than how
+comfortable they are while concluding it. Both are now in place. Of what remains,
+10 is the one with a correctness dimension: the documented definition of the
+denominator does not match the one in use.
