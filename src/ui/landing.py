@@ -38,7 +38,7 @@ def render_landing_hero(kommun_count: int | None = None) -> None:
             <h1 class="shai-headline">Swedish Housing<br>Affordability Indicator</h1>
             <p class="shai-hero-lead">
                 Strukturell bostadsekonomisk hållbarhet i Sveriges {kommuner} kommuner
-                och 21 län &mdash; med tre ekonometriska formler, prognoser och scenariosimulering.
+                och 21 län, med tre ekonometriska formler, prognoser och scenariosimulering.
             </p>
         </div>
     </div>
