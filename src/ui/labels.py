@@ -388,7 +388,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "sc.tolk_riktning_oforandrad": "Scenariot lämnar överkomligheten oförändrad på {v1}.",
     "sc.tolk_realranta": "Drivkraften är realräntan, som går från {v0} % till {v1} %. Det är realräntan, alltså styrränta minus inflation, som formeln använder, inte den nominella räntan.",
     "sc.tolk_golv_binder": "Realräntan har nått golvet på 0,5 procentenheter. Under det slutar formeln reagera på ytterligare sänkningar, så resultatet underskattar effekten.",
-    "sc.tolk_ranta_utan_inflation": "**Obs:** du har ändrat räntan med {v0} procentenheter men lämnat inflationen oförändrad. Hela ränteändringen räknas då som en real förändring. I verkligheten följs en räntehöjning ofta av högre inflation, vilket dämpar eller vänder effekten. Prova KPI-chock för ett mer realistiskt scenario.",
+    "sc.tolk_ranta_utan_inflation": "**Obs:** du har ändrat räntan med {v0} procentenheter men lämnat inflationen oförändrad. Hela ränteändringen räknas då som en real förändring. I verkligheten rör sig räntan och inflationen ofta åt samma håll, vilket dämpar eller vänder effekten. Prova KPI-chock för ett mer realistiskt scenario.",
     "sc.tolk_skala": "Värdet är ett råmått från formeln, inte samma skala som riskklasserna på Riksöversikt. Jämför basfall mot scenario här, inte mot kartans siffror.",
     "sc.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "sc.inga_data_tillgangliga_for_v0_valj_ett_ar": "Inga data tillgängliga för {v0}. Välj ett år med data: {v1}.",
