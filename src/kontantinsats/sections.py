@@ -19,7 +19,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.kontantinsats.charts import comparison_barchart, fmt_delta_sek
+from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart, fmt_delta_sek
 from src.kontantinsats.engine import REGIMES, compare_regimes
 from src.kontantinsats.regions import (
     _LAN_NAMES,
@@ -38,9 +38,18 @@ from src.ui.components import (
     page_title,
     render_kpi_row,
 )
-from src.ui.interpret import interpret_kontantinsats, render_findings
+from src.ui.interpret import (
+    LTI_LENDING_CEILING,
+    interpret_kontantinsats,
+    render_findings,
+)
 from src.ui.labels import L
 from src.ui.tokens import COLORS
+
+
+def _sv_ceiling() -> str:
+    """The lending ceiling as Swedish copy, so the caption cannot drift from it."""
+    return f"{LTI_LENDING_CEILING:.1f}".replace(".", ",")
 
 
 @dataclass(frozen=True)
@@ -139,6 +148,25 @@ def render_snapshot(ctx: Context) -> None:
             ),
         ]
     )
+    # Whether the purchase is reachable at all, before the page spends four
+    # cards on how long its deposit takes to save.
+    with st.container(border=True):
+        st.markdown(
+            card_header(L("ki.gap_rubrik"), L("ki.gap_underrubrik"), L("ki.gap_tagg")),
+            unsafe_allow_html=True,
+        )
+        st.plotly_chart(
+            affordability_gap_chart(
+                price=price,
+                income=income,
+                lending_ceiling=LTI_LENDING_CEILING,
+                min_down_pct=REGIMES["latt_2026"]["min_down_pct"],
+            ),
+            width="stretch",
+            config={"displayModeBar": False},
+        )
+        st.caption(L("ki.gap_forklaring_v0", v0=_sv_ceiling()))
+
     # What those four numbers mean together. The debt ratio in particular
     # governs whether the savings horizon beside it is a plan or a hypothetical,
     # and nothing above states that.

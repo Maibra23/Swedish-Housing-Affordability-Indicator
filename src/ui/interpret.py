@@ -215,7 +215,10 @@ def interpret_scenario(
 
 # ── Rendering ─────────────────────────────────────────────────────────
 
-_ICON = {"critical": "🔴", "warning": "🟠", "good": "🟢", "note": "•"}
+#: Severity levels, most serious first. Presentation is a coloured dot defined in
+#: the stylesheet, reusing the site's three risk tokens rather than introducing a
+#: parallel colour scale.
+LEVEL_ORDER = ("critical", "warning", "good", "note")
 
 
 def _bold(text: str) -> str:
@@ -242,7 +245,7 @@ def render_findings(findings: list[Finding], *, title: str) -> None:
         for f in findings:
             st.markdown(
                 f'<div class="shai-interpret shai-interpret--{f.level}">'
-                f'<span class="shai-interpret-icon">{_ICON.get(f.level, "•")}</span>'
+                f'<span class="shai-interpret-dot"></span>'
                 f"<span>{_bold(f.text)}</span></div>",
                 unsafe_allow_html=True,
             )

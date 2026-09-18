@@ -107,7 +107,7 @@ Every `.shai-*` class in the composed stylesheet. 85 in total.
 | `.shai-interpret--good` | Interpretation line: result within guideline. |
 | `.shai-interpret--note` | Interpretation line: context, no judgement. |
 | `.shai-interpret--warning` | Interpretation line: caution. |
-| `.shai-interpret-icon` | Severity marker on an interpretation line. |
+| `.shai-interpret-dot` | Severity marker on an interpretation line. |
 | `.shai-kommun-name` | Municipality name cell. |
 | `.shai-kpi-card` | KPI tile. |
 | `.shai-kpi-card--tipped` | KPI tile carrying a tooltip. |
