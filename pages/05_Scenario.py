@@ -27,6 +27,7 @@ from src.ui.components import (
     card_header, footer_note,
 )
 from src.ui.chart_theme import get_chart_layout
+from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.simulator import simulate
 
 inject_css()
@@ -245,6 +246,20 @@ render_kpi_row([
         tooltip=L("sc.skillnad_mellan_scenario_och_basfall"),
     ),
 ])
+
+# Why the number moved, and the reading this page invites but does not support.
+# Placed directly under the result rather than in the expander at the foot of
+# the page: the misreading forms here, so the correction belongs here.
+render_findings(
+    interpret_scenario(
+        result=result,
+        rate_shock=rate_shock,
+        income_shock_pct=income_shock_pct,
+        price_shock_pct=price_shock_pct,
+        cpi_shock=cpi_shock,
+    ),
+    title=L("sc.tolk_rubrik"),
+)
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 

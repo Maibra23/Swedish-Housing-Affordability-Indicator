@@ -229,6 +229,19 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.smahus_scb_bo0501c2": "Småhus (SCB BO0501C2)",
     "ki.lan_v0": "Län {v0}",
     "ki.v0_sek_ar_v1": "= {v0} SEK/år ({v1})",
+    # Result interpretation (sida 04). Every figure is interpolated from the
+    # computed result; none is written into the sentence.
+    "ki.tolk_rubrik": "Vad betyder det här för dig?",
+    "ki.tolk_lti_over_tak": "**Lånet är sannolikt inte beviljningsbart.** Skuldkvoten blir {v0} gånger hushållets årsinkomst. Svenska banker beviljar sällan bolån över omkring {v1} gånger inkomsten, oavsett vilket regelverk som gäller. Siffrorna nedan beskriver alltså en uträkning, inte ett köp som går att genomföra på den här inkomsten.",
+    "ki.tolk_lti_over_fi": "Skuldkvoten blir {v0} gånger årsinkomsten. Det ligger över 4,5 gånger, gränsen som utlöste det skärpta amorteringskravet fram till mars 2026. Lånet är möjligt men räknas som högt belånat.",
+    "ki.tolk_lti_rimlig": "Skuldkvoten blir {v0} gånger årsinkomsten, vilket ligger inom det intervall banker normalt beviljar.",
+    "ki.tolk_kostnad_over_100": "**Boendekostnaden överstiger inkomsten.** Den tar {v0} % av månadsinkomsten, alltså mer än hela inkomsten. Kvarvarande inkomst blir negativ.",
+    "ki.tolk_kostnad_over_riktvarde": "Boendet tar {v0} % av månadsinkomsten. Ett vanligt riktvärde är att hålla sig under {v1} %, så marginalen till annat är liten.",
+    "ki.tolk_kostnad_under_riktvarde": "Boendet tar {v0} % av månadsinkomsten, vilket ryms inom det vanliga riktvärdet på 30 %.",
+    "ki.tolk_spartid": "Att spara ihop kontantinsatsen tar {v0} år vid {v1} % sparkvot, alltså {v2} kr per år. Sparkvoten räknas på bruttoinkomsten, så det som faktiskt kan sparas efter skatt är normalt lägre och tiden därmed längre.",
+    "ki.tolk_lattnad_avvagning": "Lättnaden 2026 sänker kontantinsatsen med {v0} kr jämfört med det tidigare regelverket, men höjer månadskostnaden med {v1} kr. Lägre tröskel in, högre kostnad att bo kvar: en mindre insats betyder ett större lån.",
+    "ki.tolk_lattnad_battre": "Lättnaden 2026 sänker både kontantinsatsen, med {v0} kr, och månadskostnaden, med {v1} kr, jämfört med det tidigare regelverket.",
+    "ki.tolk_singel_antagande": "Beräkningen utgår från en inkomst. De flesta bostadsköp i Sverige görs av två personer tillsammans. Välj Par ovan för att se hur siffrorna förändras.",
     "ki.tillganglig": "Tillgänglig",
     "ki.anstrangd": "Ansträngd",
     "ki.otillganglig": "Otillgänglig",
@@ -367,6 +380,16 @@ SWEDISH_LABELS: dict[str, str] = {
 
     # ── Sida 05 — Scenario ────────────────────────────────────────
     "sc.shai_version_c_for_v0": "SHAI Version C för {v0}",
+    # Result interpretation (sida 05).
+    "sc.tolk_rubrik": "Så ska resultatet läsas",
+    "sc.tolk_inget_scenario": "Inget scenario är valt ännu. Flytta en reglage eller välj ett förinställt scenario för att se hur överkomligheten påverkas.",
+    "sc.tolk_riktning_upp": "Scenariot **förbättrar** överkomligheten med {v0} %, från {v1} till {v2}.",
+    "sc.tolk_riktning_ner": "Scenariot **försämrar** överkomligheten med {v0} %, från {v1} till {v2}.",
+    "sc.tolk_riktning_oforandrad": "Scenariot lämnar överkomligheten oförändrad på {v1}.",
+    "sc.tolk_realranta": "Drivkraften är realräntan, som går från {v0} % till {v1} %. Det är realräntan, alltså styrränta minus inflation, som formeln använder, inte den nominella räntan.",
+    "sc.tolk_golv_binder": "Realräntan har nått golvet på 0,5 procentenheter. Under det slutar formeln reagera på ytterligare sänkningar, så resultatet underskattar effekten.",
+    "sc.tolk_ranta_utan_inflation": "**Obs:** du har ändrat räntan med {v0} procentenheter men lämnat inflationen oförändrad. Hela ränteändringen räknas då som en real förändring. I verkligheten följs en räntehöjning ofta av högre inflation, vilket dämpar eller vänder effekten. Prova KPI-chock för ett mer realistiskt scenario.",
+    "sc.tolk_skala": "Värdet är ett råmått från formeln, inte samma skala som riskklasserna på Riksöversikt. Jämför basfall mot scenario här, inte mot kartans siffror.",
     "sc.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "sc.inga_data_tillgangliga_for_v0_valj_ett_ar": "Inga data tillgängliga för {v0}. Välj ett år med data: {v1}.",
     "sc.simulera_effekten_av_ranta_inkomst_och": "Simulera effekten av ränta-, inkomst- och prisförändringar på bostadsöverkomligheten",

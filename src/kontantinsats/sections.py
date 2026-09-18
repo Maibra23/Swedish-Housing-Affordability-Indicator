@@ -38,6 +38,7 @@ from src.ui.components import (
     page_title,
     render_kpi_row,
 )
+from src.ui.interpret import interpret_kontantinsats, render_findings
 from src.ui.labels import L
 from src.ui.tokens import COLORS
 
@@ -138,6 +139,21 @@ def render_snapshot(ctx: Context) -> None:
             ),
         ]
     )
+    # What those four numbers mean together. The debt ratio in particular
+    # governs whether the savings horizon beside it is a plan or a hypothetical,
+    # and nothing above states that.
+    render_findings(
+        interpret_kontantinsats(
+            baseline=baseline,
+            strictest=ctx.results["amort_2"],
+            income=income,
+            cost_pct=cost_pct,
+            savings_rate=savings_rate,
+            household_multiplier=int(ctx.household_multiplier),
+        ),
+        title=L("ki.tolk_rubrik"),
+    )
+
     _level_label = L("ki.lansniva") if use_bostadsratt else L("ki.kommunniva")
     st.caption(
         L("ki.nulage_lattnad_2026_v0_v1_v2_sparkvot_v3_0f", v0=selected_name, v1=_level_label, v2=selected_year, v3=savings_rate*100, v4=price_source_label)
