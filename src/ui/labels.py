@@ -51,7 +51,7 @@ def L(key: str, **values: object) -> str:
 SWEDISH_LABELS: dict[str, str] = {
     "rv.kartfilen_saknas": "Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.",
     "mt.expander_4_prognoser_prophet_vs_arima": "4. Prognoser (Prophet vs ARIMA)",
-    "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats — regimhistorik",
+    "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats: regimhistorik",
     "mt.expander_7_datavalidering": "7. Datavalidering",
     "mt.expander_8_referenser": "8. Referenser",
     "lj.lan": "Län",
@@ -63,30 +63,30 @@ SWEDISH_LABELS: dict[str, str] = {
     "ui.forklaring_av_begrepp": "Förklaring av begrepp",
     "ui.data_uppdaterad_v0": "Data uppdaterad {v0}",
     "glossary.zpoang.term": "Z-poäng",
-    "glossary.zpoang.def": "Antal standardavvikelser från årets riksmedian, på logaritmisk skala. Beräknas inom varje år, så en kommuns z-poäng säger var den står bland sina jämnåriga — inte om Sverige som helhet blivit dyrare.",
+    "glossary.zpoang.def": "Antal standardavvikelser från årets riksmedian, på logaritmisk skala. Beräknas inom varje år, så en kommuns z-poäng säger var den står bland sina jämnåriga, inte om Sverige som helhet blivit dyrare.",
     "glossary.riskklass.term": "Riskklass",
     "glossary.riskklass.def": "Låg, medel eller hög, satt vid ±0,67 standardavvikelser. Gränserna är kvantiler inom året, så ungefär lika stor andel hamnar i varje klass varje år. Antalet i en klass kan därför inte läsas som en trend.",
     "glossary.version_c.term": "Version C",
-    "glossary.version_c.def": "Den rekommenderade formeln: inkomst delat med pris gånger realränta. Ett nivåvärde, inte ett 0–100-index — högre värde betyder bättre överkomlighet.",
+    "glossary.version_c.def": "Den rekommenderade formeln: inkomst delat med pris gånger realränta. Ett nivåvärde, inte ett 0–100-index. Högre värde betyder bättre överkomlighet.",
     "glossary.rang.term": "Rang",
     "glossary.rang.def": "Placering inom året, där rang 1 är bäst överkomlighet. Rangen är densamma oavsett logaritmering, eftersom transformen är monoton.",
     "glossary.kt_kvot.term": "K/T-kvot",
-    "glossary.kt_kvot.def": "Köpeskilling delat med taxeringsvärde. Deskriptiv — den ingår inte i någon av formlerna; transaktionspriset i SEK används.",
+    "glossary.kt_kvot.def": "Köpeskilling delat med taxeringsvärde. Deskriptiv. Den ingår inte i någon av formlerna; transaktionspriset i SEK används.",
     "rv.forklaring_kpi": "Talen ovan beskriver {v0} kommuner för {v1}. Genomsnittligt SHAI är en nivåserie och kan jämföras mellan år; antalet högriskkommuner är en relativ position inom året och kan inte det.",
     "rv.forklaring_karta": "Färgskalan går från årets lägsta till årets högsta z-poäng, med brytpunkter vid kvartilerna. Skalan sätts om varje år, så en färg betyder ”bland årets mest ansträngda”, inte ett fast pris.",
-    "rv.forklaring_histogram": "Fördelningen visar hur {v0} kommuner ligger i förhållande till varandra detta år. Eftersom z-poängen är centrerad inom året ligger tyngdpunkten alltid nära noll — formen säger något, läget gör det inte.",
+    "rv.forklaring_histogram": "Fördelningen visar hur {v0} kommuner ligger i förhållande till varandra detta år. Eftersom z-poängen är centrerad inom året ligger tyngdpunkten alltid nära noll. Formen säger något, läget gör det inte.",
     "rv.forklaring_tabell": "Topplistorna är sorterade på Version C inom {v0}. De visar ytterkanterna av årets fördelning, inte kommuner som förändrats mest över tid.",
-    "landing.forklaring_statistik": "Indexet täcker {v0} kommuner över {v1} år. Perioden slutar {v2} eftersom medianinkomsten gör det — övriga serier sträcker sig längre.",
+    "landing.forklaring_statistik": "Indexet täcker {v0} kommuner över {v1} år. Perioden slutar {v2} eftersom medianinkomsten gör det. Övriga serier sträcker sig längre.",
     "lj.forklaring_kpi": "Länsvärden är ovägda medelvärden av kommunerna i länet. Ett län med många små kommuner väger därför lika tungt som ett med få stora.",
     "kd.forklaring_prognos": "Prognosen bygger på {v0} årliga observationer. Det är en mycket kort serie: konfidensintervallen vidgas snabbt och allt bortom tre år bör läsas som riktning, inte nivå.",
     "rv.om_kartan": "Om kartan",
     "rv.om_rankningstabellerna": "Om rankningstabellerna",
     "lj.om_lansjamforelsen": "Om länsjämförelsen",
-    "lj.om_lansjamforelsen_text": "Varje län visas som ett ovägt medelvärde av sina kommuner, så Gotland (en kommun) väger lika tungt som Västra Götaland (49). Jämförelsen säger något om länens *typiska* kommun — inte om var flest människor bor. Kurvorna kan jämföras mellan år eftersom de bygger på nivåvärden, men rangordningen inom ett år bygger på z-poäng och kan inte det.",
+    "lj.om_lansjamforelsen_text": "Varje län visas som ett ovägt medelvärde av sina kommuner, så Gotland (en kommun) väger lika tungt som Västra Götaland (49). Jämförelsen säger något om länens *typiska* kommun, inte om var flest människor bor. Kurvorna kan jämföras mellan år eftersom de bygger på nivåvärden, men rangordningen inom ett år bygger på z-poäng och kan inte det.",
     "kd.om_prognosen": "Om prognosen",
     "kd.om_prognosen_text": "Prognosen framskrivs från det sista året med observerad inkomst, inte från dagens datum. Den bygger på {v0} årliga observationer, vilket är kort för statistisk framskrivning: konfidensintervallen vidgas snabbt och bortom tre år bör kurvan läsas som riktning, inte som nivå. Den säger ingenting om enskilda bostadsaffärer.",
     "kd.om_komponenterna": "Om komponentuppdelningen",
-    "kd.om_komponenterna_text": "Staplarna visar hur mycket varje ingående variabel varierat över perioden för just denna kommun, mätt som variationskoefficient. En hög stapel betyder att variabeln rört sig mycket — inte att den bidrar mest till kommunens nivå.",
+    "kd.om_komponenterna_text": "Staplarna visar hur mycket varje ingående variabel varierat över perioden för just denna kommun, mätt som variationskoefficient. En hög stapel betyder att variabeln rört sig mycket, inte att den bidrar mest till kommunens nivå.",
     "rv.kommun": "Kommun",
     "rv.z_poang": "Z-poäng",
     "rv.shai": "SHAI",
@@ -94,8 +94,8 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.ranking": "RANKING",
 
     # ── Landing page (app.py) ─────────────────────────────────────
-    "landing.shai_bostadsekonomisk_hallbarhet": "SHAI — Bostadsekonomisk hållbarhet",
-    "landing.shai_bostadsekonomisk_hallbarhet_data_scb": "SHAI — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
+    "landing.shai_bostadsekonomisk_hallbarhet": "SHAI · Bostadsekonomisk hållbarhet",
+    "landing.shai_bostadsekonomisk_hallbarhet_data_scb": "SHAI · Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
     "landing.v0_ar_v_v1": "{v0} år  ·  v{v1}",
     "landing.lan": "Län",
     "landing.jamforda": "jämförda",
@@ -122,14 +122,14 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.poang": "poäng",
     "rv.genomsnittlig_version_c_poang_rakvot_inkomst": "Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla {v0} kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
     "rv.hogrisk_kommuner": "Högrisk kommuner",
-    "rv.antal_kommuner_med_z_poang_0_67": "Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög). Riskklassen är en relativ position inom året: kommunerna jämförs med varandra i just detta år, inte med ett fast gränsvärde. Ungefär lika många hamnar i varje klass varje år, så antalet kan inte visa om Sverige som helhet blivit mer eller mindre överkomligt — läs det ur Genomsnittligt SHAI, som är en nivåserie.",
-    "rv.genomsnittlig_kopeskillingskoefficient_k_t": "Genomsnittlig köpeskillingskoefficient (K/T): köpeskilling / taxeringsvärde. Dimensionslös kvot, typiskt 1,0–4,0. Högre = dyrare relativt taxeringsvärde. Obs: K/T ingår ej i formeln — transaktionspriset i SEK används.",
+    "rv.antal_kommuner_med_z_poang_0_67": "Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög). Riskklassen är en relativ position inom året: kommunerna jämförs med varandra i just detta år, inte med ett fast gränsvärde. Ungefär lika många hamnar i varje klass varje år, så antalet kan inte visa om Sverige som helhet blivit mer eller mindre överkomligt. Läs det ur Genomsnittligt SHAI, som är en nivåserie.",
+    "rv.genomsnittlig_kopeskillingskoefficient_k_t": "Genomsnittlig köpeskillingskoefficient (K/T): köpeskilling / taxeringsvärde. Dimensionslös kvot, typiskt 1,0–4,0. Högre = dyrare relativt taxeringsvärde. Obs: K/T ingår ej i formeln. Transaktionspriset i SEK används i stället.",
     "rv.befolkningsforandring": "Befolkningsförändring",
     "rv.procentuell_befolkningsforandring_jamfort": "Procentuell befolkningsförändring jämfört med föregående år.",
     "rv.geografisk_fordelning": "Geografisk fördelning",
     "rv.fargskala_gron_lag_risk_z_0_67_gul_medel": "Färgskala: Grön = låg risk (z ≤ −0,67) · Gul = medel risk · Röd = hög risk (z > 0,67)",
     "rv.ingen_data_tillganglig_for_kartvisning": "Ingen data tillgänglig för kartvisning.",
-    "rv.varje_kommun_visas_som_ett_ifyllt_polygon": "Varje kommun visas som ett ifyllt polygon. Färgen baseras på z-poängen (Version C). Grön = låg risk, röd = hög risk. Håll musen över en kommun för att se detaljer. Små kommunnamn visas först när du zoomat in två steg från startläget (zoomkontrollen +). De är förankrade i kartfilens centrum. Bakgrundskartan visar inga världsstäder — övrig text kommer från SHAI-data.",
+    "rv.varje_kommun_visas_som_ett_ifyllt_polygon": "Varje kommun visas som ett ifyllt polygon. Färgen baseras på z-poängen (Version C). Grön = låg risk, röd = hög risk. Håll musen över en kommun för att se detaljer. Små kommunnamn visas först när du zoomat in två steg från startläget (zoomkontrollen +). De är förankrade i kartfilens centrum. Bakgrundskartan visar inga världsstäder. Övrig text kommer från SHAI-data.",
     "rv.fordelning_av_shai_poang": "Fördelning av SHAI poäng",
     "rv.z_poang_standardavvikelser_pa_logaritmisk": "Z-poäng = standardavvikelser på logaritmisk skala. Noll = den typiska kommunen (riksmedianen). Lägre z = bättre överkomlighet.",
     "rv.lag_risk": "Låg risk",
@@ -147,14 +147,14 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.sida_02_regional_jamforelse": "Sida 02 · Regional jämförelse",
     "lj.lan_jamforelse": "Län jämförelse",
     "lj.21_lan_jamforda_under_tre_bostadsekonomiska": "21 län jämförda under tre bostadsekonomiska formler",
-    "lj.den_enklaste_versionen_mater_hushallets": "Den enklaste versionen — mäter hushållets betalningsförmåga relativt bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. Högre värde = bättre överkomlighet.",
+    "lj.den_enklaste_versionen_mater_hushallets": "Den enklaste versionen mäter hushållets betalningsförmåga relativt bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. Högre värde = bättre överkomlighet.",
     "lj.en_sammansatt_riskindikator_som_viktar_fyra": "En sammansatt riskindikator som viktar fyra makrovariabler: pris/inkomst, ränta, arbetslöshet och inflation. Speglar centralbankens makrotillsynsperspektiv. Högre värde = högre risk.",
-    "lj.arbetsloshet_avser_oppet_arbetslosa_enligt": "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. Obs: R och π är nationella variabler — de bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13).",
-    "lj.den_rekommenderade_versionen_justerar_for": "Den rekommenderade versionen — justerar för inflation genom att använda realräntan istället för nominalräntan. Akademiskt förankrad. Högre värde = bättre överkomlighet.",
-    "lj.att_olika_formler_rangordnar_lanen_olika_ar": "Att olika formler rangordnar länen olika är förväntat och inte ett fel — de mäter olika ekonomiska perspektiv.",
+    "lj.arbetsloshet_avser_oppet_arbetslosa_enligt": "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. Obs: R och π är nationella variabler. De bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13).",
+    "lj.den_rekommenderade_versionen_justerar_for": "Den rekommenderade versionen justerar för inflation genom att använda realräntan istället för nominalräntan. Akademiskt förankrad. Högre värde = bättre överkomlighet.",
+    "lj.att_olika_formler_rangordnar_lanen_olika_ar": "Att olika formler rangordnar länen olika är förväntat och inte ett fel. De mäter olika ekonomiska perspektiv.",
     "lj.stockholm_visas_som_referenslan_markerat_med": "Stockholm visas som referenslän (markerat med starkare linje).",
     "lj.v0_ar_x_varde_y_2f": "<b>{v0}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}<extra></extra>",
-    "lj.v0_lansutveckling_v1": "{v0} — Länsutveckling {v1}",
+    "lj.v0_lansutveckling_v1": "{v0} · Länsutveckling {v1}",
     "lj.ar": "År",
     "lj.indexvarde": "Indexvärde",
         "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
@@ -169,35 +169,36 @@ SWEDISH_LABELS: dict[str, str] = {
     "kd.inga_data_tillgangliga_for_den_valda": "Inga data tillgängliga för den valda kommunen.",
     "kd.poang": "poäng",
     "kd.realversion_inkomst_pris_max_r_0_5_hogre": "Realversion. Inkomst / (Pris × max(R−π, 0,5%)). Högre = bättre överkomlighet. Råkvot, ej ett 0–100 index.",
-    "kd.sammanraknad_forvarvsinkomst_medelvarde_per": "Sammanräknad förvärvsinkomst, medelvärde per individ (SCB HE0110). Individuell bruttoinkomst — ej hushållsinkomst.",
-    "kd.kopeskillingskoefficient_kopeskilling": "Köpeskillingskoefficient: köpeskilling / taxeringsvärde. Speglar relativ prisnivå. Obs: K/T ingår ej i SHAI-formeln — transaktionspriset i SEK används.",
+    "kd.sammanraknad_forvarvsinkomst_medelvarde_per": "Sammanräknad förvärvsinkomst, medelvärde per individ (SCB HE0110). Individuell bruttoinkomst, inte hushållsinkomst.",
+    "kd.kopeskillingskoefficient_kopeskilling": "Köpeskillingskoefficient: köpeskilling / taxeringsvärde. Speglar relativ prisnivå. Obs: K/T ingår ej i SHAI-formeln. Transaktionspriset i SEK används i stället.",
     "kd.styrranta": "Styrränta",
-    "kd.riksbankens_styrranta_arsgenomsnitt": "Riksbankens styrränta, årsgenomsnitt. Nationell — samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
+    "kd.riksbankens_styrranta_arsgenomsnitt": "Riksbankens styrränta, årsgenomsnitt. Nationell: samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
     "kd.prognoser_baseras_pa_v0_arliga_observationer": "**Prognoser baseras på {v0} årliga observationer ({v1}).** Konfidensintervall vidgas snabbt efter år 3. Tolka långtidsprognoser med försiktighet.",
     "kd.x_framskrivet_fran_2024": "<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
     "kd.ar": "År",
     "kd.prophet_ar_optimerat_for_dagliga": "Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.",
-    "kd.prognoserna_beraknas_pa_lansniva_v0_inte_per": "Prognoserna beräknas på länsnivå ({v0}) — inte per kommun.",
+    "kd.prognos_for_v0": "Prognos för {v0}",
+    "kd.prognoserna_beraknas_pa_lansniva_v0_inte_per": "Prognoserna beräknas på länsnivå ({v0}), inte per kommun.",
     "kd.v1_har_storst_relativ_variation_och_driver": "<div style='font-size:13px;color:{v0};text-align:center;padding:8px 0;'><strong>{v1}</strong> har störst relativ variation och driver mest av SHAI-förändringen för {v2}.</div>",
 
     # ── Sida 04 — Kontantinsats ───────────────────────────────────
     "ki.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "ki.inga_data_tillgangliga_for_v0_valj_ett_ar": "Inga data tillgängliga för {v0}. Välj ett år med data: {v1}.",
-    "ki.obs_priserna_avser_smahus_villor_scb": "**Obs — Priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. I storstäder är typiska bostadsrätspriser lägre än villapriser — kontantinsatskraven och spartiderna är därmed höga för stadsbor som söker lägenhet. Se Begränsning F11 i Metodologi (Sida 06).",
-    "ki.valj_pristyp_bostadsrattspriser_scb_bo0501c": "**Välj Pristyp:** Bostadsrättspriser (SCB BO0501C) analyseras på **länsnivå** (21 län) — SCB publicerar inga kommunspecifika bostadsrättspriser. Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** ({v0} kommuner). När du väljer Bostadsrätt byter analysen automatiskt till länsnivå.",
+    "ki.obs_priserna_avser_smahus_villor_scb": "**Obs, priserna avser småhus (villor):** SCB BO0501C2 (Fastighetstyp 220) täcker permanenta småhus och villor. Bostadsrätter och lägenheter ingår ej ännu i panelen. I storstäder är typiska bostadsrätspriser lägre än villapriser. Kontantinsatskraven och spartiderna är därmed höga för stadsbor som söker lägenhet. Se Begränsning F11 i Metodologi (Sida 06).",
+    "ki.valj_pristyp_bostadsrattspriser_scb_bo0501c": "**Välj Pristyp:** Bostadsrättspriser (SCB BO0501C) analyseras på **länsnivå** (21 län). SCB publicerar inga kommunspecifika bostadsrättspriser. Småhuspriser (SCB BO0501C2) analyseras på **kommunnivå** ({v0} kommuner). När du väljer Bostadsrätt byter analysen automatiskt till länsnivå.",
     "ki.valj_analysenhet": "Välj analysenhet",
     "ki.region_pristyp_hushallstyp_och": "Region, pristyp, hushållstyp och sparandeantagande",
     "ki.smahus_villa": "Småhus (villa)",
     "ki.bostadsratt": "Bostadsrätt",
-    "ki.smahus_scb_bo0501c2_fastighetstyp_220": "Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå ({v0} kommuner). Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt — **länsnivå** (21 län). SCB publicerar inga kommunspecifika bostadsrättspriser.",
+    "ki.smahus_scb_bo0501c2_fastighetstyp_220": "Småhus = SCB BO0501C2 (Fastighetstyp 220), kommunnivå ({v0} kommuner). Bostadsrätt = SCB BO0501C, medelpris per bostadsrätt, **länsnivå** (21 län). SCB publicerar inga kommunspecifika bostadsrättspriser.",
     "ki.stockholms_lan": "Stockholms län",
     "ki.valj_lan": "Välj län",
     "ki.valj_kommun": "Välj kommun",
     "ki.hushallstyp": "Hushållstyp",
     "ki.singelhushall": "Singelhushåll",
-    "ki.singelhushall_en_individuell_inkomst_par": "Singelhushåll: en individuell inkomst. Par: sammanlagd inkomst (2×) — halverar spartiden och sänker LTI.",
+    "ki.singelhushall_en_individuell_inkomst_par": "Singelhushåll: en individuell inkomst. Par: sammanlagd inkomst (2×), vilket halverar spartiden och sänker LTI.",
     "ki.andel_av_bruttoinkomsten_som_sparas_arligen": "Andel av bruttoinkomsten som sparas årligen. 10 % är vanligt; över 20 % är ambitiöst. Påverkar hur lång tid det tar att spara ihop insatsen.",
-    "ki.avancerade_installningar_rantepaslag": "Avancerade inställningar — Räntepåslag",
+    "ki.avancerade_installningar_rantepaslag": "Avancerade inställningar: räntepåslag",
     "ki.riksbankens_styrranta_anvands_som_bas": "Riksbankens styrränta används som bas. Bankens räntepåslag adderas för att approximera faktisk bolåneränta. Typiskt ~1,7 pp för 3-månaders rörlig ränta.",
     "ki.bankens_rantepaslag_pp_ovan_styrrantan": "Bankens räntepåslag (pp ovan styrräntan)",
     "ki.faktisk_bolaneranta_styrranta_rantepaslag_0": "Faktisk bolåneränta ≈ styrränta + räntepåslag. 0 pp = enbart styrränta (historisk default). 1,7 pp = typisk 2024 bankmarknad.",
@@ -222,8 +223,8 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.jamtlands_lan": "Jämtlands län",
     "ki.vasterbottens_lan": "Västerbottens län",
     "ki.norrbottens_lan": "Norrbottens län",
-    "ki.bostadsratt_v0_scb_bo0501c": "Bostadsrätt — {v0} (SCB BO0501C)",
-    "ki.bostadsrattspris_saknas_for_v0_smahuspriset": "Bostadsrättspris saknas för {v0} — småhuspriset används som fallback.",
+    "ki.bostadsratt_v0_scb_bo0501c": "Bostadsrätt i {v0} (SCB BO0501C)",
+    "ki.bostadsrattspris_saknas_for_v0_smahuspriset": "Bostadsrättspris saknas för {v0}. Småhuspriset används som fallback.",
     "ki.smahus_fallback": "Småhus (fallback)",
     "ki.smahus_scb_bo0501c2": "Småhus (SCB BO0501C2)",
     "ki.lan_v0": "Län {v0}",
@@ -246,13 +247,13 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.villa_vs_bostadsratt": "Villa vs. bostadsrätt",
     "ki.v0_v1_lattnad_2026": "{v0} · {v1} · Lättnad 2026",
     "ki.pristypsjamforelse": "PRISTYPSJÄMFÖRELSE",
-    "ki.smahus_villa_scb_bo0501c2_v0": "**Småhus (villa)** — SCB BO0501C2 ({v0})",
+    "ki.smahus_villa_scb_bo0501c2_v0": "**Småhus (villa)**, SCB BO0501C2 ({v0})",
     "ki.ar_att_spara": "År att spara",
     "ki.ar": " år",
     "ki.manadskostnad": "Månadskostnad",
-    "ki.bostadsratt_scb_bo0501c_lansniva": "**Bostadsrätt** — SCB BO0501C (länsnivå)",
+    "ki.bostadsratt_scb_bo0501c_lansniva": "**Bostadsrätt**, SCB BO0501C (länsnivå)",
     "ki.priskvot_villa_bostadsratt_v0_1f_bada_priser": "Priskvot villa/bostadsrätt: **{v0:.1f}×**. Båda priser avser **{v1}** (länsnivå). Samma hushållsinkomst, ränta och regelverk (Lättnad 2026).",
-    "ki.priskvot_villa_bostadsratt_v0_1f_villapris": "Priskvot villa/bostadsrätt: **{v0:.1f}×**. Villapris avser **{v1}** (kommunnivå). Bostadsrättspris avser **{v2}** (länsnivå, SCB BO0501C) — SCB publicerar inga kommunspecifika bostadsrättspriser.",
+    "ki.priskvot_villa_bostadsratt_v0_1f_villapris": "Priskvot villa/bostadsrätt: **{v0:.1f}×**. Villapris avser **{v1}** (kommunnivå). Bostadsrättspris avser **{v2}** (länsnivå, SCB BO0501C). SCB publicerar inga kommunspecifika bostadsrättspriser.",
     "ki.total_kontantinsats_10_av_medianpriset_under": "Total kontantinsats (10 % av medianpriset under nuvarande bolånetak, gäller fr.o.m. apr 2026).",
     "ki.ar_att_spara_idag": "År att spara (idag)",
     "ki.ar_2": "år",
@@ -365,6 +366,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.arlig_amortering_i_av_lanet": "Årlig amortering i % av lånet.",
 
     # ── Sida 05 — Scenario ────────────────────────────────────────
+    "sc.shai_version_c_for_v0": "SHAI Version C för {v0}",
     "sc.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "sc.inga_data_tillgangliga_for_v0_valj_ett_ar": "Inga data tillgängliga för {v0}. Välj ett år med data: {v1}.",
     "sc.simulera_effekten_av_ranta_inkomst_och": "Simulera effekten av ränta-, inkomst- och prisförändringar på bostadsöverkomligheten",
@@ -414,7 +416,7 @@ SWEDISH_LABELS: dict[str, str] = {
     - Inkomsttillväxt multipliceras med inkomsten (relativ förändring)
     - Prischock multipliceras med transaktionspriset (relativ förändring)
 
-    **Begränsning F15 — Inflationen (π) hålls konstant:**
+    **Begränsning F15, inflationen (π) hålls konstant:**
     Scenariosimulatorn ändrar inte KPI-inflationen när räntan chockas. Det innebär att
     en räntehöjning på +3 pp tolkas som en ökning av realräntan med +3 pp, vilket inte
     stämmer om höjningen är ett svar på hög inflation (som i 2022–2023 då realräntan
@@ -431,9 +433,9 @@ SWEDISH_LABELS: dict[str, str] = {
     betalningsförmåga och kostnaden för boende. Banker och tillsynsmyndigheter analyserar detta
     genom tre perspektiv:
 
-    1. **Flödesöverkomlighet** — kan hushållet klara månadskostnaden?
-    2. **Stocköverkomlighet** — kan hushållet samla ihop kontantinsatsen?
-    3. **Risköverkomlighet** — vad händer under stressade förhållanden?
+    1. **Flödesöverkomlighet:** kan hushållet klara månadskostnaden?
+    2. **Stocköverkomlighet:** kan hushållet samla ihop kontantinsatsen?
+    3. **Risköverkomlighet:** vad händer under stressade förhållanden?
 
     SHAI implementerar alla tre genom formeltrippletten (A, B, C), kontantinsatsmotorn
     och scenariosimulatorn.
@@ -462,15 +464,15 @@ SWEDISH_LABELS: dict[str, str] = {
     och exponeras som valbar "Pristyp" på Sida 04 (Kontantinsats), så att
     förstagångsköpare i städer kan få en mer realistisk bild av kontantinsatskraven
     (typisk bostadsrätt i Stockholm ≈ 3,5 MSEK vs. villa ≈ 8,6 MSEK).
-    **OBS:** SCB publicerar inga kommunspecifika bostadsrättspriser — enbart 21 län + riksnivå.
+    **OBS:** SCB publicerar inga kommunspecifika bostadsrättspriser, enbart 21 län och riksnivå.
     Sida 04 byter automatiskt till länsnivå när Bostadsrätt väljs. Se F11 nedan.
-    K/T används enbart som deskriptiv indikator — den ingår inte i formeln.
+    K/T används enbart som deskriptiv indikator. Den ingår inte i formeln.
 
     **Arbetslöshetsdefinition:** Öppet arbetslösa inskrivna vid Arbetsförmedlingen, 18–65 år,
     som andel av befolkningen 18–65 år. Detta är *inte* samma som AKU/ILO-arbetslöshet.
     """,
     "mt.mater_flodesoverkomlighet_hushallets_inkomst": """
-    Mäter flödesöverkomlighet — hushållets inkomst relativt bostadens transaktionspris och aktuell ränta.
+    Mäter flödesöverkomlighet: hushållets inkomst relativt bostadens transaktionspris och aktuell ränta.
     Speglar traditionell bankbedömning. **Högre värde = bättre överkomlighet.**
 
     - **I(i,t)** = medianinkomst, kommun i, år t (SEK)
@@ -482,7 +484,7 @@ SWEDISH_LABELS: dict[str, str] = {
     Sammansatt riskindikator som viktar pris/inkomst, ränta, arbetslöshet och inflation.
     z-poäng beräknas över hela panelen. **Högre värde = högre risk.**
 
-    **Obs (Begränsning F13):** R och π är nationella variabler — de varierar enbart med år, inte mellan kommuner.
+    **Obs (Begränsning F13):** R och π är nationella variabler. De varierar enbart med år, inte mellan kommuner.
     Inom ett enskilt år bidrar dessa 45 % av vikterna (0,25 + 0,20) enbart till ett additivt skifte och
     påverkar inte den kommunala rangordningen. Rankingen inom ett år drivs i praktiken av z(P_SEK/I) och z(U).
     """,
@@ -498,29 +500,29 @@ SWEDISH_LABELS: dict[str, str] = {
     omvandlas nivån till en **z-poäng**, som i sin tur ger rang och riskklass. Två val styr
     den omvandlingen.
 
-    **1. Fönster — inom år.** Varje års kommuner poängsätts mot just det årets nationella
+    **1. Fönster: inom år.** Varje års kommuner poängsätts mot just det årets nationella
     fördelning. Riskklassen är alltså ett uttalande om kommunens läge *relativt sina
     jämnåriga*, inte om Sveriges överkomlighet över tid.
 
     Undantag, medvetet: Version B:s egen konstruktion (z-poängen *inuti* formeln ovan)
     beräknas över hela panelen. B är ett makrotrycksmått, och det är just poolningen som gör
-    att dess nivå kan bära en tidstrend — panelmedelvärdet går från −0,37 (2015) till +0,86
+    att dess nivå kan bära en tidstrend. Panelmedelvärdet går från −0,37 (2015) till +0,86
     (2023) och följer ränteuppgången. Att normalisera B inom år skulle nolla den signalen
     varje år och ta bort det B är byggt för att mäta.
 
-    **2. Transform — logaritm för A och C.** Version A och C är *kvoter* mellan positiva
+    **2. Transform: logaritm för A och C.** Version A och C är *kvoter* mellan positiva
     storheter, och är därför lognormalfördelade, inte normalfördelade. Z-poängen beräknas
     därför på `ln(värdet)`. Utan logaritmen förkastas normalitetsantagandet i samtliga år
     (p < 6·10⁻¹⁵); med logaritmen gör det inte det i något år (p = 0,34–0,83).
 
     Detta har betydelse eftersom klassgränserna nedan är kvartiler i en *normalfördelning*.
-    På den otransformerade kvoten gav de en skev fördelning som ingen valt — cirka 19 / 51 / 30
+    På den otransformerade kvoten gav de en skev fördelning som ingen valt: cirka 19 / 51 / 30
     i stället för 25 / 50 / 25.
 
     Version B logaritmeras inte: den är en viktad *summa* av z-poäng och antar negativa
     värden, så logaritmen är odefinierad.
 
-    Eftersom logaritmen är monoton påverkar transformen **inte rangordningen** — `rank` är
+    Eftersom logaritmen är monoton påverkar transformen **inte rangordningen**: `rank` är
     identisk med och utan den. Endast z-poängen och, för 16 av {v0} kommuner, riskklassen ändras.
 
     **3. Riskklass.** Klassgränserna ligger vid ±0,67 standardavvikelser, kvartilerna i en
@@ -538,14 +540,14 @@ SWEDISH_LABELS: dict[str, str] = {
 
     **Obs (Begränsning F16):** Eftersom gränserna är fasta kvantiler hamnar ungefär en fjärdedel
     av kommunerna i varje ytterklass *varje år, per konstruktion*. Det nationella **antalet**
-    kommuner i en klass kan därför inte tolkas som en trend — bara fördelningens form och
+    kommuner i en klass kan därför inte tolkas som en trend. Bara fördelningens form och
     enskilda kommuners förflyttning mellan klasser bär information.
     """,
     "mt.varfor_transaktionspris_i_sek_inte_k_t_eller": "### Varför transaktionspris i SEK, inte K/T eller prisindex?",
     "mt.tre_alternativa_prismatt_overvagdes": """
     Tre alternativa prismått övervägdes:
 
-    - **Prisindex (1990=100):** Ett *tillväxtmått* som inte kan jämföras mellan regioner —
+    - **Prisindex (1990=100):** Ett *tillväxtmått* som inte kan jämföras mellan regioner:
       alla kommuner startar på 100 oavsett absolut prisnivå. Kan inte rangordna.
     - **K/T-kvot (köpeskilling/taxeringsvärde):** Ett *relativt mått* som snedvrids av eftersläpande
       taxeringsvärden. Höga K/T i glesbygd speglar gamla taxeringsvärden, inte hög prisnivå. K/T
@@ -553,7 +555,7 @@ SWEDISH_LABELS: dict[str, str] = {
     - **Transaktionspris i SEK (BO0501C2):** Ett *absolut nivåmått* direkt jämförbart mellan kommuner.
       Ger korrekt rangordning (Stockholm dyrast, Norrbotten billigast).
 
-    Formlerna A, B, C beräknas med **transaktionspriset i SEK** — inte K/T.
+    Formlerna A, B, C beräknas med **transaktionspriset i SEK**, inte K/T.
     SCB:s BO0501C2 innehåller *medelvärdet* (medelvärde, ej median) av köpeskillingen för
     permanenta småhus (Fastighetstyp 220). Se Begränsning F11 och F12 nedan.
     """,
@@ -625,7 +627,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "mt.id_begransning_atgard_f1_kommunal": """
     | ID | Begränsning | Åtgärd |
     |----|-------------|--------|
-    | **F1** | Kommunal pristäckning — länets K/T används som proxy. 88% av panelen har kommunspecifik K/T. | Flagga `has_native_kt` i data. |
+    | **F1** | Kommunal pristäckning: länets K/T används som proxy. 88% av panelen har kommunspecifik K/T. | Flagga `has_native_kt` i data. |
     | **F2** | Nationell styrränta appliceras på alla kommuner och län. | Dokumenterat. |
     | **F3** | Tre formler ger olika rangordning av kommuner. | Korsformelsjämförelse på Sida 02. |
     | **F4** | Prophet är svagt för årlig makrodata. | ARIMA-flik märkt "rekommenderad". |
@@ -633,11 +635,11 @@ SWEDISH_LABELS: dict[str, str] = {
     | **F6** | Lång horisont vilseleder. | Max 8 steg; varningstext. |
     | **F7** | SCB API-gränser (30 anrop/10 s, 150k celler/fråga). | All data cachad som parquet. |
     | **F8** | Översättning tappar nyanser i bankterminologi. | Ordlista i dokumentation. |
-    | **F9** | Imputering av inkomstdata efter senaste publicerade år. | `is_imputed_income`-flagga; framskrivning med 3 % nominell tillväxt per år. Dessa år är inte längre valbara i årsväljaren — indexet stannar vid senaste kompletta år. |
+    | **F9** | Imputering av inkomstdata efter senaste publicerade år. | `is_imputed_income`-flagga; framskrivning med 3 % nominell tillväxt per år. Dessa år är inte längre valbara i årsväljaren, indexet stannar vid senaste kompletta år. |
     | **F10** | Arbetslöshetsdefinition (Af, inte AKU/ILO). | Fotnot på relevanta sidor. |
-    | **F11** | SHAI-indexformlerna (A, B, C) beräknas fortfarande enbart på villapriser (SCB BO0501C2, Fastighetstyp 220) — systemisk vy, bevarad för metodologisk kontinuitet. Bostadsrättspriser (SCB BO0501C) ingår nu i panelen och exponeras som valbar Pristyp på Sida 04 (Kontantinsats). SCB publicerar bostadsrättspriser enbart på länsnivå (21 län) — inga kommunspecifika data finns. Sida 04 byter automatiskt till länsnivå vid Bostadsrätt-val. | Pristyp-väljare + automatisk nivåbyte på Sida 04. |
+    | **F11** | SHAI-indexformlerna (A, B, C) beräknas fortfarande enbart på villapriser (SCB BO0501C2, Fastighetstyp 220), en systemisk vy, bevarad för metodologisk kontinuitet. Bostadsrättspriser (SCB BO0501C) ingår nu i panelen och exponeras som valbar Pristyp på Sida 04 (Kontantinsats). SCB publicerar bostadsrättspriser enbart på länsnivå (21 län), inga kommunspecifika data finns. Sida 04 byter automatiskt till länsnivå vid Bostadsrätt-val. | Pristyp-väljare + automatisk nivåbyte på Sida 04. |
     | **F12** | Styrräntan används direkt som bolåneränta. Faktisk bolåneränta ≈ styrränta + bankens marginal (ca 1,5–2,5 pp). Månadskostnad och affordability-formler är optimistiska. | Notering i Detaljer på Sida 04. |
-    | **F13** | Version B: R och π är nationella variabler (samma för alla kommuner ett givet år). Z-poäng för dessa bär ingen kommunspecifik information inom ett enskilt år — 45% av vikterna diskriminerar enbart i tid, inte i rum. | Dokumenterat i formelbeskriving ovan. |
+    | **F13** | Version B: R och π är nationella variabler (samma för alla kommuner ett givet år). Z-poäng för dessa bär ingen kommunspecifik information inom ett enskilt år. 45% av vikterna diskriminerar enbart i tid, inte i rum. | Dokumenterat i formelbeskriving ovan. |
     | **F14** | Inkomst är individuell bruttoinkomst. Bostad köps typiskt av ett hushåll (par). Spartiden för singelhushåll är 2× hushållssiffran. | Notering under "År att spara" KPI på Sida 04. |
     | **F16** | Riskklassens gränser (±0,67 σ) är fasta kvantiler, så andelen kommuner per klass är nära konstant varje år per konstruktion. Antalet högriskkommuner kan inte bära en nationell trend. | Dokumenterat under "Normalisering" ovan; ingen förändringspil visas på antalet. |
     | **F15** | Scenariosimulatorn håller KPI-inflationen (π) konstant när räntan chockas. Realränteförändringen är därmed identisk med den nominella räntechochen. | Notering i Förklaring på Sida 05. |
@@ -667,6 +669,6 @@ SWEDISH_LABELS: dict[str, str] = {
     - **Finansinspektionen** (Amorteringskrav): [fi.se](https://www.fi.se/en/our-registers/the-amortisation-requirement/)
     - **SCB PxWeb API v1**: [scb.se/api](https://www.scb.se/api/)
     """,
-    "mt.shai_v_v0_metodologi_baserad_pa_methodology": "SHAI v{v0} — Metodologi baserad på METHODOLOGY.md",
+    "mt.shai_v_v0_metodologi_baserad_pa_methodology": "SHAI v{v0}, metodologi baserad på METHODOLOGY.md",
 
 }

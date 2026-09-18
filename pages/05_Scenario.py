@@ -255,7 +255,7 @@ with col_chart:
     with st.container(border=True):
         st.markdown(
             card_header(
-                f"SHAI Version C — {selected_county_name}",
+                L("sc.shai_version_c_for_v0", v0=selected_county_name),
                 "Basfall vs scenario",
                 "SIMULERING",
             ),

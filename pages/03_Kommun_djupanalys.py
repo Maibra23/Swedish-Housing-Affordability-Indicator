@@ -228,7 +228,7 @@ tab_prophet, tab_arima = st.tabs(["Prophet (standard)", "ARIMA (rekommenderad)"]
 with tab_prophet:
     with st.container(border=True):
         st.markdown(
-            card_header(f"Prognos — {selected_kommun}", "Prophet-modell", "PROPHET"),
+            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "Prophet-modell", "PROPHET"),
             unsafe_allow_html=True,
         )
         st.caption(L("kd.prophet_ar_optimerat_for_dagliga"))
@@ -242,7 +242,7 @@ with tab_prophet:
 with tab_arima:
     with st.container(border=True):
         st.markdown(
-            card_header(f"Prognos — {selected_kommun}", "ARIMA-modell (auto-AIC)", "ARIMA"),
+            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "ARIMA-modell (auto-AIC)", "ARIMA"),
             unsafe_allow_html=True,
         )
         if len(forecast_arima) > 0:
