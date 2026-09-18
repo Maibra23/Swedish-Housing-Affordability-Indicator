@@ -242,6 +242,16 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.tolk_lattnad_avvagning": "Lättnaden 2026 sänker kontantinsatsen med {v0} kr jämfört med det tidigare regelverket, men höjer månadskostnaden med {v1} kr. Lägre tröskel in, högre kostnad att bo kvar: en mindre insats betyder ett större lån.",
     "ki.tolk_lattnad_battre": "Lättnaden 2026 sänker både kontantinsatsen, med {v0} kr, och månadskostnaden, med {v1} kr, jämfört med det tidigare regelverket.",
     "ki.tolk_singel_antagande": "Beräkningen utgår från en inkomst. De flesta bostadsköp i Sverige görs av två personer tillsammans. Välj Par ovan för att se hur siffrorna förändras.",
+    # Affordability gap chart (sida 04).
+    "ki.gap_rubrik": "Vad räcker inkomsten till?",
+    "ki.gap_underrubrik": "Högsta pris inkomsten bär, mot priset som faktiskt begärs",
+    "ki.gap_tagg": "RÄCKVIDD",
+    "ki.gap_faktiskt_pris": "Faktiskt pris",
+    "ki.gap_max_pris": "Högsta pris inkomsten bär",
+    "ki.gap_axel_pris": "Pris (SEK)",
+    "ki.gap_saknas_v0": "{v0} SEK över räckvidd",
+    "ki.gap_marginal_v0": "{v0} SEK marginal",
+    "ki.gap_forklaring_v0": "Taket utgår från att banken lånar ut omkring {v0} gånger hushållsinkomsten. Det är vanlig bankpraxis, inte en regel, och enskilda banker gör egna bedömningar.",
     "ki.tillganglig": "Tillgänglig",
     "ki.anstrangd": "Ansträngd",
     "ki.otillganglig": "Otillgänglig",
@@ -381,6 +391,16 @@ SWEDISH_LABELS: dict[str, str] = {
     # ── Sida 05 — Scenario ────────────────────────────────────────
     "sc.shai_version_c_for_v0": "SHAI Version C för {v0}",
     # Result interpretation (sida 05).
+    # Rate and inflation surface (sida 05).
+    "sc.yta_rubrik": "Ränta och inflation tillsammans",
+    "sc.yta_underrubrik": "SHAI Version C över hela planet, med ditt scenario markerat",
+    "sc.yta_tagg": "KÄNSLIGHET",
+    "sc.yta_x_axel": "KPI-chock (procentenheter)",
+    "sc.yta_y_axel": "Räntechock (procentenheter)",
+    "sc.yta_skala": "SHAI",
+    "sc.yta_hover": "Räntechock %{y} pp<br>KPI-chock %{x} pp<br>SHAI %{z:.1f}<extra></extra>",
+    "sc.yta_du_ar_har": "Ditt scenario<extra></extra>",
+    "sc.yta_forklaring": "Diagonalerna är lika stora: samma skillnad mellan ränta och inflation ger samma värde, eftersom det är realräntan formeln räknar med. Det platta fältet uppe till höger är golvet på 0,5 procentenheter, där indexet slutar reagera på ytterligare sänkningar.",
     "sc.tolk_rubrik": "Så ska resultatet läsas",
     "sc.tolk_inget_scenario": "Inget scenario är valt ännu. Flytta en reglage eller välj ett förinställt scenario för att se hur överkomligheten påverkas.",
     "sc.tolk_riktning_upp": "Scenariot **förbättrar** överkomligheten med {v0} %, från {v1} till {v2}.",

@@ -147,28 +147,6 @@ CSS = """/* ---- Page header (full row) ---- */
     line-height: 1.2 !important;
 }
 
-/* ---- Result interpretation panel ---- */
-.shai-interpret {
-    display: flex;
-    gap: 9px;
-    align-items: flex-start;
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: #1A1A2E;
-    padding: 7px 0;
-    border-bottom: 1px solid #F2F4F7;
-}
-.shai-interpret:last-child { border-bottom: none; }
-.shai-interpret-icon {
-    flex-shrink: 0;
-    font-size: 11px;
-    line-height: 1.75;
-}
-.shai-interpret--critical { color: #8C2F2D; }
-.shai-interpret--warning  { color: #7A5B1E; }
-.shai-interpret--good     { color: #1F5A41; }
-.shai-interpret--note     { color: #4B5563; }
-
 /* ---- Generic card ---- */
 .shai-card {
     background: #FFFFFF;

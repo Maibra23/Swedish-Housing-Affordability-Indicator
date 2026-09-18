@@ -195,3 +195,83 @@ def comparison_tab_specs(*, monthly_income: float) -> tuple[dict, ...]:
             ],
         },
     )
+
+
+def affordability_gap_chart(
+    *,
+    price: float,
+    income: float,
+    lending_ceiling: float,
+    min_down_pct: float,
+) -> go.Figure:
+    """Maximum supportable price against the price actually being asked.
+
+    The page reports how long a deposit takes to save. It does not report whether
+    the purchase is reachable at all, which for the expensive half of the panel is
+    the question that governs the answer. This inverts the loan arithmetic: at the
+    lending ceiling, and with this regime's deposit, the largest price this income
+    supports is
+
+        max_price = income * ceiling / (1 - min_down_pct)
+
+    Drawn as two bars rather than a ratio because the gap between them is the
+    quantity a buyer acts on, and a gap is easier to read as a length than as a
+    multiple.
+
+    Args:
+        price: The region's actual transaction price.
+        income: Household income used by the calculation.
+        lending_ceiling: Loan-to-income multiple a bank will normally lend to.
+        min_down_pct: Deposit share under the regime being shown.
+
+    Returns:
+        A horizontal bar figure.
+    """
+    max_price = income * lending_ceiling / (1 - min_down_pct)
+    reachable = price <= max_price
+    gap = price - max_price
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=[L("ki.gap_faktiskt_pris"), L("ki.gap_max_pris")],
+        x=[price, max_price],
+        orientation="h",
+        marker_color=[
+            COLORS["low_risk"] if reachable else COLORS["high_risk"],
+            COLORS["secondary"],
+        ],
+        marker_line_width=0,
+        text=[f"{format_sek(price)} SEK", f"{format_sek(max_price)} SEK"],
+        textposition="auto",
+        textfont=dict(family="IBM Plex Mono, monospace", size=12),
+        hovertemplate="%{y}<br>%{x:,.0f} SEK<extra></extra>",
+        width=0.55,
+    ))
+
+    # The shortfall is the actionable number, so it is annotated rather than left
+    # to be inferred from two bar lengths.
+    fig.add_annotation(
+        x=max(price, max_price),
+        y=0 if not reachable else 1,
+        text=(
+            L("ki.gap_saknas_v0", v0=format_sek(abs(gap)))
+            if not reachable
+            else L("ki.gap_marginal_v0", v0=format_sek(abs(gap)))
+        ),
+        showarrow=False,
+        xanchor="right",
+        yshift=26,
+        font=dict(
+            size=12,
+            color=COLORS["high_risk"] if not reachable else COLORS["low_risk"],
+        ),
+    )
+
+    layout = get_chart_layout(height=210, showlegend=False)
+    layout["xaxis"]["title"] = L("ki.gap_axel_pris")
+    # The category labels are full sentences, so the left margin is measured
+    # rather than guessed; a fixed value clipped "Högsta pris inkomsten bär".
+    layout["yaxis"]["automargin"] = True
+    layout["margin"] = dict(r=10, t=30, b=40)
+    fig.update_layout(**layout)
+    return fig

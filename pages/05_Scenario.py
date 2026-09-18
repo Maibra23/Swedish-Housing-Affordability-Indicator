@@ -28,6 +28,7 @@ from src.ui.components import (
 )
 from src.ui.chart_theme import get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
+from src.scenario.charts import rate_inflation_surface
 from src.scenario.simulator import simulate
 
 inject_css()
@@ -260,6 +261,30 @@ render_findings(
     ),
     title=L("sc.tolk_rubrik"),
 )
+
+st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+
+# The sliders show one point on the rate/inflation plane. The surface shows the
+# plane, where equal values of R - pi form diagonal bands, which is the lesson
+# the page exists to teach and cannot deliver one slider at a time.
+with st.container(border=True):
+    st.markdown(
+        card_header(L("sc.yta_rubrik"), L("sc.yta_underrubrik"), L("sc.yta_tagg")),
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(
+        rate_inflation_surface(
+            county_kod=selected_county_code,
+            baseline_panel=baseline_panel,
+            income_shock=income_shock_pct / 100.0,
+            price_shock=price_shock_pct / 100.0,
+            rate_shock=rate_shock,
+            cpi_shock=cpi_shock,
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
+    st.caption(L("sc.yta_forklaring"))
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
