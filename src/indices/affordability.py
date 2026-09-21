@@ -17,6 +17,8 @@ import logging
 
 import pandas as pd
 
+from src.indices.b_reference import LevelReference, pi_ratio
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,7 +82,9 @@ def compute_version_a(panel: pd.DataFrame) -> pd.Series:
     return income / (price * rate_safe)
 
 
-def compute_version_b(panel: pd.DataFrame) -> pd.Series:
+def compute_version_b(
+    panel: pd.DataFrame, reference: LevelReference | None = None
+) -> pd.Series:
     """Version B: Macro composite pressure index.
 
     Risk_B = 0.35*z(P/I) + 0.25*z(R) + 0.20*z(U) + 0.20*z(pi)
@@ -88,14 +92,33 @@ def compute_version_b(panel: pd.DataFrame) -> pd.Series:
     Higher value = worse affordability (more risk).
     Requires: median_income, transaction_price_sek, policy_rate,
               unemployment_rate, cpi_yoy_pct.
-    """
-    # Price-to-income ratio using transaction price in SEK
-    pi_ratio = panel["transaction_price_sek"] / panel["median_income"]
 
-    z_pi_ratio = _zscore(pi_ratio)
-    z_rate = _zscore(panel["policy_rate"])
-    z_unemp = _zscore(panel["unemployment_rate"])
-    z_cpi = _zscore(panel["cpi_yoy_pct"])
+    The four z-scores are pooled across the panel rather than taken within year,
+    which is what lets B's level carry a time trend (decision D5). Pooling them
+    against *this* panel, however, made every published value a function of panel
+    composition: R1 in `docs/OPEN_RISKS.md`. Pass a stored `reference` and the
+    moments come from there instead, so appending a year leaves history alone.
+
+    Args:
+        panel: Rows to score.
+        reference: Frozen moments to score against. When None the moments are
+            taken from `panel` itself, which is the original behaviour and is
+            kept for deriving a reference and for tests that need to compare the
+            two directly. Production scoring always passes one.
+
+    Returns:
+        The Version B series.
+    """
+    if reference is None:
+        z_pi_ratio = _zscore(pi_ratio(panel))
+        z_rate = _zscore(panel["policy_rate"])
+        z_unemp = _zscore(panel["unemployment_rate"])
+        z_cpi = _zscore(panel["cpi_yoy_pct"])
+    else:
+        z_pi_ratio = reference.zscore(pi_ratio(panel), "pi_ratio")
+        z_rate = reference.zscore(panel["policy_rate"], "policy_rate")
+        z_unemp = reference.zscore(panel["unemployment_rate"], "unemployment_rate")
+        z_cpi = reference.zscore(panel["cpi_yoy_pct"], "cpi_yoy_pct")
 
     return 0.35 * z_pi_ratio + 0.25 * z_rate + 0.20 * z_unemp + 0.20 * z_cpi
 
@@ -123,24 +146,56 @@ def compute_version_c(panel: pd.DataFrame) -> pd.Series:
     return income / (price * real_rate_decimal)
 
 
-def compute_all(panel: pd.DataFrame) -> pd.DataFrame:
+INDEX_INPUTS = ("median_income", "transaction_price_sek", "policy_rate",
+                "unemployment_rate", "cpi_yoy_pct")
+
+
+def scorable_rows(panel: pd.DataFrame) -> pd.DataFrame:
+    """Rows carrying every index input, which is the set the formulas see.
+
+    Exposed rather than left inline inside `compute_all` because the Version B
+    reference must be derived from exactly the rows that will be scored against
+    it. Deriving from one row set and scoring another is a subtler version of the
+    defect the reference exists to fix, and it is what the first draft did:
+    `complete_case` returns 4 060 municipal rows while only 3 190 carry every
+    input, which made the frozen moments disagree with the moving ones by up to
+    0.19.
+
+    Args:
+        panel: Any panel frame.
+
+    Returns:
+        A copy holding only the rows with no nulls in the index inputs.
+    """
+    mask = panel[list(INDEX_INPUTS)].notna().all(axis=1)
+    return panel[mask].copy()
+
+
+def compute_all(
+    panel: pd.DataFrame, b_reference: LevelReference | None = None
+) -> pd.DataFrame:
     """Compute all three affordability versions.
 
     Filters to rows where all required inputs are non-null,
     then computes A, B, C.
 
-    Returns DataFrame with original panel columns plus version_a, version_b, version_c.
+    Args:
+        panel: Rows to score.
+        b_reference: Frozen moments for Version B. See `compute_version_b`; the
+            pipeline always supplies one, and omitting it re-bases B against
+            whatever panel is passed.
+
+    Returns:
+        DataFrame with original panel columns plus version_a, version_b,
+        version_c.
     """
-    required = ["median_income", "transaction_price_sek", "policy_rate",
-                 "unemployment_rate", "cpi_yoy_pct"]
-    mask = panel[required].notna().all(axis=1)
-    df = panel[mask].copy()
+    df = scorable_rows(panel)
 
     logger.info("Computing affordability on %d rows (dropped %d with nulls)",
                 len(df), len(panel) - len(df))
 
     df["version_a"] = compute_version_a(df)
-    df["version_b"] = compute_version_b(df)
+    df["version_b"] = compute_version_b(df, b_reference)
     df["version_c"] = compute_version_c(df)
 
     return df

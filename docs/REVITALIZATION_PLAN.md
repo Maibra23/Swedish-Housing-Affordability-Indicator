@@ -137,7 +137,7 @@ criteria demands.
 | D2 | UI design target | **Converge on Skattekraftspanelen** | It already uses SHAI's own `shai-` class prefix and `src/ui/` layout — it is the next generation of this design system, not a different one. Keeps Plotly. Borrow selected patterns from KRI. |
 | D3 | Sequencing | **Correctness → deployment → UI → tests/docs** | Each phase independently shippable. The app stops serving wrong numbers before it gets re-skinned. |
 | D4 | Shared design system package | **No — copy into SHAI, repos stay independent** | Zero Streamlit Cloud deployment risk, no cross-repo release coupling. Structure `src/ui/` so later extraction stays easy. |
-| D5 | Normalisation **window** (answers O2) | **Within year for `z_*`; Version B's own construction stays pooled** | A and C ask "where does this kommun stand among its peers this year"; B asks "how much macro pressure is there now versus history". B's pooled level is the only time trend in the index — its panel mean runs −0.37 (2015) to +0.86 (2023), tracking the rate cycle. Within-year normalisation would pin that at zero every year and delete the signal B exists to measure. Finding G is resolved by documenting the difference as deliberate, not by erasing it. |
+| D5 | Normalisation **window** (answers O2) | **Within year for `z_*`; Version B's own construction stays pooled** | A and C ask "where does this kommun stand among its peers this year"; B asks "how much macro pressure is there now versus history". B's pooled level is the only time trend in the index — its panel mean runs −0.31 (2015) to +0.78 (2023), tracking the rate cycle. The pooled moments are frozen in an artifact rather than recomputed per refresh; see R1. Within-year normalisation would pin that at zero every year and delete the signal B exists to measure. Finding G is resolved by documenting the difference as deliberate, not by erasing it. |
 | D6 | Normalisation **transform** (answers O4) | **Log-transform A and C before z-scoring; B stays raw** | A and C are ratios of positive quantities, so log-normal. Z-scoring them raw put the ±0.67σ cut — quartiles *of a normal distribution* — on a variable whose normality is rejected at p < 6e-15 in every year, yielding a ≈19/51/30 split nobody chose. Under the log the variable is normal in all eleven years (p = 0.34–0.83) and the split is ≈23/48/28. B is a weighted sum of z-scores and goes negative in 1919 of 3190 rows, so a log is undefined for it. Monotonic, so **no rank changes**. See Finding Q. |
 
 ### Reference repositories
@@ -357,7 +357,7 @@ middle:
 **Version B does not fit this pattern and must be handled separately.** It is a weighted sum of
 z-scores, not a ratio: it takes negative values in 1919 of 3190 rows, so a log is undefined for
 it. It is also right-skewed (+1.4 … +1.7) *and* pooled across the whole panel, so its
-within-year mean drifts from −0.37 (2015) to +0.86 (2023) — that drift is Finding G, and for B
+within-year mean drifts from −0.31 (2015) to +0.78 (2023) — that drift is Finding G, and for B
 it is arguably the point, since B is meant to carry a time trend.
 
 **How to manage it:** this is a methodology change, not a defect fix — it changes every
@@ -782,7 +782,7 @@ render date. This one does not have that property. Both answers are defensible, 
 reconcilable, and each changes numbers the app publishes:
 
 - Choosing **within-year for B** deletes the only time trend in the index by construction.
-  B's within-year mean currently runs −0.37 (2015) to +0.86 (2023), which is B doing its job
+  B's within-year mean currently runs −0.31 (2015) to +0.78 (2023), which is B doing its job
   as a macro-pressure measure. Normalising within year sets it to ~0 every year, permanently.
 - Choosing **log** changes every `z_*` the app displays and moves 16 municipalities across a
   risk boundary — outward-facing numbers about named places.
@@ -1398,10 +1398,12 @@ editorial aside) are compared where an artifact knows something adjacent and oth
 classified in `NOT_A_VINTAGE`, so a new year cannot join them unexamined.
 
 One check is worth naming: **the D5 panel-mean statistic is re-derived**. The methodology cites
-"panelmedelvärdet går från −0,37 (2015) till +0,86 (2023)" as the evidence for keeping Version B
-pooled. It holds exactly today. It is also the sentence in the whole document most likely to go
-stale, because R1 means B moves whenever the panel does — so the test recomputes the extremes
-from the artifact rather than trusting them.
+"panelmedelvärdet går från −0,31 (2015) till +0,78 (2023)" as the evidence for keeping Version B
+pooled. It holds exactly today. It was also, at the time this was written, the sentence in the
+whole document most likely to go stale, because R1 meant B moved whenever the panel did — so the
+test recomputes the extremes from the artifact rather than trusting them. It earned its keep on
+2026-09-21, catching the figures the income-source switch moved. R1 is now closed and the
+extremes no longer move on a refresh, but the test stays: it is what proves that.
 
 **Scope note, stated rather than glossed.** The acceptance said every string containing a
 number. 96 of 269 labels contain a digit, and the great majority are SCB dataset codes, regime
@@ -1518,7 +1520,7 @@ file with no reader"* — and fold build-time artifacts (`PROMPTS`, `PATCH_POST_
 - [x] No two documents describe the same thing
 - [x] Every surviving doc is linked from `README.md`, and the README links nothing missing
 
-`tests/test_docs_inventory.py` (123). 19 documents → **9 maintained** plus a 6-file archive.
+`tests/test_docs_inventory.py` (125). 19 documents → **9 maintained** plus a 6-file archive.
 
 Deleted the four superseded v1 files and renamed the `_v2` survivors onto their names.
 Build-time artifacts went to `docs/archive/` rather than being deleted — the plan allowed
@@ -1667,6 +1669,7 @@ Append one line per work session: date, tasks touched, outcome, anything the nex
 
 | Date | Tasks | Outcome | Notes for next session |
 |------|-------|---------|------------------------|
+| 2026-09-21 | R1 | **R1 CLOSED — the last open High that changed published numbers.** Version B's pooled z-score moments are now derived once and stored in `data/processed/version_b_reference.json` rather than recomputed from whatever panel is being scored. Measured both cases the register asked for before deciding: an ordinary appended year moved all 3190 historical rows, 947 ranks and 7 risk classes, while the same append left Version C on **zero** rows; the income-source switch earlier that day moved 2971 ranks by up to 117 places and **225 risk classes**. The 19-row precedent the register hoped to accept with a note was an under-count by an order of magnitude. Option C was still wrong (it deletes the trend D5 kept B for); what shipped is closest to option B with its cost removed, because the reference is frozen **once and carried forward** rather than per vintage, so all vintages stay comparable. Adoption was value-neutral: the rebuild left all four affordability parquets byte-identical. `tests/test_version_b_reference.py` (13) guards it, including a negative control asserting the unreferenced path still re-bases, so the main test cannot pass by describing a scenario that no longer happens. | The sweep found three stale copies of the D5 panel-mean figures in prose that `test_copy_matches_artifacts` does not reach — it guards `SWEDISH_LABELS`, not docstrings or markdown. All corrected, but that gap is real and unguarded. Next by the agreed order: tests for `build_panel.py` (R5, and R10's remaining half), then re-measure R4 and verify R3. |
 | 2026-09-21 | ANALYSIS_GUIDE items 5, 7, 9, 10, 11, 12, 13–19 | **All open items closed.** **Charts:** the rate/inflation surface is rebuilt as a `go.Contour` on `DIVERGING_SCALE` centred on the change from baseline, with the 0,5 pp floor drawn as a derived line rather than described in a caption that named the wrong corner; equal pp steps on both axes with `scaleanchor`, so the 45 degree iso-lines are true of the picture. `tests/test_chart_theme_guard.py` (9) closes **R14** and found nine more colour literals in pages 02 and 03. **Income:** `fetch_income` repointed from `HE0110G/TabVX4bDispInkN` (household disposable) to `HE0110A/SamForvInk1` (individual gross), which was the series every page already described; `docs/ADR/0001-income-series.md` records the candidates and the measured cost. The switch moved income -23,0 %, changed risk class on 161 of 3 190 rows and moved a quarter of municipalities more than ten rank places — an earlier three-municipality estimate had called it near-uniform and was wrong. **Audit layer:** `src/data/variable_contracts.py` pins table, filters, unit of analysis and forbidden operations; the fetch asserts them against live SCB metadata; `tests/test_variable_contracts.py` (14) pins hand-verified benchmarks; provenance now records definitions, not only vintages. The contract work found a second meaning defect: the transaction price is an arithmetic mean and the UI called it *Medianpris* in three places. **Two findings changed what the work was.** `z_a`/`rank_a`/`risk_a` are exact duplicates of the `_c` family by construction, so A and C cannot corroborate each other; and no uniform shock can move any rank under within-year normalisation, so the national scenario view needs fixed class boundaries. Both are now asserted (`test_formula_agreement.py` (7), `test_panel_scenario.py` (26)) rather than described. `scb_client.py` left the file-size exemption: it gained tests, so the transport layer moved to `pxweb.py` and it is 328 lines, under the ordinary limit. **R10 half closed.** | `build_panel.py` is the remaining R10 half, 615 lines and still untested. `SamForvInk1` reaches back to 1999 and the panel is pinned at 2011 via `min_year`; deepening it is a separate, deliberate decision. HE0110M remains available as a preliminary 2025 nowcast if it is ever shown beside the index rather than spliced into it. |
 | 2026-09-15 | — | Audit completed, plan written. No code changed. | Answer O1 before T2.4. Start at T1.1. |
 | 2026-09-16 | — (hardening) | **No task work; three findings.** Added **`scripts/audit.py`** — 27 checks re-derived from the committed artifacts, deliberately *not* importing the test suite, so it can disagree rather than echo. Writing it caught that my own Scattergeo check was wrong and the document right: it matched the word anywhere, and `DESIGN_SYSTEM.md` names Scattergeo once in its opening line as the thing the *previous* version wrongly described. Same mistake this project keeps making in miniature — a guard firing on prose that explains a defect. Then, checking what a macOS clone would do, found **`scripts/generate_municipality_coords.py` hardcoded an absolute Windows path** under one user's home; it would have failed on any other machine. Fixed, with a parametrised guard over every script, `src` module and page. Finally, audited this document's own numbers: **five per-file test counts were stale** (one was an estimate I never measured; four grew as parametrisation expanded). Corrected. | Nothing outstanding. `python scripts/audit.py` and `pytest tests/` are the two commands for a reviewer. `docs/OPEN_RISKS.md` remains the live document. |

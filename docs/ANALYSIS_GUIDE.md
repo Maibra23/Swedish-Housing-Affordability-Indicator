@@ -258,7 +258,9 @@ Because they disagree, and the disagreement is informative. A and C diverge
 exactly when inflation is far from zero, which is precisely when a nominal
 reading misleads. B can carry a time trend that A and C cannot, because its
 z-scores are pooled across the whole panel rather than computed within each year.
-Its panel mean runs from -0.37 in 2015 to +0.86 in 2023, tracking the rate cycle.
+Its panel mean runs from -0.31 in 2015 to +0.78 in 2023, tracking the rate cycle,
+now measured against a frozen reference so the figures stop moving on a refresh
+(R1).
 A and C, normalised within year, are silent about whether Sweden as a whole got
 better or worse.
 

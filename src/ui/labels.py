@@ -556,7 +556,9 @@ SWEDISH_LABELS: dict[str, str] = {
     "mt.version_b_makrokomposit_tryckmatt": "### Version B: Makrokomposit (tryckmått)",
     "mt.sammansatt_riskindikator_som_viktar_pris": """
     Sammansatt riskindikator som viktar pris/inkomst, ränta, arbetslöshet och inflation.
-    z-poäng beräknas över hela panelen. **Högre värde = högre risk.**
+    z-poängen beräknas över hela panelen, mot en fast referens som ligger still mellan
+    uppdateringar, så att redan publicerade värden inte skrivs om när ett nytt år tillkommer.
+    **Högre värde = högre risk.**
 
     **Obs (Begränsning F13):** R och π är nationella variabler. De varierar enbart med år, inte mellan kommuner.
     Inom ett enskilt år bidrar dessa 45 % av vikterna (0,25 + 0,20) enbart till ett additivt skifte och
@@ -583,6 +585,10 @@ SWEDISH_LABELS: dict[str, str] = {
     att dess nivå kan bära en tidstrend. Panelmedelvärdet går från −0,31 (2015) till +0,78
     (2023) och följer ränteuppgången. Att normalisera B inom år skulle nolla den signalen
     varje år och ta bort det B är byggt för att mäta.
+
+    Poolningen sker mot en **fast referens** som beräknats en gång och sparats, inte mot den
+    panel som just poängsätts. Annars skulle varje uppdatering räkna om historien: ett enda
+    tillagt år flyttade tidigare alla 3 190 rader.
 
     **2. Transform: logaritm för A och C.** Version A och C är *kvoter* mellan positiva
     storheter, och är därför lognormalfördelade, inte normalfördelade. Z-poängen beräknas

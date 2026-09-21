@@ -12,7 +12,7 @@ These outlive it.
 
 | # | Risk | Severity | Status |
 |---|------|----------|--------|
-| R1 | Version B re-bases every historical value whenever the panel changes | **High** | OPEN |
+| R1 | Version B re-bases every historical value whenever the panel changes | **High** | **CLOSED** |
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | OPEN |
 | R3 | The `pipeline` extra is unverified as an install | Medium | OPEN |
 | R4 | The forecast step exhausts memory on this machine | Medium | OPEN |
@@ -31,49 +31,81 @@ These outlive it.
 
 ## R1 — Version B re-bases every historical value whenever the panel changes
 
-**Severity: High.** Silent, and it changes published numbers.
+**Severity: High. CLOSED** on 2026-09-21 by `src/indices/b_reference.py`.
 
-`compute_version_b` z-scores its four components — price-index ratio, policy rate,
-unemployment, CPI — **pooled across every row of the panel it is handed**. That is
-deliberate: D5 kept B's construction pooled because the pooled level is the only time
-trend the index carries. Versions A and C are normalised within year and are immune.
+`compute_version_b` z-scored its four components — price-index ratio, policy rate,
+unemployment, CPI — **pooled across every row of the panel it was handed**. That pooling is
+deliberate: D5 kept B's construction pooled because the pooled level is the only time trend
+the index carries. Versions A and C are normalised within year and are immune.
 
-The consequence is that B's published values are a function of panel composition. Add a
-row anywhere and every year moves.
+The consequence was that B's published values were a function of panel composition. Add a
+row anywhere and every year moved.
 
-This is not hypothetical. When the 2025 component data landed in T2.4, a single
-forward-filled-income row for 2025 entered the index and shifted B for all eleven years:
+### What the measurement showed
 
-| Effect on 2014–2024 | Measured |
-|---|---|
-| `z_b` moved | all 3190 rows, max 0.051 |
-| `rank_b` changed | 1816 rows, max 8 positions |
-| `risk_b` class changed | 19 rows |
+This entry asked for one thing before a decision: *how many municipality-years actually
+change class across a realistic refresh*, on the precedent of a 19-row incident in T2.4, and
+suggested that 0.6 % might be small enough to accept with a note. Both cases were measured.
 
-`step_compute_indices` now filters through `complete_case()`, so an *imputed* year can no
-longer do this. **That guard does not close the underlying issue.** Next spring SCB
-publishes 2025 income, the complete case legitimately advances to 2025, and every
-historical Version B value shifts again — correctly, and with nothing announcing it. A
-municipality's 2018 risk class will differ from the one someone screenshotted this year.
+| Refresh | `version_b` rows moved | `rank_b` changed | `risk_b` changed |
+|---|---|---|---|
+| One ordinary year appended (2025, simulated) | 3190 of 3190 | 947, up to 4 places | 7 |
+| The income-source switch of 2026-09-21 | 3190 of 3190 | 2971, up to **117** places | **225** |
 
-### The decision
+Version C, normalised within year, moved on **zero** rows under the same appended year.
 
-| Option | What it buys | What it costs |
-|---|---|---|
-| **A. Leave pooled, announce it** | B keeps its time trend, which is the whole reason D5 chose pooling | Every refresh silently rewrites history; anyone citing a B number must cite a vintage |
-| **B. Freeze B per vintage** | Published values stop moving; citations stay valid | Two municipalities scored in different vintages are no longer comparable |
-| **C. Normalise B within year like A and C** | Consistency across all three versions; no re-basing ever | **Deletes the trend B exists to measure** — D5 rejected this for that reason |
-| **D. Split it** | A pooled `version_b_level` for the trend plus a within-year `z_b` for ranking | Two numbers to explain; more surface in the UI and the methodology |
+The second line is what settled it. The 19-row precedent came from appending data; a change
+to a *source definition* is an order of magnitude worse, and that is the case that actually
+occurred. Accepting 225 silent risk-class changes with a footnote was not defensible.
 
-**Recommendation: D, and A as the interim.** The two jobs B is doing — "how much macro
-pressure is there now versus history" and "where does this kommun stand among its peers" —
-genuinely need different normalisations, and forcing one number to do both is what creates
-the instability. Until that is built, keep the pooling and state the vintage dependence
-explicitly wherever a B rank or class is shown.
+### The fix, and why it is not option C
 
-**Before deciding, check:** how many municipality-years actually change class across a
-realistic refresh. Nineteen out of 3190 (0.6 %) may be small enough to accept with a note,
-which makes A permanent and cheap.
+The four options this entry listed were: leave pooled and announce it (A), freeze per
+vintage (B), normalise within year like A and C (C), or split into a pooled level plus a
+within-year rank (D).
+
+What shipped is closest to B, with the cost that made B unattractive removed. This entry
+framed freezing as "per vintage", which would leave two vintages incomparable. **The
+reference is frozen once and carried forward instead**, so every vintage shares one
+yardstick and all of them stay comparable. Re-basing becomes a deliberate act with a version
+bump behind it.
+
+Crucially this keeps the trend that ruled out option C. It arguably improves it: under the
+moving reference, adding a high-rate year inflated the pooled standard deviation and pushed
+earlier high-rate years back toward zero, so the yardstick shrank as the thing it measured
+grew. "2.3 standard deviations above the 2014 to 2024 norm" now means the same thing in 2030
+as it does today.
+
+### Adoption cost: none
+
+The reference was derived from the panel as it stood, so scoring against it reproduced every
+existing value exactly. The rebuild that adopted it left all four affordability parquets
+byte-identical; only the provenance timestamp changed.
+`tests/test_version_b_reference.py` asserts that property at all three levels, so it cannot
+be quietly lost.
+
+One trap worth recording, because the first draft fell into it: the reference must be
+derived from **exactly** the rows that get scored. `complete_case` returns 4060 municipal
+rows while only 3190 carry every index input, and deriving from the first while scoring the
+second put the frozen moments up to 0.19 away from the moving ones. `scorable_rows` is now
+exposed from `affordability.py` so both paths call the same filter.
+
+### What guards it
+
+`tests/test_version_b_reference.py`:
+
+- appending a year leaves every historical `version_b`, `rank_b` and `risk_b` untouched
+- **the negative control**: the same append on the unreferenced path still rewrites history,
+  so the test above cannot pass by describing a scenario that no longer occurs
+- the committed reference matches what the committed panel produces, so the JSON cannot be
+  hand-edited into a silent re-base
+- the artifact covers all three levels, so `reference_for` never bootstraps a new norm from
+  whatever panel happens to be in a checkout
+
+**Revisit if:** the Version B formula gains or loses a component, which the stored reference
+will refuse rather than guess at, or the panel changes enough that the 2014 to 2024 norm
+stops describing anything useful. Both are deliberate re-bases: bump `version` and expect
+every B value to move.
 
 ---
 
