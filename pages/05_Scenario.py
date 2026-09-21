@@ -18,6 +18,7 @@ st.set_page_config(
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import n_kommuner
 from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
@@ -30,6 +31,7 @@ from src.ui.chart_theme import get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.charts import rate_inflation_surface
 from src.scenario.simulator import simulate
+from src.scenario.sections import render_national_outcome
 
 inject_css()
 selections = render_sidebar()
@@ -38,11 +40,14 @@ selections = render_sidebar()
 try:
     with st.spinner("Laddar data..."):
         county_panel = load_artifact("panel_county.parquet")
+        # The national view needs every municipality, not one county.
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
     st.error(L("sc.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
+panel_kommuner = n_kommuner()
 selected_year = selections["selected_year"]
 county_year = county_panel[county_panel["year"] == selected_year]
 
@@ -285,6 +290,18 @@ with st.container(border=True):
         config={"displayModeBar": "hover"},
     )
     st.caption(L("sc.yta_forklaring"))
+
+st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+
+render_national_outcome(
+    ranked,
+    selected_year,
+    rate_shock=rate_shock,
+    cpi_shock=cpi_shock,
+    income_shock=income_shock_pct / 100.0,
+    price_shock=price_shock_pct / 100.0,
+    n_kommuner=panel_kommuner,
+)
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
