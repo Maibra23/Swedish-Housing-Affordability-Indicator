@@ -300,6 +300,38 @@ recommendations, in order of confidence:
    direction. Higher B is worse. Everything else on the site is the other way
    round.
 
+### Correction, 2026-09-21: A and C are not two framings. They are one.
+
+Reading the six unused columns before displaying them, per recommendation 2,
+overturned part of the paragraph above.
+
+**`z_a`, `rank_a` and `risk_a` are exact duplicates of the `_c` family in every
+one of the 3 190 rows**, to 2·10⁻¹⁵. Not approximately, and not as a property of
+this particular panel:
+
+    A = I / (P · R)
+    C = I / (P · max(R − π, 0.5))
+
+`R` and `π` are national, so within a year A and C differ by one constant factor
+across all 290 municipalities. Z-scores are taken within year on `ln(value)`,
+where a constant factor is an additive shift the z-score removes exactly.
+
+The consequence for the credibility argument is real. "Three economic framings
+broadly agree" was, for two of the three, an arithmetic identity rather than
+corroboration, and displaying A beside C would have presented it as evidence.
+**Version B is the only formula that can disagree**, and it does: on 73 of 290
+municipalities in 2024, and on 133 in 2015.
+
+Where A and C genuinely differ is in *level*. At 2024's real rate C reads about
+five times A, which is what makes C the one the site reports; a reader asking how
+bad things are needs the level, while a map only needs the order.
+
+So the answer to recommendation 2 is neither of the two offered. The A columns
+are kept and **asserted** rather than displayed: `tests/test_formula_agreement.py`
+pins the identity, so if the transform or the normalisation window ever changes,
+the test fails and the copy explaining it gets revisited. Sida 02 shows the class
+counts for all three and says plainly why two of them must match.
+
 ---
 
 ## 4. Can the variables be changed or updated?
@@ -795,9 +827,9 @@ built-figure assertions do not.
 | 4 | Explain the deposit versus monthly cost trade-off | 04 | **Done.** Computed per region, so it states the direction that applies here |
 | 6 | Flag that the savings rate is a share of gross income | 04 | **Done.** Caveat travels with the savings figure |
 | 8 | Surface the single-income assumption | 04 | **Done.** Panel names it and points at the Par control |
-| 5 | Say what A and B are for, and that C drives the site | 02 | Open. Copy change |
-| 7 | Display or remove the unused A and B risk columns | 02, pipeline | Open. Six dead artifact columns |
-| 9 | Apply scenario shocks across all kommuner, not one län | 05 | Open. Large, scope separately |
+| 5 | Say what A and B are for, and that C drives the site | 02 | **Done.** New robustness section on Sida 02 names C as load-bearing and quantifies B's disagreement |
+| 7 | Display or remove the unused A and B risk columns | 02, pipeline | **Done, differently.** B's are displayed; A's are asserted, because they are identical to C's by construction. See the correction in section 3 |
+| 9 | Apply scenario shocks across all kommuner, not one län | 05 | **Done.** `src/scenario/panel_scenario.py`. Required fixed class boundaries: a re-ranked panel provably cannot move. See 8.2 |
 | 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | **Done.** Switched to `HE0110A/SamForvInk1`. See `docs/ADR/0001-income-series.md` |
 | 12 | The Par multiplier doubled an already-household median | 04 | **Done.** The multiplier is now valid arithmetic on an individual median, and lives in `src/kontantinsats/income.py` |
 | 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | **Decided: no.** Recorded in the ADR. No overlap year means any splice assumes an uncalibrated conversion factor, which is the assumption this project removed when it stopped forward-filling income |
@@ -826,3 +858,76 @@ chart work in 14 to 17.
 
 Section 6 is implemented in full. Items 13 to 19 are done and the two
 charts no longer ship as section 6 described them.
+
+**Every item in this table is now closed.** Items 10, 11 and 12 were settled by
+the income decision recorded in `docs/ADR/0001-income-series.md`; items 5, 7 and
+9 by the work in section 8.
+
+---
+
+## 8. Closing items 5, 7 and 9, and what each one turned out to be
+
+Two of the three were not the task the item described. Both times the difference
+came from reading the data before building on it, which is the habit this
+document keeps recommending and which keeps paying.
+
+### 8.1 Items 5 and 7: the robustness argument was half an identity
+
+Covered in the correction to section 3. Sida 02 now carries a **Robusthet**
+section that states which version drives the site, shows the risk class counts
+under all three, and explains why A and C must agree. The six previously unread
+columns are the subject of `tests/test_formula_agreement.py` rather than of a
+table nobody can interpret.
+
+The honest version of the argument turns out to be stronger than the advertised
+one. "Three methods agree" invites the question of whether they were ever going
+to disagree. "The one method that *can* rank differently does so for a quarter of
+the country, and here are the eight municipalities where the gap is widest" is a
+claim a reader can check.
+
+### 8.2 Item 9: the obvious implementation returns zero, always
+
+The item asked for the scenario to be applied across all 290 municipalities, so
+the page could answer "how many kommuner cross into hög risk under this
+scenario".
+
+Built the obvious way, by shocking the panel and re-ranking it, **the answer is
+zero for every scenario the sliders can produce.** All four sliders multiply each
+municipality's Version C by the same constant: the rate and CPI shocks are
+national, and the income and price shocks are relative. A within-year z-score on
+logs removes a constant factor exactly. Measured on the committed panel, the
+largest z change under a +4 pp rate shock, a +10 % income shock or a -25 % price
+shock is 9·10⁻¹⁶.
+
+This is the same property as the A-equals-C identity in section 3, arriving in a
+different costume, and it is worth naming because the failure mode is so quiet:
+you build the feature, see a table of unchanged counts, and go looking for a bug
+in the code.
+
+`src/scenario/panel_scenario.py` therefore **holds the class boundaries fixed at
+the baseline year's distribution** and moves the country against them. That
+changes what the number means, and the caption says so: a within-year class
+compares a municipality to its peers that year, while a fixed-boundary class
+compares the country after the shock to the country before it. The second is what
+a scenario question is actually asking.
+
+With that framing the national view delivers the page's central lesson at the
+scale where it matters, for 2024:
+
+| Scenario | Real rate | Hög risk, of 290 |
+|---|---|---|
+| Baseline | 0,77 % | 84 |
+| Rate +4 pp only | 4,77 % | **290**, the entire country |
+| Rate +4 pp with CPI +8 pp | 0,50 % | **20** |
+| Price -25 % | 0,77 % | 36 |
+| Income -10 % | 0,77 % | 97 |
+
+The same nominal rate rise puts every municipality in the country into hög risk,
+or takes 64 of them out of it, depending only on whether inflation moved with it.
+That is limitation F15 stated in municipalities rather than in index points.
+
+`tests/test_panel_scenario.py` asserts the no-op property directly across every
+slider extreme, because it is the premise the design rests on: if a shock ever
+stops being uniform, fixed boundaries become the wrong choice and the explanation
+shown to readers becomes false.
+

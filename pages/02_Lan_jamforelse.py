@@ -25,6 +25,7 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     card,
+    risk_pill,
     card_header,
     explanation,
     footer_note,
@@ -33,6 +34,7 @@ from src.ui.components import (
 )
 from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
 from src.ui.data_table import Column, render_table
+from src.indices.agreement import measure_agreement, where_b_and_c_disagree
 
 inject_css()
 selections = render_sidebar()
@@ -48,6 +50,8 @@ try:
     with st.spinner("Laddar data..."):
         municipal = load_artifact("affordability_municipal.parquet")
         county_panel = load_artifact("panel_county.parquet")
+        # The risk classes live on the ranked artifact, not the municipal one.
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
     st.error(L("lj.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
@@ -269,6 +273,76 @@ with st.container(border=True):
                 st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
+
+st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+
+# Which formula is load-bearing, and how much the other two corroborate it.
+# Before this section the site computed nine scoring columns and displayed three,
+# leaving a reader no way to tell which number the rest of the app runs on.
+with st.container(border=True):
+    st.markdown(
+        card_header(
+            L("lj.vilken_version_styr"),
+            L("lj.vilken_version_styr_underrubrik"),
+            L("lj.robusthet"),
+        ),
+        unsafe_allow_html=True,
+    )
+
+    agreement = measure_agreement(ranked, selected_year)
+    st.markdown(L("lj.c_driver_sajten"))
+
+    class_rows = pd.DataFrame(
+        [
+            {
+                "version": label,
+                **{cls: agreement.counts[key][cls] for cls in ("hog", "medel", "lag")},
+            }
+            for key, label in (
+                ("c", L("lj.version_c_kort")),
+                ("a", L("lj.version_a_kort")),
+                ("b", L("lj.version_b_kort")),
+            )
+        ]
+    )
+    st.markdown(
+        render_table(
+            class_rows,
+            [
+                Column(L("lj.version"), lambda row: str(row["version"]), kind="name"),
+                Column(L("lj.hog_risk"), lambda row: str(row["hog"]), numeric=True),
+                Column(L("lj.medel_risk"), lambda row: str(row["medel"]), numeric=True),
+                Column(L("lj.lag_risk"), lambda row: str(row["lag"]), numeric=True),
+            ],
+        ),
+        unsafe_allow_html=True,
+    )
+    st.caption(L("lj.antal_kommuner_per_riskklass_v0", v0=str(selected_year)))
+
+    st.markdown(
+        L(
+            "lj.a_och_c_ar_identiska",
+            v0=str(agreement.b_differs_from_c),
+            v1=str(agreement.n_kommuner),
+            v2=f"{agreement.b_differs_pct:.0f}",
+        )
+    )
+
+    divergent = where_b_and_c_disagree(ranked, selected_year)
+    if not divergent.empty:
+        st.markdown(
+            render_table(
+                divergent,
+                [
+                    Column(L("lj.kommun"), lambda row: str(row["region_name"]), kind="name"),
+                    Column(L("lj.version_c_kort"), lambda row: risk_pill(row["risk_c"]), kind="pill"),
+                    Column(L("lj.version_b_kort"), lambda row: risk_pill(row["risk_b"]), kind="pill"),
+                    Column(L("lj.rangskillnad"), lambda row: str(int(row["rank_gap"])), numeric=True),
+                ],
+            ),
+            unsafe_allow_html=True,
+        )
+        st.caption(L("lj.storst_avstand_mellan_b_och_c"))
 
 explanation(L("lj.forklaring_kpi"))
 with st.expander(L("lj.om_lansjamforelsen")):
