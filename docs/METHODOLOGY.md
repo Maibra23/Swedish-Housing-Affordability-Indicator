@@ -157,7 +157,16 @@ about Sweden's affordability over time.
 **Deliberate exception — Version B stays pooled.** The z-scores *inside* B's own formula
 (§3, Version B) are computed across the whole panel, not within year. B is a macro-pressure
 measure, and that pooling is precisely what allows its level to carry a time trend: B's panel
-mean runs from −0.37 (2015) to +0.86 (2023), tracking the policy-rate cycle.
+mean runs from −0.31 (2015) to +0.78 (2023), tracking the policy-rate cycle.
+
+**The pooled moments are frozen.** They are derived once and stored in
+`data/processed/version_b_reference.json`, and new data is scored against them. Pooling
+against the panel being scored made every published B value a function of panel composition:
+appending one ordinary year moved all 3190 historical rows and changed 947 ranks, and the
+2026-09-21 income-source change moved 225 risk classes. A fixed reference also makes the
+trend itself more honest — under the moving reference, adding a high-rate year inflated the
+pooled standard deviation and pushed earlier high-rate years back toward zero, so the
+yardstick shrank as the thing it measured grew. Recorded as R1 in `docs/OPEN_RISKS.md`.
 
 *What within-year normalization would cost.* Applying the within-year window to B's
 construction would set its mean to ~0 in every year by definition. The 2022–2023 rate shock —

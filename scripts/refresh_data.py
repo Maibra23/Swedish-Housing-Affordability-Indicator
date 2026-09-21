@@ -100,7 +100,8 @@ def step_compute_indices() -> None:
 
     import pandas as pd
     from src.indices.affordability import compute_all as compute_affordability
-    from src.indices.affordability import complete_case
+    from src.indices.affordability import complete_case, scorable_rows
+    from src.indices.b_reference import reference_for
     from src.indices.normalize import normalize_and_rank
     from src.provenance import write_provenance
 
@@ -119,7 +120,12 @@ def step_compute_indices() -> None:
                 "  %s: scoring %d of %d rows (%d imputed-income rows held back)",
                 level, len(observed), len(panel), len(panel) - len(observed),
             )
-        aff = compute_affordability(observed)
+        # Version B is scored against a stored reference, not against this
+        # panel. Without it, appending a single year re-bases every historical
+        # value: measured at 3190 of 3190 rows moving and 947 ranks changing on
+        # an ordinary refresh, and 225 risk classes on a source change. R1.
+        b_reference = reference_for(scorable_rows(observed), level)
+        aff = compute_affordability(observed, b_reference)
         out = DATA_DIR / f"affordability_{level}.parquet"
         aff.to_parquet(out, index=False)
         logger.info("  Saved %s  (%d rows)", out.name, len(aff))

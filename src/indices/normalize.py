@@ -30,9 +30,16 @@ country's affordability over time.
 Note this applies to ``z_*`` only. Version B's own construction in
 ``affordability.py`` stays **pooled across the whole panel**, deliberately: B is
 a macro-pressure measure and the pooling is what lets its level carry a time
-trend (its panel mean runs −0.37 in 2015 to +0.86 in 2023, tracking the rate
+trend (its panel mean runs −0.31 in 2015 to +0.78 in 2023, tracking the rate
 shock). Normalising B within year would pin that at zero every year and delete
 the signal B exists to measure.
+
+The pooling is against a **stored reference**, not against whatever panel is
+being scored. Recomputing it made every published B value a function of panel
+composition, so appending a year rewrote eleven years of history; see R1 in
+``docs/OPEN_RISKS.md`` and ``src/indices/b_reference.py``. Note that ``z_b``
+below is still taken *within year* — the pooling lives inside B's construction,
+one level down.
 
 **Transform (D6, decision O4) — log for A and C.** Versions A and C are *ratios*
 of positive quantities — ``income / (price × rate)`` — and are therefore
