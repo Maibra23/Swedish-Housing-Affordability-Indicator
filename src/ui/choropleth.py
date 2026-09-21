@@ -241,7 +241,7 @@ def _map_html(
         feat["properties"]["SHAI Poäng"] = d.get("shai_fmt", "Saknas")
         feat["properties"]["Z-poäng"] = d.get("z_fmt", "Saknas")
         feat["properties"]["Rang"] = d.get("rank_fmt", "Saknas")
-        feat["properties"]["Medianpris"] = d.get("price_fmt", "Saknas")
+        feat["properties"]["Medelpris"] = d.get("price_fmt", "Saknas")
         feat["properties"]["Medianinkomst"] = d.get("income_fmt", "Saknas")
         feat["properties"]["Arbetslöshet"] = d.get("unemp_fmt", "Saknas")
         feat["properties"]["_z"] = d.get("z_score", 0.0)
@@ -306,11 +306,11 @@ def _map_html(
         tooltip=folium.GeoJsonTooltip(
             fields=[
                 "Kommun", "Riskklass", "SHAI Poäng", "Z-poäng", "Rang",
-                "Medianpris", "Medianinkomst", "Arbetslöshet",
+                "Medelpris", "Medianinkomst", "Arbetslöshet",
             ],
             aliases=[
                 "<b>Kommun</b>", "<b>Riskklass</b>", "SHAI Poäng", "Z-poäng", "Rang",
-                "Medianpris", "Medianinkomst", "Arbetslöshet",
+                "Medelpris", "Medianinkomst", "Arbetslöshet",
             ],
             sticky=True,
             style=tooltip_css,

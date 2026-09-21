@@ -3,7 +3,8 @@
 Price variable: transaction_price_sek (SCB BO0501 content code BO0501C2).
 Not price_index (growth measure) and not kt_ratio (markup measure).
 
-See METHODOLOGY.md section 3 "Why median transaction price" for rationale.
+See METHODOLOGY.md section 3 for the rationale. The series is SCB BO0501C2,
+an arithmetic mean of purchase prices, not a median.
 
 Version A: Income / (Price * Rate)           -- bank-style ratio
 Version B: weighted z-score composite        -- macro pressure index
