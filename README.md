@@ -104,6 +104,7 @@ their terms.
 | `docs/OPEN_RISKS.md` | Known risks carried deliberately |
 | `docs/DEVIATIONS.md` | Where the build departs from the PRD, and why |
 | `docs/DESIGN_SYSTEM.md` | Design tokens, chart rules and component patterns |
+| `docs/ADR/` | Decision records: what was chosen, what was rejected, and on what evidence |
 | `docs/CHOROPLETH_MAP_REFERENCE.md` | Map implementation reference |
 | `docs/PRD.md` | Product requirements |
 | `docs/PLAYBOOK.md` | Development playbook |

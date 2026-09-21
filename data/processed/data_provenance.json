@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T19:22:47+00:00",
+  "generated_at": "2026-09-21T12:24:45+00:00",
   "sources": {
     "median_income": {
       "min_year": 2011,
@@ -55,6 +55,60 @@
       "min_year": 2011,
       "max_year": 2026,
       "n_regions": 290
+    }
+  },
+  "definitions": {
+    "median_income": {
+      "table_path": "HE/HE0110/HE0110A/SamForvInk1",
+      "filters": {
+        "Kon": [
+          "1+2"
+        ],
+        "Alder": [
+          "tot20+"
+        ],
+        "Inkomstklass": [
+          "TOT"
+        ],
+        "ContentsCode": [
+          "HE0110J8"
+        ]
+      },
+      "unit_of_analysis": "individual resident",
+      "concept": "gross earned income before tax, excluding capital income",
+      "statistic": "median",
+      "unit": "tkr per year",
+      "min_year_requested": 2011
+    },
+    "transaction_price_sek": {
+      "table_path": "BO/BO0501/BO0501B/FastprisSHRegionAr",
+      "filters": {
+        "Fastighetstyp": [
+          "220"
+        ],
+        "ContentsCode": [
+          "BO0501C2"
+        ]
+      },
+      "unit_of_analysis": "transaction",
+      "concept": "purchase price for a permanent small house, excluding leasehold",
+      "statistic": "arithmetic mean",
+      "unit": "tkr",
+      "min_year_requested": null
+    },
+    "cpi_yoy_pct": {
+      "table_path": "PR/PR0101/PR0101A/KPI2020M",
+      "filters": {
+        "ContentsCode": [
+          "00000807",
+          "00000804"
+        ]
+      },
+      "unit_of_analysis": "national basket",
+      "concept": "consumer price index, 2020 = 100, and its year on year change",
+      "statistic": "index and percentage change",
+      "unit": "index points and percent",
+      "min_year_requested": null
     }
   },
   "panel_min_year": 2011,

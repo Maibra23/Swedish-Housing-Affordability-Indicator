@@ -21,7 +21,7 @@ These outlive it.
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
-| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN (reduced) |
+| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN (one of two closed) |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
@@ -370,6 +370,35 @@ nothing in the suite would catch a mistake in moving it.
 **Recommendation:** tests before splitting, in that order. This is R5 wearing a second hat:
 the modules that most need to be broken up are the ones it is least safe to touch, and the
 way out is coverage, not courage.
+
+### Progress 2026-09-21 — `scb_client.py` is out
+
+The condition this risk set was "tests before splitting, in that order". For
+`scb_client.py` that condition was met, so the split happened.
+
+The income-definition work gave the module its first tests:
+`tests/test_variable_contracts.py` exercises its metadata path against fixtures and,
+when a network is present, against the live SCB API. With something able to catch a
+mistake, the transport layer moved to `src/data/pxweb.py`: rate limiting, querying,
+caching and JSON-stat2 parsing on one side, and on the other only *which table, which
+selection*. The two change for different reasons, which is the argument for the seam.
+
+| Module | Before | After |
+|---|---|---|
+| `src/data/scb_client.py` | 487 | **328**, under the ordinary 400-line limit |
+| `src/data/pxweb.py` | — | 194 |
+
+`scb_client.py` has left `EXEMPT` entirely rather than receiving a lower ceiling, which
+is what an exemption is supposed to become.
+
+**Verification:** the refactor was checked by re-fetching the income table from SCB
+afterwards and comparing the result to the pre-split cache. Identical in shape, columns
+and every value. A line-count assertion proves a file got shorter, not that it still
+works.
+
+`build_panel.py` remains, at 615 lines and still without direct tests. It is the harder
+half: income imputation, the ragged-panel joins and the `complete_case()` rule all live
+there, and it keeps the recommendation unchanged.
 
 ### Progress 2026-09-17 — reduced, not closed
 
