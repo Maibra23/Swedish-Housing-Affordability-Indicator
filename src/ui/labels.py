@@ -196,7 +196,8 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.valj_kommun": "Välj kommun",
     "ki.hushallstyp": "Hushållstyp",
     "ki.singelhushall": "Singelhushåll",
-    "ki.singelhushall_en_individuell_inkomst_par": "Singelhushåll: en individuell inkomst. Par: sammanlagd inkomst (2×), vilket halverar spartiden och sänker LTI.",
+    "ki.par_2_inkomster": "Par (2 inkomster)",
+    "ki.singelhushall_en_individuell_inkomst_par": "Singelhushåll: en medianinkomst. Par: två medianinkomster, vilket halverar spartiden och skuldkvoten. Båda är hushåll av en viss form, inte genomsnittet av alla hushåll i kommunen.",
     "ki.andel_av_bruttoinkomsten_som_sparas_arligen": "Andel av bruttoinkomsten som sparas årligen. 10 % är vanligt; över 20 % är ambitiöst. Påverkar hur lång tid det tar att spara ihop insatsen.",
     "ki.avancerade_installningar_rantepaslag": "Avancerade inställningar: räntepåslag",
     "ki.riksbankens_styrranta_anvands_som_bas": "Riksbankens styrränta används som bas. Bankens räntepåslag adderas för att approximera faktisk bolåneränta. Typiskt ~1,7 pp för 3-månaders rörlig ränta.",
@@ -266,7 +267,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.lansniva": "länsnivå",
     "ki.kommunniva": "kommunnivå",
     "ki.nulage_lattnad_2026_v0_v1_v2_sparkvot_v3_0f": "Nuläge · Lättnad 2026 · {v0} ({v1}) · {v2} · Sparkvot {v3:.0f}% · Pristyp: {v4}",
-    "ki.inkomsten_ar_individuell_bruttoinkomst_scb": "Inkomsten är individuell bruttoinkomst (SCB HE0110). Vid gemensamt köp (par): dividera spartiden med 2. Se Begränsning F14 i Metodologi (Sida 06).",
+    "ki.inkomsten_ar_individuell_bruttoinkomst_scb": "Inkomsten är sammanräknad förvärvsinkomst per person, 20 år och äldre, före skatt (SCB HE0110A). Välj Par ovan för ett hushåll med två medianinkomster. Par är alltså två medianinkomsttagare, inte medianparet: i kommuner med många ensamhushåll är det ett mer välbeställt hushåll än det typiska. Se Begränsning F14 i Metodologi (Sida 06).",
     "ki.villa_vs_bostadsratt": "Villa vs. bostadsrätt",
     "ki.v0_v1_lattnad_2026": "{v0} · {v1} · Lättnad 2026",
     "ki.pristypsjamforelse": "PRISTYPSJÄMFÖRELSE",
@@ -551,7 +552,7 @@ SWEDISH_LABELS: dict[str, str] = {
 
     Undantag, medvetet: Version B:s egen konstruktion (z-poängen *inuti* formeln ovan)
     beräknas över hela panelen. B är ett makrotrycksmått, och det är just poolningen som gör
-    att dess nivå kan bära en tidstrend. Panelmedelvärdet går från −0,37 (2015) till +0,86
+    att dess nivå kan bära en tidstrend. Panelmedelvärdet går från −0,31 (2015) till +0,78
     (2023) och följer ränteuppgången. Att normalisera B inom år skulle nolla den signalen
     varje år och ta bort det B är byggt för att mäta.
 
@@ -685,7 +686,7 @@ SWEDISH_LABELS: dict[str, str] = {
     | **F11** | SHAI-indexformlerna (A, B, C) beräknas fortfarande enbart på villapriser (SCB BO0501C2, Fastighetstyp 220), en systemisk vy, bevarad för metodologisk kontinuitet. Bostadsrättspriser (SCB BO0501C) ingår nu i panelen och exponeras som valbar Pristyp på Sida 04 (Kontantinsats). SCB publicerar bostadsrättspriser enbart på länsnivå (21 län), inga kommunspecifika data finns. Sida 04 byter automatiskt till länsnivå vid Bostadsrätt-val. | Pristyp-väljare + automatisk nivåbyte på Sida 04. |
     | **F12** | Styrräntan används direkt som bolåneränta. Faktisk bolåneränta ≈ styrränta + bankens marginal (ca 1,5–2,5 pp). Månadskostnad och affordability-formler är optimistiska. | Notering i Detaljer på Sida 04. |
     | **F13** | Version B: R och π är nationella variabler (samma för alla kommuner ett givet år). Z-poäng för dessa bär ingen kommunspecifik information inom ett enskilt år. 45% av vikterna diskriminerar enbart i tid, inte i rum. | Dokumenterat i formelbeskriving ovan. |
-    | **F14** | Inkomst är individuell bruttoinkomst. Bostad köps typiskt av ett hushåll (par). Spartiden för singelhushåll är 2× hushållssiffran. | Notering under "År att spara" KPI på Sida 04. |
+    | **F14** | Inkomst är sammanräknad förvärvsinkomst per person före skatt, så Par modellerar två medianinkomsttagare och inte medianparet. Skillnaden är liten i kommuner där de flesta hushåll har två inkomster och stor där många bor ensamma eller är pensionärer. | Hushållstypsväljaren på Sida 04 visar båda fallen; tolkningsrutan påpekar singelantagandet när det är det som gör resultatet strängt. |
     | **F16** | Riskklassens gränser (±0,67 σ) är fasta kvantiler, så andelen kommuner per klass är nära konstant varje år per konstruktion. Antalet högriskkommuner kan inte bära en nationell trend. | Dokumenterat under "Normalisering" ovan; ingen förändringspil visas på antalet. |
     | **F15** | Scenariosimulatorn håller KPI-inflationen (π) konstant när räntan chockas. Realränteförändringen är därmed identisk med den nominella räntechochen. | Notering i Förklaring på Sida 05. |
     """,

@@ -283,7 +283,7 @@ All APIs answer. The panel is **ragged**: income is the binding constraint.
 
 | Source | Endpoint | Max year available | SHAI ships |
 |--------|----------|--------------------|-----------|
-| Income | SCB `HE/HE0110/HE0110G/TabVX4bDispInkN` | **2024** | 2024 |
+| Income | SCB `HE/HE0110/HE0110A/SamForvInk1` | **2024** | 2024 |
 | Småhus price | SCB `BO/BO0501/BO0501B/FastprisSHRegionAr` | **2025** | 2024 |
 | Bostadsrätt price | SCB `BO/BO0501/BO0501C/FastprisBRFRegionAr` | **2025** | 2024 |
 | Price index | SCB `BO/BO0501/BO0501A/FastpiPSLanAr` | **2025** | 2024 |
@@ -1518,7 +1518,7 @@ file with no reader"* — and fold build-time artifacts (`PROMPTS`, `PATCH_POST_
 - [x] No two documents describe the same thing
 - [x] Every surviving doc is linked from `README.md`, and the README links nothing missing
 
-`tests/test_docs_inventory.py` (111). 19 documents → **9 maintained** plus a 6-file archive.
+`tests/test_docs_inventory.py` (117). 19 documents → **9 maintained** plus a 6-file archive.
 
 Deleted the four superseded v1 files and renamed the `_v2` survivors onto their names.
 Build-time artifacts went to `docs/archive/` rather than being deleted — the plan allowed

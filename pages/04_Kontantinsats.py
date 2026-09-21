@@ -43,6 +43,7 @@ from src.kontantinsats.charts import (
     fmt_delta_sek,
 )
 from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
+from src.kontantinsats.income import EARNERS_BY_HOUSEHOLD_TYPE, household_income
 from src.kontantinsats.assumptions import render_assumptions
 from src.kontantinsats.sections import (
     Context,
@@ -167,14 +168,14 @@ with st.container(border=True):
     with col_type:
         household_type = st.radio(
             L("ki.hushallstyp"),
-            options=[L("ki.singelhushall"), "Par (2 inkomster)"],
+            options=list(EARNERS_BY_HOUSEHOLD_TYPE),
             index=0,
             key="ki_household_type",
             help=(
                 L("ki.singelhushall_en_individuell_inkomst_par")
             ),
         )
-        household_multiplier = 2 if household_type == "Par (2 inkomster)" else 1
+        household_multiplier = EARNERS_BY_HOUSEHOLD_TYPE[household_type]
 
     with col_slider:
         savings_rate = st.slider(
@@ -252,7 +253,10 @@ else:
     _lan_name = _LAN_NAMES.get(_lan_code, L("ki.lan_v0", v0=_lan_code))
 
 _individual_income = selected_row["median_income"]
-income = _individual_income * household_multiplier   # household income
+# `median_income` is a median *individual* figure, so combining it into a
+# household is valid. That premise lives in `income.py` together with what the
+# Par case does and does not model; it is the line this page got wrong before.
+income = household_income(_individual_income, household_multiplier)
 rate = selected_row["policy_rate"] / 100.0
 effective_rate_display_pct = selected_row["policy_rate"] + bank_margin_pct
 

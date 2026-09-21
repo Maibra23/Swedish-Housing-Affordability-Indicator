@@ -43,6 +43,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.data.variable_contracts import CONTRACTS
+
 logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -266,6 +268,33 @@ def _source_window(panel: pd.DataFrame, column: str) -> dict | None:
     }
 
 
+def _definitions() -> dict:
+    """Every contracted variable's definition, for the provenance record.
+
+    Coverage years say when a number is from. They do not say *what* it is, and
+    on 2026-09-21 that was the gap that mattered: the record showed
+    `median_income` running 2011 to 2024, which was true, while the column held
+    household disposable income and every page called it individual gross.
+
+    Writing the table path and the exact value selections into the artifact means
+    a displayed figure traces to a specific SCB query without anyone reading
+    Python. It also means a changed selection shows up in an artifact diff, which
+    a reviewer reads, rather than only in a source diff, which they may not.
+    """
+    return {
+        contract.name: {
+            "table_path": contract.table_path,
+            "filters": {code: list(values) for code, values in contract.filters},
+            "unit_of_analysis": contract.unit_of_analysis,
+            "concept": contract.concept,
+            "statistic": contract.statistic,
+            "unit": contract.unit,
+            "min_year_requested": contract.min_year,
+        }
+        for contract in CONTRACTS.values()
+    }
+
+
 def build_provenance(panel: pd.DataFrame, index_frame: pd.DataFrame) -> dict:
     """Derive the provenance record from the data that was just built.
 
@@ -302,6 +331,7 @@ def build_provenance(panel: pd.DataFrame, index_frame: pd.DataFrame) -> dict:
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "sources": sources,
+        "definitions": _definitions(),
         "panel_min_year": int(panel["year"].min()),
         "panel_max_year": int(panel["year"].max()),
         "complete_case_max_year": int(complete["year"].max()),

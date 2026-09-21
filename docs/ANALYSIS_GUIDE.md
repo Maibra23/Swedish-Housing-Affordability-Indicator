@@ -424,19 +424,31 @@ The Par case is understating the debt ratio by roughly a quarter. The page
 caption compounds it by stating "Inkomsten är individuell bruttoinkomst (SCB
 HE0110)", which is false on both axes.
 
-Three ways out, and the choice is a product decision rather than a technical one:
+Three ways out were available, and the choice was a product decision rather
+than a technical one:
 
 1. **Switch the source to `HE0110A/SamForvInk1`**, the series everything already
    claims to use. 290 kommuner, history to 1999, and it makes the couple
-   multiplier valid. Cost: income falls about 29 %, so every SHAI score, LTI and
-   affordability class on every page shifts.
+   multiplier valid.
 2. **Keep the household series and correct the surroundings**: fix the docs and
    the caption, and drop the multiplier, since a household median already
    includes both earners. Cost: the Par control loses its meaning.
-3. Leave it and document it, which is the current state.
+3. Leave it and document it.
 
-Neither 1 nor 2 moves the index past 2024. This is a correctness question, not a
-freshness one.
+**Option 1 was taken on 2026-09-21.** `docs/ADR/0001-income-series.md` records
+the reasoning, the rejected candidates and the measured cost. Neither 1 nor 2
+moves the index past 2024: this was a correctness question, not a freshness one.
+
+One estimate in this section was wrong and is worth correcting rather than
+quietly fixing, because the error is instructive. The text above says the panel
+runs "roughly 29 % above individual gross", inferred from three municipalities.
+Measured across all 3 190 rows the ratio runs **1.10 to 1.77**, median 1.31 in
+2024, and it carries a time trend from 1.74 in 2011 as individual earnings grew
+about 51 % against household disposable income's 15 %. The three municipalities
+sampled all sat at one end of that spread. A three-point sample of a quantity
+with real cross-sectional variance is an anecdote, and it under-estimated the
+re-ranking cost of the switch by a wide margin: 5.0 % of rows changed risk class
+and a quarter moved more than ten rank places.
 
 ### Can the data be refreshed to a newer year?
 
@@ -786,9 +798,9 @@ built-figure assertions do not.
 | 5 | Say what A and B are for, and that C drives the site | 02 | Open. Copy change |
 | 7 | Display or remove the unused A and B risk columns | 02, pipeline | Open. Six dead artifact columns |
 | 9 | Apply scenario shocks across all kommuner, not one län | 05 | Open. Large, scope separately |
-| 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | Open. A decision, not a task. See section 4 |
-| 12 | **The Par multiplier doubles an already-household median** | 04 | Open. Understates LTI by about a quarter. Blocked on 10 |
-| 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | Open. Viable for 2025 at kommun level, different definition, no overlap year to calibrate |
+| 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | **Done.** Switched to `HE0110A/SamForvInk1`. See `docs/ADR/0001-income-series.md` |
+| 12 | The Par multiplier doubled an already-household median | 04 | **Done.** The multiplier is now valid arithmetic on an individual median, and lives in `src/kontantinsats/income.py` |
+| 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | **Decided: no.** Recorded in the ADR. No overlap year means any splice assumes an uncalibrated conversion factor, which is the assumption this project removed when it stopped forward-filling income |
 | 13 | The surface caption named the wrong corner of the plane | 05 | **Done.** The caption no longer claims a direction; the floor is drawn instead |
 | 14 | Draw the 0,5 pp real-rate floor as a boundary instead of describing it | 05 | **Done.** Derived from the simulator's own floor and asserted across the grid |
 | 15 | Equal pp steps on both surface axes, aspect locked | 05 | **Done.** 0,5 pp on both, `scaleanchor` ratio 1 |

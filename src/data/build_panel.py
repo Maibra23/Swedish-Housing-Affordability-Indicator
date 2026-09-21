@@ -69,7 +69,7 @@ def _parse_quarter_tid(tid: str) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 
 def _clean_income() -> pd.DataFrame:
-    """Median disposable income (tkr) per region × year."""
+    """Median sammanräknad förvärvsinkomst (tkr) per region × year. Individual, gross."""
     df = _read("HE0110_income")
     df = df[["Region_code", "Region", "Tid_code", "value"]].copy()
     df.rename(columns={"Region_code": "region_code", "Region": "region_name",

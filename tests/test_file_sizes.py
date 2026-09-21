@@ -26,20 +26,24 @@ EXEMPT = {
     # One dict of user-facing copy. Splitting it would scatter the thing T3.1
     # deliberately gathered.
     "labels.py",
-    # Over the limit and knowingly left so. Both are in `src/data/`, which Phase 3
-    # never touched, and both sit at 0 % test coverage (R5). Splitting a module
-    # with no tests is the riskiest refactor available: nothing would catch a
-    # mistake. They are recorded as R10 and should be split *after* they have
-    # tests, not before.
+    # Over the limit and knowingly left so. In `src/data/`, which Phase 3 never
+    # touched, and at 0 % test coverage (R5). Splitting a module with no tests is
+    # the riskiest refactor available: nothing would catch a mistake. Recorded as
+    # R10, to be split *after* it has tests.
+    #
+    # `scb_client.py` left this set on 2026-09-21. It gained tests
+    # (`test_variable_contracts.py` exercises its metadata path against the live
+    # API and against fixtures), so the condition R10 set was met, and the
+    # transport layer moved to `pxweb.py`. It is now 328 lines and under the
+    # ordinary limit, which is what the exemption was always meant to become.
     "build_panel.py",
-    "scb_client.py",
 }
 
 # Their current lengths, so an exemption cannot quietly cover further growth.
 # Ceilings ratchet downward only. D2 took build_panel.py from 641 to 615 by
 # extracting the triplicated income forward-fill; the exemption now covers
 # 615 and no more, so the file cannot drift back up under cover of it.
-EXEMPT_CEILINGS = {"build_panel.py": 615, "scb_client.py": 474}
+EXEMPT_CEILINGS = {"build_panel.py": 615}
 
 
 def _modules() -> list[Path]:
@@ -76,6 +80,9 @@ def test_exempt_modules_do_not_grow(name: str, ceiling: int) -> None:
 def test_the_split_modules_still_exist() -> None:
     """A split undone by re-merging would otherwise pass silently."""
     for expected in (
+        # The PxWeb transport, split from scb_client.py so that module holds only
+        # which table and which selection.
+        "src/data/pxweb.py",
         "src/ui/tokens.py",
         "src/ui/css_layout.py",
         "src/ui/css_components.py",
