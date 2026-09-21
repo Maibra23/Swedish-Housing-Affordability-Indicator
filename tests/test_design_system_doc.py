@@ -141,7 +141,7 @@ def test_map_section_agrees_with_the_choropleth_module() -> None:
 
 def test_contributor_checklist_exists() -> None:
     text = DOC.read_text(encoding="utf-8")
-    assert "## 6. Contributor checklist" in text
+    assert "## 7. Contributor checklist" in text
     assert text.count("- [ ]") >= 6, "a checklist with two items is a suggestion"
 
 

@@ -3,6 +3,8 @@
 What these two pages are for, how to read them correctly, where they currently
 mislead a user, and what to do about it. Written 2026-09-18 against the committed
 artifacts, with every figure re-derived from them rather than quoted from memory.
+Section 6, on the two charts that shipped out of these recommendations, added
+2026-09-21 on the same basis.
 
 ---
 
@@ -605,7 +607,173 @@ inflation", which is wrong for a cut. The text is now direction-neutral: "ränta
 och inflationen rör sig ofta åt samma håll". A single worked example would not
 have caught this, because the obvious example is a rate rise.
 
-## 6. Summary of recommended work
+## 6. The two charts, checked against the design system and the data
+
+Commit `60e150d` shipped two visualisations out of the recommendations above: a
+reachability chart on Sida 04 and a rate/inflation surface on Sida 05. This
+section holds them to the same rule as the rest of this document. Every figure
+below is re-derived from the committed artifacts, and every claim about the app's
+visual language is checked against `docs/DESIGN_SYSTEM.md` and the code it
+describes.
+
+The two did not come out the same way. One fits. One was off-system, and part of
+what it told a reader was wrong. What follows is what the review found, kept in
+the present tense of the review; 6.4 and 6.5 record what was done about it, which
+is all of it.
+
+### 6.1 Reachability, Sida 04. Fits.
+
+`affordability_gap_chart` inverts the loan arithmetic to the largest price the
+income supports at the lending ceiling, and puts the asked price beside it:
+
+```
+max_price = income * LTI_LENDING_CEILING / (1 - min_down_pct)
+```
+
+It sits inside the app's existing grammar: horizontal bars, the `low_risk`,
+`high_risk` and `secondary` tokens, the shared `get_chart_layout`, and a
+`card_header` inside a bordered container, which is how every other card on the
+site is built. It answers a question nothing else on the page answers, in kronor
+rather than in an index, so it complements the interpretation panel underneath
+instead of repeating it: the panel gives the debt ratio, the chart gives the
+shortfall in money.
+
+Two things to tidy, neither structural:
+
+- The deposit share is read from `REGIMES["latt_2026"]` inside the chart, while
+  the page sets its baseline separately at `pages/04_Kontantinsats.py:265`. The
+  two agree today. They are two statements of one fact, so changing the baseline
+  regime would move the page and leave the chart behind. Pass the baseline
+  regime in rather than naming it twice.
+- The ceiling is a loan-to-income test and nothing else. It assumes the deposit
+  is already in hand, which is the very thing the rest of the page exists to
+  question. One clause in `ki.gap_forklaring_v0` closes that gap.
+
+### 6.2 The rate and inflation surface, Sida 05. Four defects.
+
+The intent is right: the page's lesson is that only `R - pi` reaches the formula,
+a slider can only ever show one point on that plane, and a plane shows the whole
+thing. The execution does not deliver it.
+
+**Defect 1. The caption names the wrong corner, and a user can see it.**
+`sc.yta_forklaring` says the flat field is *"uppe till höger"*. The floor binds
+when `s_rate - s_cpi` falls to 0.5 pp or below, which is **low** rate shock with
+**high** CPI shock. On this chart, with rate ascending up the y-axis and CPI
+ascending to the right, that is the **lower right**. Version C over the plotted
+grid, Stockholms län 2024, from `panel_county.parquet` (income 551 500 SEK,
+price 6 748 000 SEK, R 3.63 %, pi 2.86 %):
+
+| rate \ CPI | -4 | -2 | 0 | +2 | +4 | +6 | +8 | +10 |
+|---|---|---|---|---|---|---|---|---|
+| **+5** | 0.8 | 1.1 | 1.4 | 2.2 | 4.6 | 16.3 | 16.3 | 16.3 |
+| **+4** | 0.9 | 1.2 | 1.7 | 3.0 | 10.6 | 16.3 | 16.3 | 16.3 |
+| **+3** | 1.1 | 1.4 | 2.2 | 4.6 | 16.3 | 16.3 | 16.3 | 16.3 |
+| **+2** | 1.2 | 1.7 | 3.0 | 10.6 | 16.3 | 16.3 | 16.3 | 16.3 |
+| **+1** | 1.4 | 2.2 | 4.6 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
+| **0** | 1.7 | 3.0 | **10.6** | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
+| **-1** | 2.2 | 4.6 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
+| **-2** | 3.0 | 10.6 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
+
+The bold 10.6 at the origin is the baseline this document quotes in section 2.
+The flat field is unambiguously below and to the right of it.
+
+**Defect 2. More than half the surface is one repeated number.** 36 of the 64
+cells sit at the 0.5 pp floor and return an identical 16.3. Of the 28 that do
+not, 20 fall below 4.1. Version C is a reciprocal of the real rate, so a linear
+colour scale spends most of its range on a region the grid barely visits: the
+chart reads as a large green block against a near-uniform red block, and the
+diagonal banding it exists to teach survives only in the left column or two.
+
+**Defect 3. The diagonals are not diagonals.** `RATE_STEPS` moves 1 pp per cell;
+`CPI_STEPS` moves 2 pp per cell (`src/scenario/charts.py`). The axes are
+categorical, so the cells are drawn equally wide. Lines of constant `R - pi`
+therefore run at two cells up for every one cell across. The caption calls them
+diagonals and says they are *"lika stora"*. The render does not show that, and
+the table above is the proof: 4.6 appears at (+5, +4), (+3, +2), (+1, 0) and
+(-1, -2), one CPI column per two rate rows.
+
+**Defect 4. It breaks the single colour language.** `colorscale="RdYlGn"` is the
+only place in the app that uses a ramp other than `DIVERGING_SCALE`, which
+`DESIGN_SYSTEM.md` section 2 presents as the one diverging scale the project
+owns. The result is a saturated red-to-green legend labelled "SHAI" sitting two
+pages away from a muted red-to-green map legend labelled with a z-score, on a
+different quantity and a different scale. That is precisely the confusion
+recommendation 3 above was written to prevent, reintroduced by the chart that
+was supposed to help. The scenario marker also hardcodes `#0B1F3F` instead of
+`COLORS["primary"]`, and both new charts pass `displayModeBar: False` where the
+seven charts that preceded them pass `"hover"`.
+
+### 6.3 Why this drifted
+
+`tests/test_design_system_doc.py` checks the CSS class inventory in both
+directions, `tests/test_css_naming.py` rejects a class outside the `shai-`
+convention, and `tests/test_no_inline_copy.py` keeps strings out of pages. The
+chart layer has none of that. No test asserts that a figure goes through
+`get_chart_layout`, that its colours come from `COLORS` or `DIVERGING_SCALE`, or
+that the toolbar setting is consistent. The design system is guarded everywhere
+except where this drift happened, which is why it happened here and not in the
+stylesheet.
+
+Recorded as R14 in `docs/OPEN_RISKS.md`.
+
+### 6.4 What to change, in order. All six done.
+
+1. **Fix the caption.** Done, and it no longer asserts a direction in prose at
+   all: the floor is drawn, per 2.
+2. **Draw the `R - pi = 0.5` boundary** as an annotated dashed line. Done.
+   `floor_boundary_intercept` derives it from the same arithmetic the simulator
+   applies, and a test walks all 465 grid cells asserting that "below the line"
+   and "the floor binds" never disagree. Limitation M4 is now a thing the reader
+   sees. A caption can be wrong about a picture; a line derived from the formula
+   cannot.
+3. **Give both axes the same step in percentage points** and lock the aspect.
+   Done: 0.5 pp on both, `yaxis.scaleanchor="x"` with ratio 1.
+4. **Move from `go.Heatmap` to `go.Contour`.** Done, with `coloring="heatmap"`
+   so the fill is smooth and the iso-lines are drawn on top. The grid now spans
+   exactly the two sliders it explains, so the marked scenario is always inside
+   the plane, and the marker sits on the exact scenario rather than snapping to
+   a cell centre.
+5. **Re-colour on `DIVERGING_SCALE`, centred on the change from baseline.** Done.
+   `zmin` and `zmax` are fixed at -100 and +100 rather than autoscaled per
+   county, so a colour means the same change in every län. The colourbar reads
+   "Förändring mot basfall" and cannot be mistaken for the map's score.
+6. **Add a chart-theme guard.** Done: `tests/test_chart_theme_guard.py`. See
+   below.
+
+### 6.5 The guard, and what it found
+
+`tests/test_chart_theme_guard.py` makes three kinds of assertion, because there
+are three ways to drift:
+
+- **Built figures.** Every builder that can be called without a Streamlit process
+  is called, and its layout is compared against `get_chart_layout`. Plotly's own
+  default template is excluded: it ships a full palette for trace types this
+  project never draws, so asserting against it would test Plotly.
+- **Source text.** A colour written as `"#B94A48"` renders identically to
+  `COLORS["high_risk"]`, so only the source can tell them apart, and the whole
+  point of a token is that changing it moves every use. Same for a built-in
+  colorscale name.
+- **Call sites.** `displayModeBar` lives in the page, not the figure, so no built
+  figure can show that drift.
+
+Each of the three original deviations was re-introduced against the guard to
+confirm it fails. A guard that has never been seen to fail is a comment.
+
+**It found two more of the same kind on its first run**, neither previously
+noticed: six colour literals in `pages/02_Lan_jamforelse.py` and three in
+`pages/03_Kommun_djupanalys.py`. Every one was an exact palette value typed out
+by hand, so every one rendered correctly and would have stopped doing so the day
+the palette moved. That is the drift this section opened by describing, already
+present in two older pages, which is the argument for the guard rather than for
+the fix.
+
+What the guard still does not reach: a chart built inline inside a page script
+cannot be constructed without Streamlit, so the source scan covers it and the
+built-figure assertions do not.
+
+---
+
+## 7. Summary of recommended work
 
 | # | Change | Page | Status |
 |---|---|---|---|
@@ -621,11 +789,28 @@ have caught this, because the obvious example is a rate rise.
 | 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | Open. A decision, not a task. See section 4 |
 | 12 | **The Par multiplier doubles an already-household median** | 04 | Open. Understates LTI by about a quarter. Blocked on 10 |
 | 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | Open. Viable for 2025 at kommun level, different definition, no overlap year to calibrate |
+| 13 | The surface caption named the wrong corner of the plane | 05 | **Done.** The caption no longer claims a direction; the floor is drawn instead |
+| 14 | Draw the 0,5 pp real-rate floor as a boundary instead of describing it | 05 | **Done.** Derived from the simulator's own floor and asserted across the grid |
+| 15 | Equal pp steps on both surface axes, aspect locked | 05 | **Done.** 0,5 pp on both, `scaleanchor` ratio 1 |
+| 16 | Move the surface from `go.Heatmap` to `go.Contour` | 05 | **Done.** Smooth fill, iso-lines drawn on top |
+| 17 | Re-colour the surface on `DIVERGING_SCALE`, centred on change from baseline | 05 | **Done.** One diverging ramp again; bounds fixed so a colour means the same change in every län |
+| 18 | Add a chart-theme guard: shared layout, tokens-only colours, consistent toolbar | tests | **Done.** `tests/test_chart_theme_guard.py`. Closed R14; found nine more colour literals in two older pages |
+| 19 | Pass the baseline regime into the reachability chart instead of naming it twice | 04 | **Done.** `BASELINE_REGIME` in `engine.py`, read at all seven sites |
 
 Items 1 and 2 were the two that changed what a user concludes rather than how
 comfortable they are while concluding it. Both are now in place.
 
-Of what remains, **12 is the only one that makes a displayed number wrong**, and
-it cannot be fixed independently of 10: whether the multiplier should be removed
-or made valid depends on which income series the project decides to carry. That
-decision is deferred; nothing in the pipeline has been changed.
+Of what remains, **12 and 13 are the two that put something wrong in front of a
+reader.** They are wrong in different ways and cost different amounts to fix.
+
+**12** makes a displayed number wrong, and it cannot be fixed independently of
+10: whether the multiplier should be removed or made valid depends on which
+income series the project decides to carry. That decision is deferred; nothing
+in the pipeline has been changed.
+
+**13** makes a sentence wrong while the numbers underneath it are right. It is a
+single label and nothing blocks it, so it should not wait for the rest of the
+chart work in 14 to 17.
+
+Section 6 is implemented in full. Items 13 to 19 are done and the two
+charts no longer ship as section 6 described them.

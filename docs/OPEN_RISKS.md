@@ -25,6 +25,7 @@ These outlive it.
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
+| R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
 
 ---
 
@@ -488,6 +489,51 @@ in the same response. Fixing the map payload mattered; this does not.
 **Revisit if:** Streamlit gains a media-type mapping for static files, or the app moves off
 Community Cloud to a host where a reverse proxy can serve `/static` itself. Flipping it back
 on is a small change — the reasoning is recorded in `src/ui/css.py:inject_css`.
+
+---
+
+## R14 — The chart layer sits outside every design guard
+
+**Severity: Medium. CLOSED** by `tests/test_chart_theme_guard.py`.
+
+The design system used to be enforced everywhere except where charts are.
+`tests/test_design_system_doc.py` checks the CSS class inventory in both directions and
+verifies the map section against `choropleth.py`. `tests/test_css_naming.py` rejects a
+class defined outside the `shai-` convention. `tests/test_no_inline_copy.py` keeps user
+strings out of pages. **Nothing checked a Plotly figure.**
+
+This was not hypothetical. The two charts added in `60e150d` drifted on three axes at
+once and the suite stayed green:
+
+| Deviation | Where | Now |
+|---|---|---|
+| Plotly's built-in `RdYlGn` instead of `DIVERGING_SCALE`, so the app had two diverging ramps | `src/scenario/charts.py` | `DIVERGING_SCALE`, reversed |
+| The primary navy hardcoded as a hex literal instead of `COLORS["primary"]` | `src/scenario/charts.py` | The token |
+| `displayModeBar: False` where the seven earlier charts pass `"hover"` | `src/scenario/charts.py`, `src/kontantinsats/sections.py` | `"hover"` everywhere |
+
+Fixing them turned up two more of the same kind that no one had noticed: six colour
+literals in `pages/02_Lan_jamforelse.py` and three in `pages/03_Kommun_djupanalys.py`,
+each one an exact palette value spelled out by hand. They painted the right pixel and
+would have painted the wrong one the day the palette moved.
+
+**Why it was Medium rather than Low.** A stylesheet drift is visible the moment someone
+looks at the page. A chart drift looks deliberate: a second red-to-green ramp reads as a
+design choice, and a reader has no way to tell it is not the map's scale.
+
+**What the guard does**, in the shape the CSS tests already use: it builds every figure a
+test can build and asserts the layout came from `get_chart_layout` and that every colour
+in the rendered figure is a token; it scans the source of every figure-building file for
+hex literals and built-in colorscale names, because a built figure cannot tell
+`"#B94A48"` from `COLORS["high_risk"]`; and it scans call sites for `displayModeBar`,
+which lives in the page rather than the figure. Each of the three original deviations was
+re-introduced against the guard to confirm it fails rather than merely passing.
+
+**What it still does not cover.** Charts built inline inside a page script cannot be
+constructed without a Streamlit process, so they are reached by the source scan but not
+by the built-figure assertions. Moving them into builder modules would close that gap.
+
+**Revisit if:** an inline page chart grows enough logic to deserve a module, at which
+point it should get one and fall under the built-figure half of the guard too.
 
 ---
 
