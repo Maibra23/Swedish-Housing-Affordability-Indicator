@@ -20,7 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart, fmt_delta_sek
-from src.kontantinsats.engine import REGIMES, compare_regimes
+from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
 from src.kontantinsats.regions import (
     _LAN_NAMES,
     REGIME_ACCENT_COLORS,
@@ -160,10 +160,10 @@ def render_snapshot(ctx: Context) -> None:
                 price=price,
                 income=income,
                 lending_ceiling=LTI_LENDING_CEILING,
-                min_down_pct=REGIMES["latt_2026"]["min_down_pct"],
+                min_down_pct=REGIMES[BASELINE_REGIME]["min_down_pct"],
             ),
             width="stretch",
-            config={"displayModeBar": False},
+            config={"displayModeBar": "hover"},
         )
         st.caption(L("ki.gap_forklaring_v0", v0=_sv_ceiling()))
 
@@ -214,9 +214,9 @@ def render_villa_vs_bostadsratt(ctx: Context) -> None:
     )
     if _show_comparison:
         from src.kontantinsats.engine import apply_regime as _apply_regime
-        _villa_res = _apply_regime(_villa_price, income, rate, "latt_2026",
+        _villa_res = _apply_regime(_villa_price, income, rate, BASELINE_REGIME,
                                    savings_rate, bank_margin)
-        _br_res = _apply_regime(_br_price, income, rate, "latt_2026",
+        _br_res = _apply_regime(_br_price, income, rate, BASELINE_REGIME,
                                 savings_rate, bank_margin)
         _ratio = _villa_price / _br_price if _br_price > 0 else float("nan")
         with st.container(border=True):
@@ -342,7 +342,7 @@ def render_regime_cards(ctx: Context) -> None:
                     st.metric(
                         "Kontantinsats",
                         format_sek_compact(res["required_cash"]),
-                        delta=fmt_delta_sek(delta_cash) if key != "latt_2026" else None,
+                        delta=fmt_delta_sek(delta_cash) if key != BASELINE_REGIME else None,
                         delta_color="inverse",
                         help=L("ki.kontantinsats_ar_eget_kapital_insats_som"),
                     )
@@ -351,7 +351,7 @@ def render_regime_cards(ctx: Context) -> None:
                         f"{res['years_to_save']:.1f}".replace(".", ",") + L("ki.ar"),
                         delta=(
                             (L("ki.v0_1f_ar", v0=delta_years).replace(".", ","))
-                            if (key != "latt_2026" and abs(delta_years) >= 0.05)
+                            if (key != BASELINE_REGIME and abs(delta_years) >= 0.05)
                             else None
                         ),
                         delta_color="inverse",
@@ -360,7 +360,7 @@ def render_regime_cards(ctx: Context) -> None:
                     st.metric(
                         L("ki.manadskostnad"),
                         f"{format_sek(res['monthly_total'])} SEK",
-                        delta=fmt_delta_sek(delta_cost) if key != "latt_2026" else None,
+                        delta=fmt_delta_sek(delta_cost) if key != BASELINE_REGIME else None,
                         delta_color="inverse",
                         help=L("ki.summa_amortering_rantekostnad_per_manad"),
                     )

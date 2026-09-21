@@ -31,7 +31,7 @@ from src.ui.components import (
     page_title,
     vintage_badge,
 )
-from src.ui.chart_theme import get_chart_layout
+from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
 from src.ui.data_table import Column, render_table
 
 inject_css()
@@ -91,8 +91,8 @@ FORMULA_INFO = {
             L("lj.den_enklaste_versionen_mater_hushallets")
         ),
         "col": "version_a",
-        "color_highlight": "#B94A48",
-        "color_others": "#4A6FA5",
+        "color_highlight": COLORS["high_risk"],
+        "color_others": COLORS["secondary"],
     },
     "Makroversion (B)": {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
@@ -100,8 +100,8 @@ FORMULA_INFO = {
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
         ),
         "col": "version_b",
-        "color_highlight": "#C4A35A",
-        "color_others": "#7B68A8",
+        "color_highlight": COLORS["accent"],
+        "color_others": CHART_PALETTE[4],
         "footnote": (
             L("lj.arbetsloshet_avser_oppet_arbetslosa_enligt")
         ),
@@ -112,8 +112,8 @@ FORMULA_INFO = {
             L("lj.den_rekommenderade_versionen_justerar_for")
         ),
         "col": "version_c",
-        "color_highlight": "#2E7D5B",
-        "color_others": "#D4785A",
+        "color_highlight": COLORS["low_risk"],
+        "color_others": CHART_PALETTE[5],
         "footnote": (
             L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
@@ -249,7 +249,7 @@ with st.container(border=True):
 
     if len(year_data) > 0:
         cols = st.columns(3)
-        formula_colors = ["#4A6FA5", "#7B68A8", "#3D8B6E"]
+        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4], CHART_PALETTE[6]]
         for col_idx, (name, info) in enumerate(FORMULA_INFO.items()):
             with cols[col_idx]:
                 st.markdown(

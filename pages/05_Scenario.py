@@ -282,7 +282,7 @@ with st.container(border=True):
             cpi_shock=cpi_shock,
         ),
         width="stretch",
-        config={"displayModeBar": False},
+        config={"displayModeBar": "hover"},
     )
     st.caption(L("sc.yta_forklaring"))
 

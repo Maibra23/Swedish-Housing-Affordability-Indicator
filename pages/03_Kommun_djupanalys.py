@@ -263,9 +263,9 @@ with st.container(border=True):
     col1, col2, col3 = st.columns(3)
 
     component_configs = [
-        ("Medianinkomst", "median_income", "SEK", col1, "#3D8B6E"),
-        ("K/T-kvot", "kt_ratio", "kvot", col2, "#4A6FA5"),
-        (L("kd.styrranta"), "policy_rate", "%", col3, "#D4785A"),
+        ("Medianinkomst", "median_income", "SEK", col1, CHART_PALETTE[6]),
+        ("K/T-kvot", "kt_ratio", "kvot", col2, CHART_PALETTE[0]),
+        (L("kd.styrranta"), "policy_rate", "%", col3, CHART_PALETTE[5]),
     ]
 
     # Compute driver

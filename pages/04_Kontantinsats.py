@@ -42,7 +42,7 @@ from src.kontantinsats.charts import (
     comparison_tab_specs,
     fmt_delta_sek,
 )
-from src.kontantinsats.engine import REGIMES, compare_regimes
+from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
 from src.kontantinsats.assumptions import render_assumptions
 from src.kontantinsats.sections import (
     Context,
@@ -262,7 +262,7 @@ _sparkvot_caption.caption(
 
 # ── Compute all regimes ──────────────────────────────────────────────
 results = compare_regimes(price, income, rate, savings_rate, bank_margin)
-baseline = results["latt_2026"]
+baseline = results[BASELINE_REGIME]
 regime_keys = REGIME_KEYS
 
 # Which regime is cheapest and dearest by monthly cost. Page state, not

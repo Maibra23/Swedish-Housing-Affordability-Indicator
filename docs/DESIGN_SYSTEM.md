@@ -187,7 +187,53 @@ year, so a colour means "among this year's most stretched", not a fixed price le
 
 ---
 
-## 5. Components
+## 5. Charts
+
+**Plotly**, everywhere except the map. `src/ui/chart_theme.py` owns the shared
+visual language: `get_chart_layout` returns the font, the grid, the hover label and
+the margins, and `CHART_PALETTE` holds the eight series colours. A figure builder
+assembles traces and reference lines; it does not restate layout.
+
+| Where | Builds |
+|-------|--------|
+| `src/kontantinsats/charts.py` | Regime comparison bars, reachability bars |
+| `src/scenario/charts.py` | The rate and inflation surface |
+| Page scripts | Scenario bars, time series and the distribution histogram, inline |
+
+**One diverging ramp.** `DIVERGING_SCALE` is the project's only diverging scale.
+A chart that needs one uses it, reversed where the quantity runs the other way,
+so a colour keeps its meaning across the site. The map spends it on a z-score
+where low is good; the rate and inflation surface plots a change where high is
+good and therefore reads the same ramp from the other end.
+
+**Colours come from tokens.** `COLORS`, `CHART_PALETTE` and `DIVERGING_SCALE`,
+never a literal. `chart_theme.py` and `tokens.py` are where the hex values live;
+everywhere else imports them. A literal paints the right pixel today and the
+wrong one the day the palette moves.
+
+**The toolbar setting is part of the language.** Every chart passes
+`displayModeBar: "hover"`. Two charts on one site that disagree about whether a
+toolbar appears read as a bug to the person using them.
+
+**Numeric axes carry their unit.** Where two axes are in the same unit and the
+relationship between them is the point, give them the same step and lock the
+aspect with `scaleanchor`. The surface's 45 degree iso-lines are only true of the
+picture because of that; before it, one axis moved 1 pp per cell and the other
+2 pp, and the caption describing diagonals described arithmetic the render did
+not show.
+
+> **This section is enforced.** `tests/test_chart_theme_guard.py` builds every
+> figure a test can build and asserts the layout came from `get_chart_layout` and
+> that every colour is a token; it scans the source of every figure-building file
+> for hex literals and built-in colorscale names, which a built figure cannot
+> distinguish from tokens; and it scans call sites for `displayModeBar`. The
+> three deviations this section used to record are fixed, and each one was
+> re-introduced against the guard to confirm it fails. R14 in
+> `docs/OPEN_RISKS.md` is closed.
+
+---
+
+## 6. Components
 
 | Component | Module | Notes |
 |-----------|--------|-------|
@@ -205,7 +251,7 @@ year, so a colour means "among this year's most stretched", not a fixed price le
 
 ---
 
-## 6. Contributor checklist
+## 7. Contributor checklist
 
 Before opening a pull request that touches the interface:
 
@@ -217,6 +263,9 @@ Before opening a pull request that touches the interface:
 - [ ] **String quotes a number?** Interpolate it from the artifact. A typed figure is
       Findings A, C and H returning. `tests/test_copy_matches_artifacts.py` is the guard.
 - [ ] **New table?** Through `render_table`. No page builds table markup.
+- [ ] **New chart?** Through `get_chart_layout`, with colours from `COLORS` or
+      `DIVERGING_SCALE` and the same toolbar setting as its neighbours. Section 5
+      says why; no test will catch you.
 - [ ] **Filtering by risk?** Through `filters.py`. An empty selection means *all*.
 - [ ] **Added a bare number to a page?** Add an `explanation()` beneath it.
 - [ ] **File over 400 lines?** Split it, or justify the exemption in
@@ -225,11 +274,11 @@ Before opening a pull request that touches the interface:
 
 ---
 
-## 7. What this document does not cover
+## 8. What this document does not cover
 
 Visual equivalence with Skattekraftspanelen. D2 set convergence on that design as the
-goal, and the components in section 5 were built from the task descriptions in
+goal, and the components in section 6 were built from the task descriptions in
 `docs/REVITALIZATION_PLAN.md`, because the reference repository is not available on the
 machine this work was done on. The capabilities are present and tested. **Whether they
-look the same is unverified.** Re-check section 5 against the reference before treating
+look the same is unverified.** Re-check section 6 against the reference before treating
 D2 as met.
