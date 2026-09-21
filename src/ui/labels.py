@@ -278,7 +278,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.bostadsratt_scb_bo0501c_lansniva": "**Bostadsrätt**, SCB BO0501C (länsnivå)",
     "ki.priskvot_villa_bostadsratt_v0_1f_bada_priser": "Priskvot villa/bostadsrätt: **{v0:.1f}×**. Båda priser avser **{v1}** (länsnivå). Samma hushållsinkomst, ränta och regelverk (Lättnad 2026).",
     "ki.priskvot_villa_bostadsratt_v0_1f_villapris": "Priskvot villa/bostadsrätt: **{v0:.1f}×**. Villapris avser **{v1}** (kommunnivå). Bostadsrättspris avser **{v2}** (länsnivå, SCB BO0501C). SCB publicerar inga kommunspecifika bostadsrättspriser.",
-    "ki.total_kontantinsats_10_av_medianpriset_under": "Total kontantinsats (10 % av medianpriset under nuvarande bolånetak, gäller fr.o.m. apr 2026).",
+    "ki.total_kontantinsats_10_av_medianpriset_under": "Total kontantinsats (10 % av medelpriset under nuvarande bolånetak, gäller fr.o.m. apr 2026).",
     "ki.ar_att_spara_idag": "År att spara (idag)",
     "ki.ar_2": "år",
     "ki.antal_ar_for_att_spara_kontantinsatsen_vid": "Antal år för att spara kontantinsatsen vid vald sparkvot.",
@@ -450,7 +450,7 @@ SWEDISH_LABELS: dict[str, str] = {
 
     Där:
     - **Inkomst** = median disponibel hushållsinkomst (SEK)
-    - **Transaktionspris** = median transaktionspris för bostäder (SEK, SCB BO0501)
+    - **Transaktionspris** = genomsnittligt transaktionspris för småhus (SEK, SCB BO0501, köpeskilling medelvärde)
     - **R** = Riksbankens styrränta i procentenheter (årsgenomsnitt)
     - **π** = KPI-inflation i procentenheter (årsgenomsnitt)
     - **0,5** = golv (procentenheter) för att förhindra division med noll vid negativ realränta
