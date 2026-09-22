@@ -16,12 +16,12 @@ These outlive it.
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | OPEN |
 | R3 | The `pipeline` extra is unverified as an install | Medium | OPEN |
 | R4 | The forecast step exhausts memory on this machine | Medium | OPEN |
-| R5 | Refresh-pipeline modules have no tests (44 % overall, was 15 %) | **High** | OPEN |
+| R5 | Refresh-pipeline modules have no tests (68 % overall, was 15 %) | **High** | OPEN (reduced) |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
-| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | OPEN (one of two closed) |
+| R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | **CLOSED** |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
@@ -213,10 +213,53 @@ runs once or twice a year, by hand, and a mistake in it is invisible until a num
 on a page. `build_panel.py` in particular holds income imputation, the ragged-panel joins and
 the forward-fill — the machinery behind D1, F9 and the `complete_case()` rule.
 
-**Recommendation unchanged in priority, narrowed in target:** `affordability.py` has coverage
-now but no *property* tests — orientation, monotonicity in each input, behaviour at zero and
-negative real rates. That is still where R1 came from, and it is 69 statements. After that,
-`build_panel.py`, which is also R10's blocker.
+### Progress 2026-09-22 — the panel builder is covered, and the numbers above are stale
+
+The table earlier in this entry reports 44 % overall and lists five modules at 0 %. Both
+were out of date by the time they were read, which this entry itself predicted: *"a risk
+register goes stale exactly like the prose T4.1 polices."*
+
+Measured now:
+
+| | After Phase 4 | Now |
+|---|---|---|
+| `src/` overall | 44 % | **68 %** |
+| `src/data/build_panel.py` | 0 % | **91 %** |
+| `src/data/clean_sources.py` | — | **95 %** |
+| `src/data/panel_summary.py` | — | **100 %** |
+| `src/data/scb_client.py` | 0 % | 13 % |
+
+The narrowed recommendation this entry made — property tests for
+`affordability.py` — had already been satisfied by
+`tests/test_affordability_properties.py`, which covers orientation, monotonicity in income
+and price, the floored real rate, the zero-price case and panel-composition dependence. That
+left `build_panel.py` as the target, and it is done: `tests/test_build_panel.py` (28) drives
+the whole builder in-process by patching `_read`, the single I/O seam, with synthetic frames
+in each source's published shape.
+
+What those tests assert is the part worth naming. They are not smoke tests; they pin the
+**documented approximations**, each of which is a deliberate decision that would otherwise
+become something else the first time a merge key moved:
+
+- the county price index reaching every municipality (F1)
+- the national policy rate and CPI at all three levels (F2)
+- K/T and transaction-price fallback to county values, with `has_native_*` recording which
+- income forward-filled past its vintage at 3 %/yr and flagged (F9), with
+  `median_income_tkr` moving with `median_income`
+- the combined `08+09` Kalmar and Gotland row split so both counties join
+- Kolada's `00` + SCB code convention for counties
+- quarterly K/T rows and non-permanent property types filtered out rather than averaged in
+
+**Still at 0 %:** `src/forecast/arima_pipeline.py` (108 statements),
+`src/forecast/prophet_pipeline.py` (110) and `src/data/riksbanken_client.py` (67). These are
+the remaining reason this risk is reduced rather than closed. The forecast pipelines are the
+larger gap; they feed page 03 and they are the step most likely to be skipped on a refresh,
+which is exactly how the stale forecast artifacts of 2026-09-21 nearly shipped.
+
+**Recommendation, narrowed again:** `riksbanken_client.py` next, because it is 67 statements
+and the policy rate reaches every page through both A and C. Then the forecast pipelines,
+which need a different approach — their value is in the model fitting, and a test that pins
+ARIMA output is a change-detector rather than a guard.
 
 ---
 
@@ -403,6 +446,39 @@ nothing in the suite would catch a mistake in moving it.
 **Recommendation:** tests before splitting, in that order. This is R5 wearing a second hat:
 the modules that most need to be broken up are the ones it is least safe to touch, and the
 way out is coverage, not courage.
+
+### CLOSED 2026-09-22 — `build_panel.py` followed, and the set is empty
+
+`build_panel.py` took the same route `scb_client.py` took the day before, in the order this
+risk prescribed: tests first, then the split.
+
+Coverage went 0 % to 87 % on the original module. With something able to catch a mistake,
+the seam was obvious once looked for — the module was doing three jobs:
+
+| Module | Lines | Holds |
+|---|---|---|
+| `src/data/clean_sources.py` | 267 | The shapes: one cleaner per raw source |
+| `src/data/build_panel.py` | **387** | The joins, and the approximations they carry |
+| `src/data/panel_summary.py` | 57 | The refresh report |
+
+The report is the interesting extraction. It was 23 `print` statements inside `build_all`,
+which meant the first thing anyone reads after a rebuild was the one part of the pipeline
+nothing could check. It returns a string now, and two tests assert it describes what was
+actually built.
+
+**Verification:** the split was checked by rebuilding all three panels from the real cached
+raw data and comparing to the pre-split artifacts. Identical, row for row, at every level. A
+line count proves a file got shorter, not that it still works.
+
+**The tests earned their keep during the split itself.** They failed the moment it landed,
+because the cleaners resolve `_read` in their own module while `build_county_panel` also
+calls it directly through the re-export, so patching one module left half the builder
+reading the real `data/raw/`. That is precisely the class of mistake this risk said would go
+uncaught in an untested module, and it was caught in seconds.
+
+`EXEMPT_CEILINGS` is now empty, and `test_no_source_module_still_needs_a_ceiling` asserts it,
+so re-opening the exemption is a visible decision rather than a quiet one. Only `labels.py`
+remains exempt, as a data file with its own guards.
 
 ### Progress 2026-09-21 — `scb_client.py` is out
 
