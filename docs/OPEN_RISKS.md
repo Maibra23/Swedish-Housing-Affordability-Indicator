@@ -16,11 +16,11 @@ These outlive it.
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | **CLOSED** |
 | R3 | The `pipeline` extra is unverified as an install | Medium | **CLOSED** |
 | R4 | The forecast step exhausts memory on this machine | Medium | **CLOSED** |
-| R5 | Refresh-pipeline modules have no tests (68 % overall, was 15 %) | **High** | OPEN (reduced) |
+| R5 | Refresh-pipeline modules have no tests (73 % overall, was 15 %) | **High** | **CLOSED** |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
 | R8 | `folium_static` is deprecated and will be removed | Medium | **CLOSED** |
-| R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
+| R9 | `labels.py` holds markup and LaTeX, not only copy | Low | **CLOSED** |
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | **CLOSED** |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
 | R12 | A zero price divides to infinity in Version C | Low | **CLOSED** |
@@ -331,10 +331,49 @@ the remaining reason this risk is reduced rather than closed. The forecast pipel
 larger gap; they feed page 03 and they are the step most likely to be skipped on a refresh,
 which is exactly how the stale forecast artifacts of 2026-09-21 nearly shipped.
 
-**Recommendation, narrowed again:** `riksbanken_client.py` next, because it is 67 statements
-and the policy rate reaches every page through both A and C. Then the forecast pipelines,
-which need a different approach — their value is in the model fitting, and a test that pins
-ARIMA output is a change-detector rather than a guard.
+### CLOSED 2026-09-22 — no subsystem is at zero
+
+The two modules that recommendation named are done, and with them the risk's own
+framing — *whole subsystems have no tests* — stops being true of anything.
+
+| | After Phase 1 | After Phase 4 | Now |
+|---|---|---|---|
+| `src/` overall | 15 % | 44 % | **73 %** |
+| `src/data/build_panel.py` | 0 % | 0 % | 91 % |
+| `src/data/clean_sources.py` | — | — | 95 % |
+| `src/data/riksbanken_client.py` | 0 % | 0 % | **87 %** |
+| `src/forecast/arima_pipeline.py` | 0 % | 0 % | 31 % |
+| `src/forecast/prophet_pipeline.py` | 0 % | 0 % | 30 % |
+
+**`riksbanken_client.py`** was named for leverage rather than size: 67 statements producing a
+series that Version A divides by directly and Version C through the real rate. The tests
+stub the network and pin the two things that can go wrong quietly — a rate that fails to
+parse becoming `NaN` through `errors="coerce"`, and the fact that the annual figure is the
+mean of the business days present rather than a time-weighted average. The second is a
+modelling choice the whole panel inherits, and it was nowhere written down.
+
+**The forecast pipelines are tested by contract, not by output**, and the low percentages
+are the deliberate result. Pinning ARIMA's predicted values would be a change-detector: it
+would fail whenever `pmdarima` changed a default, pass while the pipeline forecast the wrong
+series entirely, and leave nobody able to say whether a diff was a regression or a better
+model. The uncovered statements are the model fitting, which is exercised end to end
+whenever a refresh runs.
+
+What is covered is everything around the fit: `_resolve_end_year` ignoring the imputed tail,
+the horizon and its consecutive target years, all 21 counties present for every variable,
+bands that contain their own mean and are not inverted, and the widening validator on both
+a widening and a narrowing series.
+
+**The most valuable one is the vintage check**, and it closes the loop on the near-miss R4
+describes. A forecast's first target year must be the year after the last observed one, so
+the forecast artifacts and the index artifacts can be compared directly without either
+recording a timestamp. On 2026-09-21 the refresh wrote panels and indices, then exited on a
+missing import before the forecast step, leaving committed forecasts built on the previous
+income series. It was caught by hand. It would now fail a test.
+
+**Residual, and deliberately accepted:** the model-fitting bodies of both forecast pipelines
+are not unit-tested. Unit tests are the wrong instrument there, and the right one — the
+contract on their output, plus the vintage check — is in place.
 
 ---
 
@@ -495,6 +534,33 @@ a separate `TEMPLATES` mapping (or component functions) for markup. T3.10 splits
 `components.py` and is the natural moment: markup that lives in a component does not need to
 live in a label at all. Low priority because nothing is broken and the guard tests pin the
 current behaviour; worth doing before the dict grows past the point where anyone reads it.
+
+### CLOSED 2026-09-22 — `src/ui/templates.py`
+
+Ten markup blocks moved out of `SWEDISH_LABELS`: the two regime tables, the assumptions
+panel, the landing blurb and five smaller fragments. 368 labels and 10 templates.
+
+**The line is a rule rather than a judgement**, which is what makes it hold. A string
+carrying HTML tags is a template; prose has none. `tests/test_labels.py` asserts both
+directions, so a markup block cannot drift back into the copy dictionary and a sentence
+cannot end up in the template file.
+
+One carve-out, because the alternative is worse: Plotly hover templates contain `<br>` and
+`<extra></extra>`, which is Plotly's microformat rather than page markup, and what a reader
+sees in a tooltip is copy. They are recognised by their `%{...}` placeholders, which appear
+in no page HTML, so the exemption needs no key-name convention to maintain.
+
+The LaTeX this risk also named stayed put. There is exactly one formula string, it is read
+by `st.latex` as content rather than assembled as markup, and a third dictionary for a
+single entry would be structure for its own sake.
+
+**The move nearly weakened a guard, which is the part worth recording.**
+`test_copy_matches_artifacts.py` scanned `SWEDISH_LABELS` for unexamined year literals.
+Four of the ten moved blocks carry 13 year literals between them — they are regime tables,
+dense with 2010, 2016, 2018 and 2026 — so scanning only the copy dictionary afterwards would
+have quietly narrowed the guard to the strings that happen not to carry markup. Prose wrapped
+in a `<div>` goes stale exactly as easily. Its four scanning loops now read both dictionaries,
+and that was verified by counting what came back into scope rather than assumed.
 
 ---
 

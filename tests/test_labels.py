@@ -223,3 +223,69 @@ def test_a_dangling_limitation_reference_would_be_caught() -> None:
 def test_an_inverted_orientation_phrase_would_be_caught() -> None:
     sample = "Obs: högre z = bättre överkomlighet"
     assert "högre z = bättre" in sample.lower()
+
+
+# ---------------------------------------------------------------------------
+# R9: copy and markup have separate homes, and the line is enforced
+# ---------------------------------------------------------------------------
+
+#: Page markup. Plotly hover templates are excluded below rather than here,
+#: because `<br>` is legitimate in both.
+HTML_TAG = re.compile(r"</?(div|table|tr|td|th|ul|ol|li|p|h[1-6]|strong|em|b|i|span)\b")
+
+#: Plotly's own microformat. `%{...}` placeholders appear in no page markup, so
+#: they identify a hover template without needing a key-name convention.
+PLOTLY_TEMPLATE = re.compile(r"%\{|<extra>")
+
+
+def test_prose_and_markup_do_not_share_a_dictionary() -> None:
+    """R9. A 2000-character regime table and the word "Kommun" are not the same
+    object, and a translator and a front-end developer do not edit the same file.
+
+    The carve-out is Plotly hover templates: `<br>` and `<extra></extra>` are
+    Plotly syntax, and what a user reads in a tooltip is copy.
+    """
+    from src.ui.labels import SWEDISH_LABELS
+
+    offenders = [
+        key
+        for key, value in SWEDISH_LABELS.items()
+        if isinstance(value, str)
+        and HTML_TAG.search(value)
+        and not PLOTLY_TEMPLATE.search(value)
+    ]
+    assert not offenders, (
+        "markup in the copy dictionary: "
+        + ", ".join(sorted(offenders))
+        + ". Move it to src/ui/templates.py."
+    )
+
+
+def test_templates_are_markup_rather_than_prose() -> None:
+    """The other direction, so a sentence cannot drift into the template file."""
+    from src.ui.templates import TEMPLATES
+
+    offenders = [
+        key for key, value in TEMPLATES.items() if not HTML_TAG.search(value)
+    ]
+    assert not offenders, (
+        "plain prose in the template dictionary: "
+        + ", ".join(sorted(offenders))
+        + ". Move it to src/ui/labels.py."
+    )
+
+
+def test_the_two_dictionaries_are_disjoint() -> None:
+    """One key, one home. A key in both is a rendering decided by import order."""
+    from src.ui.labels import SWEDISH_LABELS
+    from src.ui.templates import TEMPLATES
+
+    assert not set(SWEDISH_LABELS) & set(TEMPLATES)
+
+
+def test_an_unknown_template_key_names_its_near_misses() -> None:
+    """Same failure mode as a missing label: a blank area of a page."""
+    from src.ui.templates import T
+
+    with pytest.raises(KeyError, match="no template"):
+        T("ki.smahuspris_referens_v0_sekk")

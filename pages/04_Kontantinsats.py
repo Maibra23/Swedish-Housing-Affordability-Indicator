@@ -9,6 +9,7 @@ because SCB only publishes apartment prices at the county level.
 import streamlit as st
 
 from src.ui.labels import L
+from src.ui.templates import T
 
 st.set_page_config(
     page_title="SHAI · Kontantinsats",
@@ -323,7 +324,7 @@ with st.container(border=True):
         card_header("Regelverksutveckling", "Fem milstolpar 2010–2026", "TIDSLINJE"),
         unsafe_allow_html=True,
     )
-    timeline_html = L("ki.fore_2010_bolanetak_amorteringskrav_skarpt", v0=COLORS['text_tertiary'], v1=COLORS['accent'], v2=COLORS['medium_risk'], v3=COLORS['high_risk'], v4=COLORS['low_risk'], v5=COLORS['accent'], v6=COLORS['text_tertiary'], v7=COLORS['text_secondary'], v8=COLORS['text_secondary'], v9=COLORS['text_secondary'], v10=COLORS['text_secondary'])
+    timeline_html = T("ki.fore_2010_bolanetak_amorteringskrav_skarpt", v0=COLORS['text_tertiary'], v1=COLORS['accent'], v2=COLORS['medium_risk'], v3=COLORS['high_risk'], v4=COLORS['low_risk'], v5=COLORS['accent'], v6=COLORS['text_tertiary'], v7=COLORS['text_secondary'], v8=COLORS['text_secondary'], v9=COLORS['text_secondary'], v10=COLORS['text_secondary'])
     st.markdown(_compact(timeline_html), unsafe_allow_html=True)
 
 render_regime_cards(_ctx)
@@ -370,7 +371,7 @@ _rate_note = (
     if bank_margin_pct > 0
     else L("ki.styrranta_v0_2f", v0=selected_row['policy_rate'])
 )
-insight_html = L("ki.nyckelinsikt_syntes_for_ett_v2_v3_under", v0=COLORS['accent'], v1=COLORS['text_primary'], v2=_hushall_label, v3=_rate_note, v4=format_sek(baseline['required_cash']), v5=baseline['years_to_save'], v6=int(savings_rate*100), v7=format_sek(baseline['monthly_total']), v8=cost_pct, v9=REGIMES[best_key]['label'], v10=format_sek(cost_diff), v11=pct_diff)
+insight_html = T("ki.nyckelinsikt_syntes_for_ett_v2_v3_under", v0=COLORS['accent'], v1=COLORS['text_primary'], v2=_hushall_label, v3=_rate_note, v4=format_sek(baseline['required_cash']), v5=baseline['years_to_save'], v6=int(savings_rate*100), v7=format_sek(baseline['monthly_total']), v8=cost_pct, v9=REGIMES[best_key]['label'], v10=format_sek(cost_diff), v11=pct_diff)
 st.markdown(_compact(insight_html), unsafe_allow_html=True)
 
 render_assumptions(_ctx)
