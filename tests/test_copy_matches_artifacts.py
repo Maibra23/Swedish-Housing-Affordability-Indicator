@@ -183,7 +183,7 @@ def test_municipality_counts_in_copy_match_the_panel() -> None:
 def test_the_d5_panel_mean_statistic_still_holds() -> None:
     """Methodology prose cites measured extremes as the evidence for D5.
 
-    "panelmedelvärdet går från −0,37 (2015) till +0,86 (2023)" is the argument for
+    "panelmedelvärdet går från −0,31 (2015) till +0,78 (2023)" is the argument for
     keeping Version B's construction pooled — it is what shows B carrying a time
     trend at all. Cited numbers are the weakest kind of prose: correct when
     written, silently wrong after any refresh, and load-bearing for a locked
@@ -240,7 +240,7 @@ NOT_A_VINTAGE = {
     # "Åren 2020–2021 har negativ realränta" — a statement about the rate cycle
     # that stays true regardless of how far the data now reaches.
     "historical episode reference": r"Åren\s+(?:19|20)\d{2}\s*[–—-]\s*(?:19|20)\d{2}",
-    # "−0,37 (2015) till +0,86 (2023)" — measured extremes, re-derived in
+    # "−0,31 (2015) till +0,78 (2023)" — measured extremes, re-derived in
     # test_the_d5_panel_mean_statistic_still_holds rather than classified away.
     "D5 panel-mean extremes, checked above": r"[+−-]\d+,\d+\s*\(\d{4}\)",
     "index period, checked above": rf"\b{first_year()}\b|\b{complete_case_max_year()}\b",

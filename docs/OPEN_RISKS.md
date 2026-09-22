@@ -26,6 +26,7 @@ These outlive it.
 | R12 | A zero price divides to infinity in Version C | Low | OPEN |
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 | R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
+| R15 | Numbers quoted in docstrings and markdown are guarded nowhere | Medium | **CLOSED** |
 
 ---
 
@@ -595,6 +596,69 @@ by the built-figure assertions. Moving them into builder modules would close tha
 
 **Revisit if:** an inline page chart grows enough logic to deserve a module, at which
 point it should get one and fall under the built-figure half of the guard too.
+
+---
+
+## R15 — Numbers quoted in docstrings and markdown are guarded nowhere
+
+**Severity: Medium. CLOSED** on 2026-09-22 by `tests/test_prose_matches_artifacts.py`.
+
+`tests/test_copy_matches_artifacts.py` exists because of Findings A, C and H, which were
+one defect wearing three coats: prose asserting a number the data no longer supported. It
+polices `SWEDISH_LABELS`, which is where the copy a user reads lives, so it was the right
+place to start. It works, too — it caught the Version B panel means within minutes of the
+income source changing on 2026-09-21.
+
+**It caught one of six.** The same figures were quoted in five other places, none of them
+in the label dictionary, and all five survived the refresh silently:
+
+| Where | What it was |
+|---|---|
+| `src/indices/normalize.py` | Module docstring explaining why B stays pooled |
+| `docs/METHODOLOGY.md` | §4, the evidence for decision D5 |
+| `docs/REVITALIZATION_PLAN.md` | The D5 decision row, and again in the O2 analysis |
+| `tests/test_copy_matches_artifacts.py` | Its own docstring, and a comment beside `NOT_A_VINTAGE` |
+
+The last row is the uncomfortable one. The guard against stale quoted figures had two stale
+quoted figures in it, and would not have noticed if it had a hundred.
+
+This is the project's own recurring defect in a place nobody thought to look. The label
+dictionary was hardened; the rest of the repository was left as prose.
+
+### Why it took a year to surface
+
+Because until 2026-09-21 the figures happened to be correct. R1 meant Version B moved
+whenever the panel did, and the panel had not moved in a way that touched those numbers.
+The income switch moved all of them at once, and only the guarded copy noticed.
+
+### The fix, and the limit on it
+
+A general prose checker is not possible. Most numbers in a docstring are parameters,
+thresholds or worked examples with no artifact behind them, and asserting against them would
+be noise. What *is* checkable is a shape that only ever means one thing here: a signed
+decimal bound to a year, as in "−0,31 (2015)". Every occurrence of that shape anywhere in
+the repository is now re-derived from `affordability_ranked.parquet`.
+
+Three details that decide whether it works:
+
+- **Wrapped lines are rejoined first.** `labels.py` breaks the D5 sentence mid-claim, so a
+  line-by-line scan saw the first figure and missed the second entirely. A guard that reads
+  half a sentence is worse than none, because it looks like coverage.
+- **Session-log rows are exempt by shape, not by allowlist.** Those entries record what was
+  true on a date; rewriting them would destroy the record. Matching the table row means a
+  new log entry needs no maintenance here.
+- **The claim's own precision sets the tolerance**, so tightening a sentence to three
+  decimals does not silently loosen its guard.
+
+It found the four stale figures in `test_copy_matches_artifacts.py` on its first run, which
+is the argument for it.
+
+**What it still does not cover:** any quoted figure whose shape is not "signed decimal plus
+year". A municipality count or a price in prose would pass unexamined. Extending it means
+adding one pattern per checkable fact rather than attempting a general solution.
+
+**Revisit if:** a second class of artifact-derived figure starts appearing in prose, at
+which point the pattern list becomes a registry and deserves the structure that implies.
 
 ---
 
