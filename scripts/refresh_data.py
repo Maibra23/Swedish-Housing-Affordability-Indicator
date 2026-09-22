@@ -103,7 +103,7 @@ def step_compute_indices() -> None:
     from src.indices.affordability import complete_case, scorable_rows
     from src.indices.b_reference import reference_for
     from src.indices.normalize import normalize_and_rank
-    from src.provenance import write_provenance
+    from src.provenance_build import write_provenance
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()

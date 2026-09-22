@@ -13,7 +13,7 @@ These outlive it.
 | # | Risk | Severity | Status |
 |---|------|----------|--------|
 | R1 | Version B re-bases every historical value whenever the panel changes | **High** | **CLOSED** |
-| R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | OPEN |
+| R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | **CLOSED** |
 | R3 | The `pipeline` extra is unverified as an install | Medium | **CLOSED** |
 | R4 | The forecast step exhausts memory on this machine | Medium | **CLOSED** |
 | R5 | Refresh-pipeline modules have no tests (68 % overall, was 15 %) | **High** | OPEN (reduced) |
@@ -133,6 +133,33 @@ the index past what the selector offers reopens it in three places at once.
 **Recommendation:** fold into Phase 3, alongside T3.7 (`src/ui/filters.py`), which already
 exists to de-duplicate page filter logic. One shared accessor, and a source-level guard in
 the style of `tests/test_pages_no_recompute.py` asserting no page derives its own year list.
+
+### CLOSED 2026-09-22 — one accessor, a guard, and a fourth site nobody had listed
+
+`src.provenance.selectable_years()` resolves the index period once, the same way the
+sidebar has since T1.4, and the three sites now read it.
+
+The exposure was real on two of them rather than stylistic. `04_Kontantinsats` and
+`05_Scenario` built their "no data for this year, try one of these" fallbacks from *panel*
+frames, which run to 2026 while the index stops at 2024. The suggestions were years that
+render blank. Page 02's two sites were bounded correctly, because they read a scored
+artifact, but were deriving a fact the page had already resolved from provenance at the top.
+
+**The guard found a fourth site the register had not listed**, and it turned out to be dead
+code rather than a wrong year list. `02_Lan_jamforelse` built `_imputed_years` from the
+scored artifact to shade forward-filled years on its trend charts. T2.4 made
+`step_compute_indices` score only `complete_case()` rows, so that artifact carries **zero**
+imputed rows by construction — `is_imputed_income` is False on all 3190. The set was always
+empty, the shading could never render, and the chart was advertising an annotation that
+cannot appear. Removed, with the reason recorded where it stood.
+
+That is the argument for writing the guard rather than just fixing the three known sites: a
+list of three came from reading the code once, and the scan found the one that reading had
+missed.
+
+`tests/test_year_range.py` now asserts that no page asks a frame which years exist, that
+`selectable_years()` matches the artifact it describes, and that it is the index period
+rather than the panel's — the two differ by design, and conflating them is what R2 was.
 
 ---
 

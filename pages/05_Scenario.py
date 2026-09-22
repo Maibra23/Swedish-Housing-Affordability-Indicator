@@ -18,7 +18,7 @@ st.set_page_config(
 import pandas as pd
 import plotly.graph_objects as go
 
-from src.provenance import n_kommuner
+from src.provenance import n_kommuner, selectable_years
 from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
@@ -52,7 +52,9 @@ selected_year = selections["selected_year"]
 county_year = county_panel[county_panel["year"] == selected_year]
 
 if len(county_year) == 0:
-    _available = sorted(county_panel["year"].unique(), reverse=True)
+    # From provenance, not from the frame: the panel runs past the last year
+    # the index can be computed for, so suggesting its years offers blanks. R2.
+    _available = sorted(selectable_years(), reverse=True)
     st.warning(
         L("sc.inga_data_tillgangliga_for_v0_valj_ett_ar", v0=selected_year, v1=', '.join(str(y) for y in _available[:5]))
     )
