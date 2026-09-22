@@ -14,8 +14,8 @@ These outlive it.
 |---|------|----------|--------|
 | R1 | Version B re-bases every historical value whenever the panel changes | **High** | **CLOSED** |
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | OPEN |
-| R3 | The `pipeline` extra is unverified as an install | Medium | OPEN |
-| R4 | The forecast step exhausts memory on this machine | Medium | OPEN |
+| R3 | The `pipeline` extra is unverified as an install | Medium | **CLOSED** |
+| R4 | The forecast step exhausts memory on this machine | Medium | **CLOSED** |
 | R5 | Refresh-pipeline modules have no tests (68 % overall, was 15 %) | **High** | OPEN (reduced) |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
@@ -23,7 +23,7 @@ These outlive it.
 | R9 | `labels.py` holds markup and LaTeX, not only copy | Low | OPEN |
 | R10 | Two `src/data/` modules exceed the line limit and have no tests | Medium | **CLOSED** |
 | R11 | The map cache cannot hold every year x risk combination | Low | **CLOSED** |
-| R12 | A zero price divides to infinity in Version C | Low | OPEN |
+| R12 | A zero price divides to infinity in Version C | Low | **CLOSED** |
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 | R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
 | R15 | Numbers quoted in docstrings and markdown are guarded nowhere | Medium | **CLOSED** |
@@ -155,6 +155,27 @@ that is worth knowing now and worth writing down next to the command rather than
 someone to discover it. Consider pinning `prophet` and `pmdarima` to versions with
 published wheels for the supported Python range.
 
+### CLOSED 2026-09-22 — it installs
+
+Run as documented, on the interpreter the docs promise: `python3.11 -m venv`, then
+`pip install -e ".[pipeline]"` into it. **It succeeds**, and nothing compiles from source —
+`prophet` and `pmdarima` both resolve to wheels.
+
+| | Resolved |
+|---|---|
+| Python | 3.11.13 |
+| prophet | 1.4.0 |
+| pmdarima | 2.1.1 |
+| statsmodels | 0.15.0 |
+
+The recommendation to pin `prophet` and `pmdarima` to versions with published wheels is
+therefore not needed today. It stays worth remembering: this verifies one interpreter on one
+platform, and the fragility the risk described is real, it simply is not biting.
+
+**One thing the run surfaced, and it belongs to R7 rather than here.** The clean install
+resolved `pandas 3.0.6` and `numpy 2.4.6` — both inside the declared caps, and both major
+versions above what the app is verified against. That is R7 happening in front of us rather
+than in theory.
 ---
 
 ## R4 — The forecast step exhausts memory on this machine
@@ -175,6 +196,33 @@ as a separate, deliberate run. If it still cannot complete, make the pipeline ch
 per county so a kill loses one county rather than the whole step. Worth measuring actual
 peak RSS before choosing a fix.
 
+### CLOSED 2026-09-22 — measured, and it does not
+
+This entry recommended measuring actual peak RSS before choosing a fix. Measured:
+
+| | Result |
+|---|---|
+| ARIMA, 84 series | 103 s |
+| Prophet, 84 series | 19 s |
+| **Peak RSS** | **197 MB** |
+
+The 2026-09-15 OOM kill does not reproduce. 197 MB is not close to exhausting anything, and
+the whole step finishes in two minutes. Whatever happened that day was about the state of
+that machine, not about this code.
+
+That matters more than a closed row, because this risk carried an expiry: its own reasoning
+for why the kill was harmless — that the training window still ended in 2024 and none of the
+forecast variables had moved inside it — ends the moment SCB publishes 2025 income. The step
+that could not run would have been the one that had to. It runs.
+
+The full step was also exercised end to end on 2026-09-21 as part of the income switch, and
+wrote all three forecast artifacts.
+
+**What this leaves open, elsewhere:** the forecast pipelines remain at 0 % coverage, which is
+R5, not this. And the failure mode that nearly shipped that day was not memory but silence —
+steps 1 to 3 wrote their artifacts and step 4 exited on a missing import, leaving committed
+forecasts derived from the previous income series. Worth a guard comparing artifact vintages;
+recorded under R5's recommendation rather than reopening this.
 ---
 
 ## R5 — Whole subsystems have no tests
@@ -598,6 +646,30 @@ not a tidy-up — the same reasoning that made D6 a locked decision rather than 
 so the re-publication is paid once. A `price <= 0` row should yield `NaN`, joining the nulls
 that `complete_case()` already drops, rather than `inf`.
 
+### CLOSED 2026-09-22 — and the deferral reason turned out not to apply
+
+The recommendation was to guard this the next time the formula was being changed for another
+reason, so the re-publication is paid once. Checked before acting, that cost is zero: no
+panel at any level holds a non-positive price, the lowest being 260 000 SEK, so the guard
+removes no row and moves no value. The rebuild confirmed it — `version_a`, `version_b`,
+`version_c` and `z_c` identical to the last byte, no risk class changed.
+
+Guarded in two places, because they fail differently:
+
+- **`scorable_rows`** drops non-positive prices *and incomes* at the input, so no formula
+  ever sees one. Income is included because Version B divides by it to form the
+  price-to-income ratio; it is the same defect in the same shape, and the register only
+  named price because that is where it was found.
+- **`compute_version_a` and `compute_version_c`** yield `NaN` rather than `inf` on a
+  non-positive price, which guards the direct call that the property tests make.
+
+`test_zero_price_does_not_return_infinity` was the suite's only `xfail`, carrying the
+instruction "if this starts passing, someone added the guard: remove the marker and close
+R12". It passes; the marker is gone.
+
+`test_guarding_the_denominators_changed_no_published_value` keeps the claim honest: if a
+future refresh brings in a non-positive price, it fails, and the re-publication becomes a
+deliberate decision with a number attached instead of being paid by accident.
 ---
 
 ## R13 — 24 KB of CSS is inlined on every page load
