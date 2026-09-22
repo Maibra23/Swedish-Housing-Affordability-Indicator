@@ -19,7 +19,12 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.provenance import (
+    complete_case_max_year,
+    first_year,
+    n_kommuner,
+    selectable_years,
+)
 from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
@@ -71,13 +76,6 @@ county_names = county_panel[["lan_code", "region_name"]].drop_duplicates()
 county_versions = county_versions.merge(county_names, on="lan_code", how="left")
 
 selected_year = selections["selected_year"]
-
-# Identify imputed-income years for visual annotation
-_imputed_years = set()
-if "is_imputed_income" in municipal.columns:
-    _imputed_years = set(
-        municipal[municipal["is_imputed_income"] == True]["year"].unique()
-    )
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
@@ -166,26 +164,17 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                         hovertemplate=L("lj.v0_ar_x_varde_y_2f", v0=name),
                     ))
 
-                # Shade imputed-income years
-                all_years = sorted(county_versions["year"].unique())
-                max_real_year = max((y for y in all_years if y not in _imputed_years), default=None)
-                if max_real_year and _imputed_years:
-                    # Add a shaded rectangle from first imputed year - 0.5 to last + 0.5
-                    imp_start = min(_imputed_years) - 0.5
-                    imp_end = max(_imputed_years) + 0.5
-                    fig.add_vrect(
-                        x0=imp_start, x1=imp_end,
-                        fillcolor="rgba(212, 120, 90, 0.08)",
-                        line_width=0,
-                        annotation_text="Imputerad inkomst",
-                        annotation_position="top left",
-                        annotation_font_size=10,
-                        annotation_font_color=COLORS["accent"],
-                    )
-
-                # Determine title suffix
-                all_yrs = sorted(county_versions["year"].unique())
-                yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else PERIOD
+                # No imputed-income shading here, deliberately. T2.4 made
+                # `step_compute_indices` score only `complete_case()` rows, so the
+                # affordability artifacts this page reads carry zero forward-filled
+                # years by construction — the flag is False on all 3190 rows. The
+                # shading that used to sit here could not render, and advertising
+                # an annotation that never appears is worse than not having one.
+                # The imputed tail is visible where it exists, in the panel.
+                # The plotted range is the index period, which this page already
+                # resolves from provenance at the top. Re-deriving it from the
+                # frame was R2's third site.
+                yr_range = PERIOD
 
                 layout = get_chart_layout(
                     title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=yr_range),

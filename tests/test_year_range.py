@@ -145,3 +145,68 @@ def test_footer_still_credits_the_sources():
     html = sidebar.footer_html()
     for source in ("SCB", "Riksbanken", "Kolada"):
         assert source in html
+
+
+# ---------------------------------------------------------------------------
+# R2: no page derives its own year list
+# ---------------------------------------------------------------------------
+
+#: A page asking a dataframe which years exist. The sidebar has read provenance
+#: since T1.4; three pages kept doing this themselves, each from whichever frame
+#: happened to be loaded. On two of them the frame was a *panel*, which runs past
+#: the last year the index can be computed for, so the "pick another year"
+#: fallback offered years that render blank.
+DERIVES_YEARS = re.compile(r"\[[\"']year[\"']\]\s*\.unique\(\)")
+
+
+def test_no_page_derives_its_own_year_list() -> None:
+    """R2, closed. One accessor, and prose cannot drift from it.
+
+    `selectable_years()` resolves the index period from provenance. A page that
+    computes its own is not wrong today only because the data happens to agree;
+    it is wrong the moment a component series is published ahead of income,
+    which is the normal state of this panel.
+    """
+    offenders: list[str] = []
+    for path in sorted(PROJECT_ROOT.glob("pages/*.py")) + [PROJECT_ROOT / "app.py"]:
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            if DERIVES_YEARS.search(line):
+                offenders.append(f"{path.name}:{line_no} {line.strip()}")
+    assert not offenders, (
+        "pages deriving their own year list: "
+        + "; ".join(offenders)
+        + ". Use src.provenance.selectable_years()."
+    )
+
+
+def test_selectable_years_is_the_index_period() -> None:
+    """And it is the period, not the panel: the two differ by design."""
+    from src.provenance import (
+        complete_case_max_year,
+        first_year,
+        panel_max_year,
+        selectable_years,
+    )
+
+    years = selectable_years()
+    assert years[0] == first_year()
+    assert years[-1] == complete_case_max_year()
+    assert years == sorted(set(years)), "years must be unique and ordered"
+    assert panel_max_year() >= years[-1], (
+        "the panel no longer reaches at least as far as the index; if that is "
+        "real, the ragged-panel reasoning in src/provenance.py needs revisiting"
+    )
+
+
+def test_selectable_years_covers_what_the_artifact_holds() -> None:
+    """The accessor and the scored data must not disagree about the period."""
+    import pandas as pd
+
+    from src.provenance import selectable_years
+
+    ranked = pd.read_parquet(
+        PROJECT_ROOT / "data" / "processed" / "affordability_ranked.parquet"
+    )
+    assert set(ranked["year"].unique()) == set(selectable_years())

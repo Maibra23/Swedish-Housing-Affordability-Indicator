@@ -106,6 +106,10 @@ def test_the_split_modules_still_exist() -> None:
         # The R10 split of build_panel.py: shapes, joins and report.
         "src/data/clean_sources.py",
         "src/data/panel_summary.py",
+        # Reading the provenance artifact and writing it have different
+        # audiences: every page imports the readers, the builder runs once per
+        # refresh.
+        "src/provenance_build.py",
         "src/ui/tokens.py",
         "src/ui/css_layout.py",
         "src/ui/css_components.py",
