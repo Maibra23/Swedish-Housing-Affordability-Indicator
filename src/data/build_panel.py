@@ -1,9 +1,12 @@
-"""Panel construction — merge all raw sources into municipality × year panels.
+"""Panel construction — join the cleaned sources into municipality × year panels.
 
-Reads parquet files from data/raw/ and produces:
+Produces:
 - data/processed/panel_municipal.parquet  (kommun_kod × year)
 - data/processed/panel_county.parquet     (lan_kod × year)
 - data/processed/panel_national.parquet   (year)
+
+The raw-table cleaners live in `clean_sources.py`; this module is the joins and
+the documented approximations they carry.
 
 Handles the 12–18 month income lag by forward-filling the latest known income
 year with an explicit `is_imputed_income` flag.
@@ -24,27 +27,32 @@ logger = logging.getLogger(__name__)
 
 # Extracted in T-D2: the same forward-fill was written three times, once per
 # panel level. Re-exported so existing importers keep working.
+from src.data.panel_summary import summarise  # noqa: E402
 from src.data.panel_income import (  # noqa: E402
     IMPUTED_INCOME_GROWTH_RATE,
     impute_income_forward,
 )
 
-RAW_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
+# Cleaners, split out in the R10 work. Imported by name and re-exported, because
+# `build_all` and the tests both reach for them through this module.
+from src.data.clean_sources import (  # noqa: E402
+    RAW_DIR,
+    _clean_bostadsratt_price,
+    _clean_construction,
+    _clean_cpi,
+    _clean_income,
+    _clean_kt_ratio,
+    _clean_policy_rate,
+    _clean_population,
+    _clean_price_index,
+    _clean_transaction_price,
+    _clean_unemployment,
+    _parse_month_tid,
+    _parse_quarter_tid,
+    _read,
+)
+
 OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "processed"
-
-# 3% nominal income growth applied when forward-filling imputed years (audit F9).
-# Shared by municipal, county, and national panel builders.
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _read(name: str) -> pd.DataFrame:
-    path = RAW_DIR / f"{name}.parquet"
-    if not path.exists():
-        raise FileNotFoundError(f"Missing raw file: {path}")
-    return pd.read_parquet(path)
 
 
 def _kommun_to_lan(kod: str) -> str:
@@ -52,221 +60,6 @@ def _kommun_to_lan(kod: str) -> str:
     return kod[:2]
 
 
-def _parse_month_tid(tid: str) -> tuple[int, int]:
-    """Parse '2024M03' → (2024, 3)."""
-    parts = tid.split("M")
-    return int(parts[0]), int(parts[1])
-
-
-def _parse_quarter_tid(tid: str) -> tuple[int, int]:
-    """Parse '2024K3' → (2024, 3)."""
-    parts = tid.split("K")
-    return int(parts[0]), int(parts[1])
-
-
-# ---------------------------------------------------------------------------
-# Individual table cleaners
-# ---------------------------------------------------------------------------
-
-def _clean_income() -> pd.DataFrame:
-    """Median sammanräknad förvärvsinkomst (tkr) per region × year. Individual, gross."""
-    df = _read("HE0110_income")
-    df = df[["Region_code", "Region", "Tid_code", "value"]].copy()
-    df.rename(columns={"Region_code": "region_code", "Region": "region_name",
-                        "Tid_code": "year", "value": "median_income_tkr"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-    # Convert tkr to SEK
-    df["median_income"] = df["median_income_tkr"] * 1000
-    return df
-
-
-def _clean_price_index() -> pd.DataFrame:
-    """Fastighetsprisindex (1990=100) per county × year.
-
-    The Län code '08+09' (Kalmar+Gotland combined) is split so both
-    county 08 and county 09 get the same index value.
-    """
-    df = _read("BO0501_price_index")
-    df = df[["Lan_code", "Lan", "Tid_code", "value"]].copy()
-    df.rename(columns={"Lan_code": "lan_code", "Lan": "lan_name",
-                        "Tid_code": "year", "value": "price_index"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-
-    # Split combined 08+09 into separate rows for 08 and 09
-    combined = df[df["lan_code"] == "08+09"].copy()
-    if not combined.empty:
-        row_08 = combined.copy()
-        row_08["lan_code"] = "08"
-        row_08["lan_name"] = row_08["lan_name"]  # keep same name
-        row_09 = combined.copy()
-        row_09["lan_code"] = "09"
-        df = pd.concat([df[df["lan_code"] != "08+09"], row_08, row_09], ignore_index=True)
-
-    return df
-
-
-def _clean_kt_ratio() -> pd.DataFrame:
-    """K/T ratio — annual per municipality and county."""
-    df = _read("BO0501_kt_ratio")
-    # Use annual municipal data
-    annual = df[df["frequency"] == "annual"].copy()
-    annual = annual[["Region_code", "Region", "Tid_code", "value"]].copy()
-    annual.rename(columns={"Region_code": "region_code", "Region": "region_name",
-                            "Tid_code": "year", "value": "kt_ratio"}, inplace=True)
-    annual["year"] = annual["year"].astype(int)
-    return annual
-
-
-def _clean_unemployment() -> pd.DataFrame:
-    """Unemployment rate (%) per municipality × year.
-
-    Source: Kolada KPI N03937 (Arbetsförmedlingen) via kolada_client.py.
-    Öppet arbetslösa av befolkningen, 18–65 år, andel (%).
-    Coverage: All 290 municipalities, 2010–2024.
-    """
-    df = _read("kolada_unemployment")
-    df = df[["municipality_code", "year", "unemployment_rate"]].copy()
-    df.rename(columns={"municipality_code": "region_code"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-    return df
-
-
-def _clean_population() -> pd.DataFrame:
-    """Total population per region × year (summed across gender and civil status)."""
-    df = _read("BE0101_population")
-    df = df[["Region_code", "Region", "Tid_code", "value"]].copy()
-    df.rename(columns={"Region_code": "region_code", "Region": "region_name",
-                        "Tid_code": "year", "value": "population"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-
-    # Sum across Civilstånd and Kön
-    pop = (df.groupby(["region_code", "region_name", "year"], as_index=False)
-           ["population"].sum())
-    return pop
-
-
-def _clean_construction() -> pd.DataFrame:
-    """Housing completions per region × year (sum of all house types)."""
-    df = _read("BO0101_construction")
-    df = df[["Region_code", "Region", "Tid_code", "value"]].copy()
-    df.rename(columns={"Region_code": "region_code", "Region": "region_name",
-                        "Tid_code": "year", "value": "completions"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-
-    # Sum across house types (småhus + flerbostadshus)
-    constr = (df.groupby(["region_code", "region_name", "year"], as_index=False)
-              ["completions"].sum())
-    return constr
-
-
-def _clean_transaction_price() -> pd.DataFrame:
-    """Mean (arithmetic average) transaction price in SEK per region x year.
-
-    Source: SCB BO0501 content code BO0501C2 (köpeskilling medelvärde, 1000 SEK).
-    Note: BO0501C2 is labeled 'Köpeskilling, medelvärde i tkr' — this is the MEAN,
-    not the median. All documentation and comments should reflect this.
-    Fastighetstyp 220 (permanent small house / permanentbostad ej tomträtt).
-    Bostadsrätter are NOT included.
-
-    The combined 08+09 code (Kalmar+Gotland) is split so both counties
-    get the same price.
-    """
-    df = _read("BO0501_transaction_price")
-    # Filter to permanent housing only
-    ft_col = "Fastighetstyp_code" if "Fastighetstyp_code" in df.columns else "Fastighetstyp"
-    df = df[df[ft_col] == "220"].copy()
-
-    region_col = "Region_code" if "Region_code" in df.columns else "Region"
-    time_col = "Tid_code" if "Tid_code" in df.columns else "Tid"
-
-    df = df[[region_col, time_col, "value"]].copy()
-    df.rename(columns={region_col: "region_code", time_col: "year",
-                        "value": "transaction_price_ksek"}, inplace=True)
-    df["year"] = df["year"].astype(int)
-    df["transaction_price_sek"] = df["transaction_price_ksek"] * 1000
-    df.drop(columns=["transaction_price_ksek"], inplace=True)
-
-    # Split combined 08+09 into separate rows
-    combined = df[df["region_code"] == "08+09"].copy()
-    if not combined.empty:
-        row_08 = combined.copy()
-        row_08["region_code"] = "08"
-        row_09 = combined.copy()
-        row_09["region_code"] = "09"
-        df = pd.concat([df[df["region_code"] != "08+09"], row_08, row_09], ignore_index=True)
-
-    return df
-
-
-def _clean_bostadsratt_price() -> pd.DataFrame | None:
-    """Mean transaction price in SEK per bostadsrätt (housing co-op apartment),
-    county × year. Returns None if the raw BO0501C file is not present yet.
-
-    Source: SCB BO0501C/FastprisBRFRegionAr, content code BO0501R7 (Medelpris i tkr).
-    Complements small-house prices (BO0501C2) for audit finding F11.
-
-    Coverage: 21 counties (01–25) + national (00). SCB publishes NO municipality-level
-    bostadsrätt prices — every municipality receives its county's value as fallback.
-    Storstadsområden codes (0010, 0020, 0030, 0060) are excluded to avoid duplicates.
-    """
-    path = RAW_DIR / "BO0501C_bostadsratt_price.parquet"
-    if not path.exists():
-        logger.info("BO0501C bostadsrätt price not cached yet — skipping apartment merge")
-        return None
-
-    df = _read("BO0501C_bostadsratt_price")
-
-    region_col = "Region_code" if "Region_code" in df.columns else "Region"
-    time_col = "Tid_code" if "Tid_code" in df.columns else "Tid"
-
-    df = df[[region_col, time_col, "value"]].copy()
-    df.rename(columns={region_col: "region_code", time_col: "year",
-                       "value": "bostadsratt_price_ksek"}, inplace=True)
-    # SCB publishes the mean price in tkr → convert to SEK.
-    df["year"] = df["year"].astype(int)
-    df["bostadsratt_price_sek"] = df["bostadsratt_price_ksek"] * 1000
-    df.drop(columns=["bostadsratt_price_ksek"], inplace=True)
-
-    # Keep only 2-char codes: counties (01–25) + national (00).
-    # This excludes storstadsområden (0010, 0020, 0030, 0060) which are subsets of counties.
-    df = df[df["region_code"].str.len() == 2].copy()
-
-    return df
-
-
-def _clean_cpi() -> pd.DataFrame:
-    """CPI index (2020=100) and YoY change per year (annual average of monthly)."""
-    df = _read("PR0101_cpi")
-
-    # Split the two content codes
-    idx = df[df["ContentsCode_code"] == "00000807"][["Tid_code", "value"]].copy()
-    idx.rename(columns={"value": "cpi_index"}, inplace=True)
-    yoy = df[df["ContentsCode_code"] == "00000804"][["Tid_code", "value"]].copy()
-    yoy.rename(columns={"value": "cpi_yoy_pct"}, inplace=True)
-
-    cpi = idx.merge(yoy, on="Tid_code", how="outer")
-
-    parsed = cpi["Tid_code"].apply(_parse_month_tid)
-    cpi["year"] = [p[0] for p in parsed]
-    cpi["month"] = [p[1] for p in parsed]
-
-    # Annual average
-    annual = cpi.groupby("year", as_index=False).agg(
-        cpi_index=("cpi_index", "mean"),
-        cpi_yoy_pct=("cpi_yoy_pct", "mean"),
-    )
-    return annual
-
-
-def _clean_policy_rate() -> pd.DataFrame:
-    """Policy rate — annual average from daily data."""
-    df = _read("policy_rate")
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-
-    annual = df.groupby("year", as_index=False)["rate"].mean()
-    annual.rename(columns={"rate": "policy_rate"}, inplace=True)
-    return annual
 
 
 # ---------------------------------------------------------------------------
@@ -584,29 +377,8 @@ def build_all() -> dict[str, pd.DataFrame]:
     national = build_national_panel()
     national.to_parquet(OUT_DIR / "panel_national.parquet", index=False)
 
-    # --- Validation outputs ---
     panels = {"municipal": muni, "county": county, "national": national}
-    for name, p in panels.items():
-        print(f"\n{'='*60}")
-        print(f"Panel: {name}")
-        print(f"  Rows: {len(p):,}")
-        print(f"  Columns: {len(p.columns)}")
-        print(f"  Year range: {p['year'].min()} – {p['year'].max()}")
-
-        if "region_code" in p.columns:
-            muni_codes = [c for c in p["region_code"].unique() if len(c) == 4]
-            print(f"  Municipalities: {len(muni_codes)}")
-        if "lan_code" in p.columns:
-            lan_codes = [c for c in p["lan_code"].unique() if len(c) == 2 and c != "00"]
-            print(f"  Counties: {len(lan_codes)}")
-
-        # Null percentages
-        print("  Null %:")
-        for col in p.columns:
-            pct = p[col].isna().mean() * 100
-            if pct > 0:
-                print(f"    {col}: {pct:.1f}%")
-
+    print(summarise(panels))
     return panels
 
 

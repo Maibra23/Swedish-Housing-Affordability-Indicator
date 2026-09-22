@@ -1520,7 +1520,7 @@ file with no reader"* — and fold build-time artifacts (`PROMPTS`, `PATCH_POST_
 - [x] No two documents describe the same thing
 - [x] Every surviving doc is linked from `README.md`, and the README links nothing missing
 
-`tests/test_docs_inventory.py` (125). 19 documents → **9 maintained** plus a 6-file archive.
+`tests/test_docs_inventory.py` (129). 19 documents → **9 maintained** plus a 6-file archive.
 
 Deleted the four superseded v1 files and renamed the `_v2` survivors onto their names.
 Build-time artifacts went to `docs/archive/` rather than being deleted — the plan allowed

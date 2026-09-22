@@ -26,24 +26,26 @@ EXEMPT = {
     # One dict of user-facing copy. Splitting it would scatter the thing T3.1
     # deliberately gathered.
     "labels.py",
-    # Over the limit and knowingly left so. In `src/data/`, which Phase 3 never
-    # touched, and at 0 % test coverage (R5). Splitting a module with no tests is
-    # the riskiest refactor available: nothing would catch a mistake. Recorded as
-    # R10, to be split *after* it has tests.
-    #
-    # `scb_client.py` left this set on 2026-09-21. It gained tests
-    # (`test_variable_contracts.py` exercises its metadata path against the live
-    # API and against fixtures), so the condition R10 set was met, and the
-    # transport layer moved to `pxweb.py`. It is now 328 lines and under the
-    # ordinary limit, which is what the exemption was always meant to become.
-    "build_panel.py",
 }
 
-# Their current lengths, so an exemption cannot quietly cover further growth.
-# Ceilings ratchet downward only. D2 took build_panel.py from 641 to 615 by
-# extracting the triplicated income forward-fill; the exemption now covers
-# 615 and no more, so the file cannot drift back up under cover of it.
-EXEMPT_CEILINGS = {"build_panel.py": 615}
+# R10 is closed and this set is empty of `src/data/` modules. Both were exempt
+# for the same reason — over the limit, and at 0 % coverage, which made splitting
+# them the riskiest refactor available because nothing would catch a mistake.
+# Both took the same route out, in the order the risk prescribed:
+#
+#   scb_client.py   2026-09-21  tests first, then the PxWeb transport to
+#                               pxweb.py. 487 -> 328 lines.
+#   build_panel.py  2026-09-22  tests first (0 % -> 87 %), then the cleaners to
+#                               clean_sources.py and the refresh report to
+#                               panel_summary.py. 615 -> 387 lines.
+#
+# Both splits were verified by rebuilding from the real cached data and
+# comparing the output to the pre-split artifacts, not by a line count.
+
+# Ceilings for exempt modules, so an exemption cannot quietly cover further
+# growth. Empty now that R10 is closed: nothing is over the limit but labels.py,
+# which is a data file and has its own guards in test_no_inline_copy.py.
+EXEMPT_CEILINGS: dict[str, int] = {}
 
 
 def _modules() -> list[Path]:
@@ -66,14 +68,32 @@ def test_module_is_under_the_line_limit(module: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("name,ceiling", EXEMPT_CEILINGS.items())
-def test_exempt_modules_do_not_grow(name: str, ceiling: int) -> None:
-    """An exemption is for the size a file already is, not a licence to expand."""
-    path = next(p for p in (ROOT / "src").rglob(name))
-    length = len(path.read_text(encoding="utf-8").splitlines())
-    assert length <= ceiling, (
-        f"{name} has grown from {ceiling} to {length} lines while exempt from the "
-        f"{LIMIT}-line limit. Split it, or give it tests first (R5)."
+def test_exempt_modules_do_not_grow() -> None:
+    """An exemption is for the size a file already is, not a licence to expand.
+
+    A plain loop rather than a parametrize: the dict is empty now that R10 is
+    closed, and an empty parametrize reports as a permanent skip, which reads
+    like something is broken rather than like something was finished.
+    """
+    for name, ceiling in EXEMPT_CEILINGS.items():
+        path = next(p for p in (ROOT / "src").rglob(name))
+        length = len(path.read_text(encoding="utf-8").splitlines())
+        assert length <= ceiling, (
+            f"{name} has grown from {ceiling} to {length} lines while exempt from "
+            f"the {LIMIT}-line limit. Split it, or give it tests first (R5)."
+        )
+
+
+def test_no_source_module_still_needs_a_ceiling() -> None:
+    """R10, closed. Kept as an assertion so a new exemption is a visible choice.
+
+    If this fails, someone added a module to EXEMPT_CEILINGS. That may be right,
+    but it reopens the risk and should be recorded in docs/OPEN_RISKS.md rather
+    than absorbed.
+    """
+    assert EXEMPT_CEILINGS == {}, (
+        f"modules are exempt from the line limit again: {sorted(EXEMPT_CEILINGS)}. "
+        f"R10 closed when the last one was split; re-opening it is a decision."
     )
 
 
@@ -83,6 +103,9 @@ def test_the_split_modules_still_exist() -> None:
         # The PxWeb transport, split from scb_client.py so that module holds only
         # which table and which selection.
         "src/data/pxweb.py",
+        # The R10 split of build_panel.py: shapes, joins and report.
+        "src/data/clean_sources.py",
+        "src/data/panel_summary.py",
         "src/ui/tokens.py",
         "src/ui/css_layout.py",
         "src/ui/css_components.py",
