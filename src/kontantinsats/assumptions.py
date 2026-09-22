@@ -32,6 +32,7 @@ from src.ui.components import (
     render_kpi_row,
 )
 from src.ui.labels import L
+from src.ui.templates import T
 from src.ui.tokens import COLORS
 
 
@@ -64,23 +65,23 @@ def render_assumptions(ctx: Context) -> None:
     with st.expander("Detaljer & antaganden"):
         _region_label = L("ki.lan") if use_bostadsratt else "Kommun"
         st.markdown(
-            L("ki.indata_v1_v2_analysar_v3_pristyp_v4_pris", v0=COLORS['text_secondary'], v1=_region_label, v2=selected_name, v3=selected_year, v4=price_source_label, v5=format_sek(price))
+            T("ki.indata_v1_v2_analysar_v3_pristyp_v4_pris", v0=COLORS['text_secondary'], v1=_region_label, v2=selected_name, v3=selected_year, v4=price_source_label, v5=format_sek(price))
             + (
-                L("ki.smahuspris_referens_v0_sek", v0=format_sek(_villa_price))
+                T("ki.smahuspris_referens_v0_sek", v0=format_sek(_villa_price))
                 if _villa_price is not None and pd.notna(_villa_price) and use_bostadsratt
                 else ""
             )
             + (
-                L("ki.bostadsrattspris_referens_v0_v1_sek", v0=_lan_name, v1=format_sek(_br_price))
+                T("ki.bostadsrattspris_referens_v0_v1_sek", v0=_lan_name, v1=format_sek(_br_price))
                 if _br_price is not None and pd.notna(_br_price) and not use_bostadsratt
                 else ""
             ) +
-            L("ki.hushallstyp_v0_individuell_medianinkomst_v1", v0=household_type, v1=format_sek(_individual_income), v2=format_sek(income), v3=' (2 × individuell)' if household_multiplier == 2 else '', v4=selected_row['policy_rate'], v5=bank_margin_pct, v6=effective_rate_display_pct, v7=int(savings_rate*100)),
+            T("ki.hushallstyp_v0_individuell_medianinkomst_v1", v0=household_type, v1=format_sek(_individual_income), v2=format_sek(income), v3=' (2 × individuell)' if household_multiplier == 2 else '', v4=selected_row['policy_rate'], v5=bank_margin_pct, v6=effective_rate_display_pct, v7=int(savings_rate*100)),
             unsafe_allow_html=True,
         )
 
         st.markdown(
-            L("ki.sa_laser_du_tabellen_kolumner_visar_skillnad", v0=COLORS['text_secondary']),
+            T("ki.sa_laser_du_tabellen_kolumner_visar_skillnad", v0=COLORS['text_secondary']),
             unsafe_allow_html=True,
         )
 

@@ -7,6 +7,7 @@ Historisk SHAI över indexets hela period + prognos sex år framåt.
 import streamlit as st
 
 from src.ui.labels import L
+from src.ui.templates import T
 
 st.set_page_config(
     page_title="SHAI · Kommun djupanalys",
@@ -310,7 +311,7 @@ with st.container(border=True):
 
     if driver:
         st.markdown(
-            L("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
+            T("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
             unsafe_allow_html=True,
         )
 

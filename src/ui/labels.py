@@ -99,11 +99,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "landing.v0_ar_v_v1": "{v0} år  ·  v{v1}",
     "landing.lan": "Län",
     "landing.jamforda": "jämförda",
-    "landing.vad_hittar_du_har": """
-<div class="shai-section">
-    <div class="shai-section-title">Vad hittar du här?</div>
-</div>
-""",
     "landing.riksoversikt": "Riksöversikt",
     "landing.nationell_overblick_med_karta_histogram_och": "Nationell överblick med karta, histogram och rankingtabeller för {v0} kommuner.",
     "landing.lan_jamforelse": "Län jämförelse",
@@ -195,7 +190,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "kd.prophet_ar_optimerat_for_dagliga": "Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.",
     "kd.prognos_for_v0": "Prognos för {v0}",
     "kd.prognoserna_beraknas_pa_lansniva_v0_inte_per": "Prognoserna beräknas på länsnivå ({v0}), inte per kommun.",
-    "kd.v1_har_storst_relativ_variation_och_driver": "<div style='font-size:13px;color:{v0};text-align:center;padding:8px 0;'><strong>{v1}</strong> har störst relativ variation och driver mest av SHAI-förändringen för {v2}.</div>",
 
     # ── Sida 04 — Kontantinsats ───────────────────────────────────
     "ki.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
@@ -302,32 +296,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.rante_amorteringskostnad_per_manad_efter_att": "Ränte- + amorteringskostnad per månad efter att ha köpt.",
     "ki.sek_ar": "SEK/år",
     "ki.inkomst_kvar_efter_att_boendekostnaderna_ar": "Inkomst kvar efter att boendekostnaderna är betalda (per år).",
-    "ki.fore_2010_bolanetak_amorteringskrav_skarpt": """
-<div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
-  <div style="flex:3;background:{v0};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Före 2010</span>
-  </div>
-  <div style="flex:3;background:{v1};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Bolånetak</span>
-  </div>
-  <div style="flex:1;background:{v2};display:flex;align-items:center;justify-content:center;padding:0 2px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Amorteringskrav</span>
-  </div>
-  <div style="flex:3;background:{v3};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:600;white-space:nowrap;">Skärpt amorteringskrav</span>
-  </div>
-  <div style="flex:2;background:{v4};border:2px solid {v5};display:flex;align-items:center;justify-content:center;padding:0 6px;">
-    <span style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;">Lättnader i bolånereglerna</span>
-  </div>
-</div>
-<div style="display:flex;width:100%;margin-top:4px;">
-  <div style="flex:3;text-align:center;font-size:10px;color:{v6};"></div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{v7};">2010</div>
-  <div style="flex:1;text-align:center;font-size:10px;color:{v8};">2016</div>
-  <div style="flex:3;text-align:center;font-size:10px;color:{v9};">2018</div>
-  <div style="flex:2;text-align:center;font-size:10px;color:{v10};">2026</div>
-</div>
-""",
     "ki.ingen_formell_insatsniva_hog_belaning_var": "Ingen formell insatsnivå; hög belåning var vanligare.",
     "ki.bolanetak_infors_max_85_belaning_hogre": "Bolånetak införs (max 85 % belåning) → högre insats.",
     "ki.amorteringskrav_infors_hogre_manadskostnad": "Amorteringskrav införs → högre månadskostnad vid hög belåning.",
@@ -356,33 +324,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.singelhushall_2": "singelhushåll",
     "ki.styrranta_v0_2f_paslag_v1_1f_pp_v2_2f": "styrränta {v0:.2f}% + påslag {v1:.1f} pp = {v2:.2f}%",
     "ki.styrranta_v0_2f": "styrränta {v0:.2f}%",
-    "ki.nyckelinsikt_syntes_for_ett_v2_v3_under": """
-<div class="shai-card" style="border-left:3px solid {v0};">
-  <div class="shai-card-header">
-    <div class="shai-card-title">Nyckelinsikt</div>
-    <span class="shai-card-tag">SYNTES</span>
-  </div>
-  <p style="font-size:14px;color:{v1};line-height:1.7;margin:0;">
-    För ett <strong>{v2}</strong> ({v3}) under
-    <strong>nuvarande regler (Lättnad 2026)</strong> krävs
-    <strong>{v4} SEK</strong> i kontantinsats,
-    vilket tar <strong>{v5:.1f} år</strong> att spara
-    vid {v6} % sparkvot.
-    Månadskostnaden är <strong>{v7} SEK</strong>
-    (<strong>{v8:.0f} % av månadsinkomst</strong>).<br><br>
-    Det historiskt förmånligaste regelverket
-    (<strong>{v9}</strong>) innebar
-    <strong>{v10} SEK lägre</strong> månadskostnad
-    ({v11:.0f} % billigare).
-  </p>
-</div>
-""",
     "ki.lan": "Län",
-    "ki.indata_v1_v2_analysar_v3_pristyp_v4_pris": "<div style='color:{v0};font-size:13px;line-height:1.55;'><strong>Indata</strong><br>- {v1}: <strong>{v2}</strong> (analysår {v3})<br>- Pristyp: <strong>{v4}</strong><br>- Pris (används): <strong>{v5} SEK</strong><br>",
-    "ki.smahuspris_referens_v0_sek": "- Småhuspris (referens): <strong>{v0} SEK</strong><br>",
-    "ki.bostadsrattspris_referens_v0_v1_sek": "- Bostadsrättspris (referens, {v0}): <strong>{v1} SEK</strong><br>",
-    "ki.hushallstyp_v0_individuell_medianinkomst_v1": "- Hushållstyp: <strong>{v0}</strong><br>- Individuell medianinkomst: <strong>{v1} SEK</strong><br>- Hushållsinkomst (används): <strong>{v2} SEK</strong>{v3}<br>- Styrränta: <strong>{v4:.2f}%</strong><br>- Bankens räntepåslag: <strong>{v5:.1f} pp</strong><br>- Effektiv bolåneränta (används): <strong>{v6:.2f}%</strong><br>- Sparkvot: <strong>{v7}%</strong><br><br><strong>Konstant mellan regelverk</strong><br>- Samma pris, inkomst och räntenivå används i alla regimer<br>- Skillnaderna drivs av insatskrav, maxbelåning och amorteringsregler<br><br><strong>Metod</strong><br>Se Metodologi (Sida 06), avsnitt 6 för antaganden och definitioner.</div>",
-    "ki.sa_laser_du_tabellen_kolumner_visar_skillnad": "<div style='color:{v0};font-size:13px;line-height:1.55;margin-top:8px;'><strong>Så läser du tabellen</strong><br>- Δ-kolumner visar skillnad mot <strong>idag (Lättnad 2026)</strong><br>- Markeringar: <strong>bäst</strong> = lägst för Insats/Sparår/Månkostnad, högst för Kvar</div>",
     "ki.sparar": "Sparår",
     "ki.sparar_2": "Δ Sparår",
     "ki.mankostnad": "Månkostnad",
@@ -658,39 +600,6 @@ SWEDISH_LABELS: dict[str, str] = {
     och prognoser bortom 3 år bör tolkas med stor försiktighet.
 
     **Horisont:** 6 årliga steg (2025–2030). Begränsad till max 8 steg.
-    """,
-    "mt.fore_2010_inget_formellt_krav_okt_2010": """
-    <div style="position:relative;padding:20px 0;margin:16px 0;">
-        <div style="position:absolute;top:40px;left:0;right:0;height:3px;background:{v0};"></div>
-
-        <div style="display:flex;justify-content:space-between;position:relative;">
-            <div style="text-align:center;z-index:1;">
-                <div style="width:16px;height:16px;border-radius:50%;background:{v1};margin:32px auto 8px;"></div>
-                <div style="font-size:11px;font-weight:700;">Före 2010</div>
-                <div style="font-size:10px;color:{v2};">Inget formellt krav</div>
-            </div>
-            <div style="text-align:center;z-index:1;">
-                <div style="width:16px;height:16px;border-radius:50%;background:{v3};margin:32px auto 8px;"></div>
-                <div style="font-size:11px;font-weight:700;">Okt 2010</div>
-                <div style="font-size:10px;color:{v4};">Bolånetak 85%</div>
-            </div>
-            <div style="text-align:center;z-index:1;">
-                <div style="width:16px;height:16px;border-radius:50%;background:{v5};margin:32px auto 8px;"></div>
-                <div style="font-size:11px;font-weight:700;">Jun 2016</div>
-                <div style="font-size:10px;color:{v6};">Amorteringskrav 1.0</div>
-            </div>
-            <div style="text-align:center;z-index:1;">
-                <div style="width:16px;height:16px;border-radius:50%;background:{v7};margin:32px auto 8px;"></div>
-                <div style="font-size:11px;font-weight:700;">Mar 2018</div>
-                <div style="font-size:10px;color:{v8};">Amorteringskrav 2.0</div>
-            </div>
-            <div style="text-align:center;z-index:1;">
-                <div style="width:16px;height:16px;border-radius:50%;background:{v9};margin:32px auto 8px;border:2px solid {v10};"></div>
-                <div style="font-size:11px;font-weight:700;">Apr 2026</div>
-                <div style="font-size:10px;color:{v11};">Lättnader 2026</div>
-            </div>
-        </div>
-    </div>
     """,
     "mt.regelverk_period_kontantinsats": """
     | Regelverk | Period | Kontantinsats | Amorteringskrav |

@@ -7,6 +7,7 @@ Landing page with hero, stat strip, explanation, index visual, steps, nav cards,
 import streamlit as st
 
 from src.ui.labels import L
+from src.ui.templates import T
 
 st.set_page_config(
     page_title=L("landing.shai_bostadsekonomisk_hallbarhet"),
@@ -71,7 +72,7 @@ render_index_visual_block()
 render_landing_steps()
 
 # ── Navigation cards ─────────────────────────────────────────────────
-st.markdown(L("landing.vad_hittar_du_har"), unsafe_allow_html=True)
+st.markdown(T("landing.vad_hittar_du_har"), unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 with col1:

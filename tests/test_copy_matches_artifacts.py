@@ -41,6 +41,14 @@ from src.provenance import (
     source_coverage,
 )
 from src.ui.labels import SWEDISH_LABELS
+from src.ui.templates import TEMPLATES
+
+#: Everything a reader sees, both dictionaries. R9 moved ten markup blocks out of
+#: `SWEDISH_LABELS` and into `TEMPLATES`, and two of them are the regime tables,
+#: which are dense with years. Scanning only the copy dictionary after that split
+#: would have quietly narrowed this guard to the strings that happen not to carry
+#: markup — prose wrapped in a `<div>` goes stale exactly as easily.
+ALL_COPY: dict[str, str] = {**SWEDISH_LABELS, **TEMPLATES}
 
 ARTIFACT = Path(__file__).resolve().parents[1] / "data" / "processed" / "affordability_ranked.parquet"
 
@@ -137,7 +145,7 @@ def test_index_period_spans_in_copy_match_provenance() -> None:
     """Any `<first_year>–<yyyy>` span is the index period and must end where it does."""
     start, end = first_year(), complete_case_max_year()
     offenders = []
-    for key, value in SWEDISH_LABELS.items():
+    for key, value in ALL_COPY.items():
         for lower, upper in re.findall(r"(\d{4})\s*[–—-]\s*(\d{4})", value):
             if int(lower) == start and int(upper) != end:
                 offenders.append((key, f"{lower}–{upper}"))
@@ -151,7 +159,7 @@ def test_forecast_base_year_matches_the_index_end() -> None:
     end = complete_case_max_year()
     offenders = [
         (key, match.group(1))
-        for key, value in SWEDISH_LABELS.items()
+        for key, value in ALL_COPY.items()
         for match in re.finditer(r"[Ff]ramskrivet från\s*(\d{4})", value)
         if int(match.group(1)) != end
     ]
@@ -171,7 +179,7 @@ def test_municipality_counts_in_copy_match_the_panel() -> None:
     expected = n_kommuner()
     offenders = [
         (key, match.group(1))
-        for key, value in SWEDISH_LABELS.items()
+        for key, value in ALL_COPY.items()
         for match in re.finditer(r"(?<!\()\b(\d{3})\s+kommun", value)
         if int(match.group(1)) != expected
     ]
@@ -250,7 +258,7 @@ NOT_A_VINTAGE = {
 def test_no_unexamined_year_literal_in_copy() -> None:
     """Force a decision on every year the copy states."""
     unexplained = {}
-    for key, value in SWEDISH_LABELS.items():
+    for key, value in ALL_COPY.items():
         if key == TABLE_KEY:
             continue
         masked = value

@@ -7,6 +7,7 @@ Sections 1–3 always visible, 4–8 in expanders.
 import streamlit as st
 
 from src.ui.labels import L
+from src.ui.templates import T
 
 st.set_page_config(
     page_title="SHAI · Metodologi",
@@ -131,7 +132,7 @@ with st.expander(L("mt.expander_5_kontantinsats_regimhistorik")):
     st.markdown("Fem regulatoriska regimer modelleras:")
 
     # Timeline visual
-    st.markdown(L("mt.fore_2010_inget_formellt_krav_okt_2010", v0=COLORS['border'], v1=COLORS['text_tertiary'], v2=COLORS['text_secondary'], v3=COLORS['accent'], v4=COLORS['text_secondary'], v5=COLORS['medium_risk'], v6=COLORS['text_secondary'], v7=COLORS['high_risk'], v8=COLORS['text_secondary'], v9=COLORS['low_risk'], v10=COLORS['accent'], v11=COLORS['text_secondary']), unsafe_allow_html=True)
+    st.markdown(T("mt.fore_2010_inget_formellt_krav_okt_2010", v0=COLORS['border'], v1=COLORS['text_tertiary'], v2=COLORS['text_secondary'], v3=COLORS['accent'], v4=COLORS['text_secondary'], v5=COLORS['medium_risk'], v6=COLORS['text_secondary'], v7=COLORS['high_risk'], v8=COLORS['text_secondary'], v9=COLORS['low_risk'], v10=COLORS['accent'], v11=COLORS['text_secondary']), unsafe_allow_html=True)
 
     st.markdown(L("mt.regelverk_period_kontantinsats"))
 
