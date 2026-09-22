@@ -18,7 +18,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.indices.affordability import compute_all, compute_version_a, compute_version_c
+from src.indices.affordability import (
+    INDEX_INPUTS,
+    compute_all,
+    compute_version_a,
+    compute_version_c,
+)
 
 
 def panel(**overrides) -> pd.DataFrame:
@@ -81,23 +86,18 @@ def test_negative_real_rate_is_floored_not_propagated() -> None:
     assert np.isfinite(values).all()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "R12: a zero price divides to infinity rather than being guarded. Not "
-        "reachable today — the panel has no zeros and a minimum of 260 000 SEK — "
-        "so this documents a latent gap rather than a live defect. Marked xfail "
-        "instead of being fixed, because changing the formula changes every "
-        "published z_* and that is a decision, not a tidy-up. If this starts "
-        "passing, someone added the guard: remove the marker and close R12."
-    ),
-)
 def test_zero_price_does_not_return_infinity() -> None:
-    """Defensive: a missing price must not produce inf and poison a z-score.
+    """R12, closed 2026-09-22. Was xfail; the guard is now in place.
 
     An infinite value in `version_c` would propagate through the within-year
     z-score and make every other municipality's `z_c` NaN — one bad row silently
-    voiding a whole year.
+    voiding a whole year of the map.
+
+    The register deferred this on the grounds that changing the formula changes
+    every published `z_*`. Measured before acting, that turned out not to apply:
+    no panel at any level holds a non-positive price, the lowest being 260 000
+    SEK, so the guard is value-neutral on today's data. That is asserted in
+    `test_guarding_the_denominators_changed_no_published_value`.
     """
     values = compute_version_c(
         panel(transaction_price_sek=[0.0, 900_000.0, 0.0, 920_000.0])
@@ -141,4 +141,36 @@ def test_version_a_and_c_do_not_depend_on_panel_composition() -> None:
         shared = combined.iloc[: len(small)][column].to_numpy()
         assert np.allclose(shared, small[column].to_numpy(), equal_nan=True), (
             f"{column} changed when an unrelated municipality was added"
+        )
+
+
+def test_a_non_positive_income_is_also_refused() -> None:
+    """Version B divides by income to form its price-to-income ratio, so income
+    is a denominator too and fails the same way."""
+    from src.indices.affordability import scorable_rows
+
+    frame = panel(median_income=[0.0, 300.0, -5.0, 305.0])
+    assert len(scorable_rows(frame)) == 2
+
+
+def test_guarding_the_denominators_changed_no_published_value() -> None:
+    """R12 was deferred because a formula change re-publishes every z-score.
+
+    It does not here, and that is checkable rather than hopeful: no panel holds
+    a non-positive price or income, so the guard removes no row. If a future
+    refresh brings one in, this test fails and the re-publication becomes a
+    deliberate decision with a number attached — which is what the register
+    wanted to avoid paying by accident.
+    """
+    from pathlib import Path
+
+    from src.indices.affordability import scorable_rows
+
+    processed = Path(__file__).resolve().parents[1] / "data" / "processed"
+    for level in ("municipal", "county", "national"):
+        frame = pd.read_parquet(processed / f"panel_{level}.parquet")
+        unguarded = frame[frame[list(INDEX_INPUTS)].notna().all(axis=1)]
+        assert len(scorable_rows(frame)) == len(unguarded), (
+            f"the {level} panel now holds a non-positive price or income; "
+            f"guarding it drops rows and every z-score in the affected year moves"
         )

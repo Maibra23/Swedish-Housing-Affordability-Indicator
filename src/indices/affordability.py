@@ -70,7 +70,10 @@ def compute_version_a(panel: pd.DataFrame) -> pd.Series:
     Requires: median_income, transaction_price_sek, policy_rate.
     """
     income = panel["median_income"]
-    price = panel["transaction_price_sek"]
+    # R12: yield NaN rather than inf on an impossible price. `scorable_rows`
+    # already drops these before scoring; this guards the direct call, which the
+    # property tests make and which a future caller might.
+    price = panel["transaction_price_sek"].where(lambda p: p > 0)
     rate = panel["policy_rate"]
 
     # Rate is in percentage points, convert to decimal for the ratio
@@ -133,7 +136,9 @@ def compute_version_c(panel: pd.DataFrame) -> pd.Series:
     Requires: median_income, transaction_price_sek, policy_rate, cpi_yoy_pct.
     """
     income = panel["median_income"]
-    price = panel["transaction_price_sek"]
+    # R12: see compute_version_a. An infinite value here would propagate through
+    # the within-year z-score and NaN out every other municipality in the year.
+    price = panel["transaction_price_sek"].where(lambda p: p > 0)
     rate = panel["policy_rate"]       # percentage points
     inflation = panel["cpi_yoy_pct"]  # percentage points
 
@@ -168,6 +173,18 @@ def scorable_rows(panel: pd.DataFrame) -> pd.DataFrame:
         A copy holding only the rows with no nulls in the index inputs.
     """
     mask = panel[list(INDEX_INPUTS)].notna().all(axis=1)
+
+    # R12: a non-positive price or income is not a missing value, so `notna`
+    # lets it through, and it is not a small value either — it is a division by
+    # zero. Version C would return `inf`, and a standard deviation taken over an
+    # infinite value is `NaN`, so **one bad row would void every other
+    # municipality's z-score for that year**: a whole year of the map going
+    # blank from a single cell. Treated as missing here, which is what it is,
+    # so the row joins the nulls that are already dropped rather than poisoning
+    # its neighbours.
+    for denominator in ("transaction_price_sek", "median_income"):
+        mask &= panel[denominator] > 0
+
     return panel[mask].copy()
 
 
