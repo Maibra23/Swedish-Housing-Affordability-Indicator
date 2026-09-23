@@ -11,7 +11,7 @@ literal; and they set `displayModeBar` to `False` where the seven charts before
 them set it to `"hover"`.
 
 This file is the missing guard. It closes R14 in `docs/OPEN_RISKS.md` and item 18
-in `docs/ANALYSIS_GUIDE.md`.
+in `docs/APP_GUIDE.md`.
 
 **Three kinds of assertion, because there are three ways to drift.**
 

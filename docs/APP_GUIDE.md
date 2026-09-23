@@ -1,14 +1,240 @@
-# Analysis guide: Kontantinsats, Scenariosimulator, and the three SHAI versions
+# App guide: what each page is for, and how to read what it gives back
 
-What these two pages are for, how to read them correctly, where they currently
-mislead a user, and what to do about it. Written 2026-09-18 against the committed
-artifacts, with every figure re-derived from them rather than quoted from memory.
-Section 6, on the two charts that shipped out of these recommendations, added
-2026-09-21 on the same basis.
+One section per page, in the order the navigation lists them, then the method
+and decisions that sit underneath all of them.
+
+Each page section answers the same five questions: **what it is**, **why it
+exists** when the other pages already exist, **how it works**, **when it is the
+right tool**, and **what its numbers actually say** — including where they are
+easy to misread, which is the part a dashboard usually leaves out.
+
+Written against the committed artifacts, with every figure re-derived from them
+rather than quoted from memory. Sections 4 and 5 were written 2026-09-18 for
+Kontantinsats and Scenariosimulator; section 9 on the two charts added
+2026-09-21; sections 1 to 3 added 2026-09-23, extending the same treatment to
+the three pages a visitor meets first.
+
+| | Page | Section |
+|---|---|---|
+| Sida 01 | Riksöversikt | 1 |
+| Sida 02 | Län jämförelse | 2 |
+| Sida 03 | Kommun djupanalys | 3 |
+| Sida 04 | Kontantinsats analys | 4 |
+| Sida 05 | Scenariosimulator | 5 |
+| Sida 06 | Metodologi och källor | documented by `docs/METHODOLOGY.md`, which is its source |
+
+Sections 6 to 11 are not about a single page: the three formula versions, what
+can and cannot be refreshed, the interpretation system both tool pages share, the
+two charts, and the record of recommended work.
 
 ---
 
-## 1. Kontantinsats analys (Sida 04)
+## 1. Riksöversikt (Sida 01)
+
+### What it is
+
+The whole country in one year: a choropleth of all 290 municipalities, a
+four-card KPI strip above it, and a histogram of where those 290 sit relative to
+each other.
+
+### Why it exists
+
+It is the only view that requires the reader to have chosen nothing. Every other
+page needs a county, a municipality or a scenario before it can say anything.
+This one opens with the answer already on screen, which is why it is the front
+door and why the things it gets wrong cost the most.
+
+### How it works
+
+The map does not colour the raw index. Version C is log-transformed, z-scored
+**within the selected year**, and cut at ±0.67σ into three classes (decisions D5
+and D6; `src/indices/normalize.py` owns all three steps). So a colour is a
+statement about a municipality's position among its peers *that year*, not about
+Sweden's affordability over time.
+
+### When to use it
+
+- Locating one municipality against the national distribution.
+- Reading the *shape* of that distribution, which the histogram shows and the map
+  cannot.
+- Comparing the spread between years, as distinct from the level.
+
+### What the numbers actually say, with real figures
+
+2024, Version C:
+
+| | Value |
+|---|---|
+| Låg / Medel / Hög risk | 70 / 136 / 84 |
+| z range | −2,39 (Åsele, C = 74,9) to +2,62 (Lidingö, C = 4,6) |
+| Genomsnittligt SHAI | 23,0, against 36,3 in 2023 |
+
+**The page carries two kinds of number side by side, and only one of them can
+trend.** This is the thing most likely to be misread here.
+
+The high-risk *count* cannot move meaningfully. The ±0.67σ cuts are quantiles of
+a normal distribution, so a near-fixed share lands in each class every year by
+construction. Measured across all eleven years the high-risk share runs **27,6 %
+to 29,0 %** — a spread of 1,4 points over a decade that contained a zero-rate era
+and a rate shock. Reading "84 municipalities at high risk, up from 83" as
+deterioration is reading noise in a definition. That is limitation F16, and the
+KPI card labels itself "relativ position" for this reason.
+
+The *average SHAI* can trend, because it is a mean of raw Version C rather than
+of z-scores. Its fall from 36,3 to 23,0 between 2023 and 2024 is a real
+level change, driven by the real rate.
+
+Both numbers sit in the same KPI strip. The card labels and the explanation line
+beneath now distinguish them; before T1.9 the count carried a year-on-year delta,
+which asserted a trend it cannot have.
+
+---
+
+## 2. Län jämförelse (Sida 02)
+
+### What it is
+
+21 counties under all three formulas, as a trend chart with a ranking table
+beside it, one tab per formula.
+
+### Why it exists
+
+To answer an objection that any single-formula indicator invites: *is this
+ranking just an artefact of the formula you happened to choose?* Sida 01 shows
+one ranking with great confidence. This page exists to test it.
+
+### How it works
+
+Municipal scores are averaged into counties — `municipal.groupby("lan_code")`
+— and ranked within the selected year. Versions A and C are plotted on a
+logarithmic axis, which is the same treatment decision D6 applies to them for
+z-scoring and for the same reason: they are ratios with the policy rate in the
+denominator, so when the rate approached zero they ran to 400+ and squashed
+recent years flat against a linear axis.
+
+### When to use it
+
+- Checking whether a county's standing survives a change of formula.
+- Reading a county's trajectory over the full period rather than one year.
+- Understanding what A, B and C each measure before trusting any of them.
+
+### What the numbers actually say, with real figures
+
+**Two of the three formulas cannot disagree.** Version A and Version C rank
+identically, in every year, by construction: within a year the rate and inflation
+are national constants, so A and C differ by a single constant factor that a
+within-year z-score on logs removes exactly. `z_a` equals `z_c` on all 3 190
+rows. Version B is the only one that can rank differently, and it does — for 73
+of 290 municipalities in 2024.
+
+So the honest form of this page's argument is not "three methods agree". It is
+"the one method that *could* rank differently does so for a quarter of the
+country, and here is where". The Robusthet section at the foot of the page states
+that and shows the class counts for all three.
+
+Where A and C genuinely differ is in **level**: C reads about 4,7 times A at
+2024's real rate. That is the inflation correction, and it is why C is the one
+the site reports.
+
+**A divergence this page does not announce.** The county figures here are means
+of municipalities. The county figures on Sida 05 come from
+`affordability_county.parquet`, which computes Version C from county-level income
+and price rather than averaging municipal ratios. A mean of ratios is not the
+ratio of means, so the two disagree:
+
+| Län, 2024 | Sida 02 (mean of kommuner) | Sida 05 (county aggregate) |
+|---|---|---|
+| Västerbottens län | 44,62 | 16,85 |
+| Norrbottens län | 37,73 | 22,62 |
+| Stockholms län | 8,45 | 7,71 |
+| Gotlands län | 10,63 | 10,63 |
+
+The ratio between them runs 1,00 to **2,65**, median 1,42, and the rank
+correlation is 0,806 — so the two do not even order the counties the same way.
+Sparse northern counties diverge most, because a handful of very cheap
+municipalities pull an unweighted mean upward while the aggregate is dominated by
+where people actually live. Gotland agrees exactly, being one municipality.
+
+Neither figure is wrong. They answer different questions: "what does the typical
+municipality in this county look like" against "what does this county look like".
+But the same label, *Stockholms län*, carries two different numbers two pages
+apart with nothing saying so. Recorded here rather than silently corrected,
+because choosing one is a product decision: population-weighting the Sida 02
+mean would close the gap and change every value on the page.
+
+---
+
+## 3. Kommun djupanalys (Sida 03)
+
+### What it is
+
+One municipality at a time: its Version C history, a component KPI row, and a
+six-year forecast under two models.
+
+### Why it exists
+
+It is the only per-municipality time series in the app, and the only forward-
+looking view other than the scenario simulator. Sida 01 says where a municipality
+stands now; this says how it got there and where the models think it goes.
+
+### How it works
+
+History is municipal. **The forecast is not.** `arima_pipeline.forecast_county`
+fits at county level over 2014 to 2024, forecasting income, transaction price,
+policy rate and CPI separately, then recombines them into `affordability_c` for
+six annual steps to 2030. SCB publishes nothing that would support a municipal
+forecast.
+
+### When to use it
+
+- Reading one municipality's trajectory rather than its rank.
+- Seeing which component moved: the KPI row carries income, K/T and the rate
+  beside the index.
+- Bounding a forward view, with the caveats below taken seriously.
+
+### What the numbers actually say, with real figures
+
+**The forecast is the county's, and the chart used to hide that.** It drew the
+forecast beginning at the *municipality's* last value, so Stockholm's line ran at
+6,2 and then jumped to the county's 2025 forecast — which reads as a predicted
+improvement and is in fact a seam between two geographies. Stockholm kommun
+closed 2024 at 6,2; Stockholms län at 7,7. The chart now draws the county history
+as a separate series, labelled *Länet*, and anchors the forecast to it. Nothing
+is stitched across a geography.
+
+**ARIMA's first forecast year is not usable, for any county.** All 21 collapse to
+roughly a quarter of their last observed value in 2025 and rebound the year
+after:
+
+| Län | 2024 observed | 2025 forecast |
+|---|---|---|
+| Stockholm | 7,7 | **1,9** |
+| Uppsala | 12,1 | **3,0** |
+| Jönköping | 17,0 | **4,1** |
+
+Stockholm's full path is 7,7 → 1,9 → 13,1 → 13,8 → 14,5 → 15,0 → 15,5. Prophet
+does this for **zero** of 21. The cause is visible in the component forecasts:
+ARIMA puts the 2025 policy rate at 2,56 % against a falling observed rate, and
+then takes it to −0,88 % by 2029.
+
+The page recommends ARIMA in its own copy while opening on Prophet. That
+contradiction is left standing deliberately: resolving it the obvious way would
+show every reader a broken forecast on first load. Recorded as **R16** in
+`docs/OPEN_RISKS.md`, where the two ways out are set against each other.
+
+**What is checked and what is not.** `_validate_widening_bands` runs after
+fitting and asserts the confidence intervals widen with horizon, which they do.
+Nothing asserts the central path is plausible, which is why a one-year collapse
+and rebound shipped. A first-year sanity check beside it is three lines and is
+the recommendation in R16.
+
+Beyond that, the honest bound on all of this is eleven annual observations. The
+page says so in a persistent caption, and it should be read as the binding
+constraint rather than a formality.
+
+---
+
+## 4. Kontantinsats analys (Sida 04)
 
 ### What it is
 
@@ -145,7 +371,7 @@ Changing the default is one line; the honest alternative is to show both.
 
 ---
 
-## 2. Scenariosimulator (Sida 05)
+## 5. Scenariosimulator (Sida 05)
 
 ### What it is
 
@@ -238,7 +464,7 @@ scoping separately. Recorded here as a direction, not a quick win.
 
 ---
 
-## 3. The three SHAI versions: what they mean and whether they matter here
+## 6. The three SHAI versions: what they mean and whether they matter here
 
 ### What each one is
 
@@ -336,7 +562,7 @@ counts for all three and says plainly why two of them must match.
 
 ---
 
-## 4. Can the variables be changed or updated?
+## 7. Can the variables be changed or updated?
 
 Two different questions live here.
 
@@ -533,7 +759,7 @@ Three cautions that are easy to learn the hard way:
 
 ---
 
-## 5. The result interpretation system (implemented)
+## 8. The result interpretation system (implemented)
 
 Both pages now carry a panel that reads the user's own numbers and says what they
 mean. It lives in `src/ui/interpret.py`; all copy is in `SWEDISH_LABELS` and
@@ -626,7 +852,7 @@ Kontantinsats, at a 5 % savings rate:
 
 The gradient behaves: the panel escalates with price and de-escalates with a
 second income, and Åsele never trips a warning at any savings rate. Note that
-the Par rows inherit the multiplier bug described in section 4, so their LTI is
+the Par rows inherit the multiplier bug described in section 7, so their LTI is
 optimistic.
 
 Scenario, Stockholms län 2024:
@@ -653,7 +879,7 @@ inflation", which is wrong for a cut. The text is now direction-neutral: "ränta
 och inflationen rör sig ofta åt samma håll". A single worked example would not
 have caught this, because the obvious example is a rate rise.
 
-## 6. The two charts, checked against the design system and the data
+## 9. The two charts, checked against the design system and the data
 
 Commit `60e150d` shipped two visualisations out of the recommendations above: a
 reachability chart on Sida 04 and a rate/inflation surface on Sida 05. This
@@ -667,7 +893,7 @@ what it told a reader was wrong. What follows is what the review found, kept in
 the present tense of the review; 6.4 and 6.5 record what was done about it, which
 is all of it.
 
-### 6.1 Reachability, Sida 04. Fits.
+### 9.1 Reachability, Sida 04. Fits.
 
 `affordability_gap_chart` inverts the loan arithmetic to the largest price the
 income supports at the lending ceiling, and puts the asked price beside it:
@@ -695,7 +921,7 @@ Two things to tidy, neither structural:
   is already in hand, which is the very thing the rest of the page exists to
   question. One clause in `ki.gap_forklaring_v0` closes that gap.
 
-### 6.2 The rate and inflation surface, Sida 05. Four defects.
+### 9.2 The rate and inflation surface, Sida 05. Four defects.
 
 The intent is right: the page's lesson is that only `R - pi` reaches the formula,
 a slider can only ever show one point on that plane, and a plane shows the whole
@@ -720,7 +946,7 @@ price 6 748 000 SEK, R 3.63 %, pi 2.86 %):
 | **-1** | 2.2 | 4.6 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
 | **-2** | 3.0 | 10.6 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 | 16.3 |
 
-The bold 10.6 at the origin is the baseline this document quotes in section 2.
+The bold 10.6 at the origin is the baseline this document quotes in section 5.
 The flat field is unambiguously below and to the right of it.
 
 **Defect 2. More than half the surface is one repeated number.** 36 of the 64
@@ -749,7 +975,7 @@ was supposed to help. The scenario marker also hardcodes `#0B1F3F` instead of
 `COLORS["primary"]`, and both new charts pass `displayModeBar: False` where the
 seven charts that preceded them pass `"hover"`.
 
-### 6.3 Why this drifted
+### 9.3 Why this drifted
 
 `tests/test_design_system_doc.py` checks the CSS class inventory in both
 directions, `tests/test_css_naming.py` rejects a class outside the `shai-`
@@ -762,10 +988,10 @@ stylesheet.
 
 Recorded as R14 in `docs/OPEN_RISKS.md`.
 
-### 6.4 What to change, in order. All six done.
+### 9.4 What to change, in order. All six done.
 
 1. **Fix the caption.** Done, and it no longer asserts a direction in prose at
-   all: the floor is drawn, per 2.
+   all: the floor is drawn, per 9.2.
 2. **Draw the `R - pi = 0.5` boundary** as an annotated dashed line. Done.
    `floor_boundary_intercept` derives it from the same arithmetic the simulator
    applies, and a test walks all 465 grid cells asserting that "below the line"
@@ -786,7 +1012,7 @@ Recorded as R14 in `docs/OPEN_RISKS.md`.
 6. **Add a chart-theme guard.** Done: `tests/test_chart_theme_guard.py`. See
    below.
 
-### 6.5 The guard, and what it found
+### 9.5 The guard, and what it found
 
 `tests/test_chart_theme_guard.py` makes three kinds of assertion, because there
 are three ways to drift:
@@ -819,7 +1045,7 @@ built-figure assertions do not.
 
 ---
 
-## 7. Summary of recommended work
+## 10. Summary of recommended work
 
 | # | Change | Page | Status |
 |---|---|---|---|
@@ -830,8 +1056,8 @@ built-figure assertions do not.
 | 6 | Flag that the savings rate is a share of gross income | 04 | **Done.** Caveat travels with the savings figure |
 | 8 | Surface the single-income assumption | 04 | **Done.** Panel names it and points at the Par control |
 | 5 | Say what A and B are for, and that C drives the site | 02 | **Done.** New robustness section on Sida 02 names C as load-bearing and quantifies B's disagreement |
-| 7 | Display or remove the unused A and B risk columns | 02, pipeline | **Done, differently.** B's are displayed; A's are asserted, because they are identical to C's by construction. See the correction in section 3 |
-| 9 | Apply scenario shocks across all kommuner, not one län | 05 | **Done.** `src/scenario/panel_scenario.py`. Required fixed class boundaries: a re-ranked panel provably cannot move. See 8.2 |
+| 7 | Display or remove the unused A and B risk columns | 02, pipeline | **Done, differently.** B's are displayed; A's are asserted, because they are identical to C's by construction. See the correction in section 6 |
+| 9 | Apply scenario shocks across all kommuner, not one län | 05 | **Done.** `src/scenario/panel_scenario.py`. Required fixed class boundaries: a re-ranked panel provably cannot move. See 11.2 |
 | 10 | Resolve the income definition: switch source, or fix docs and drop the multiplier | pipeline, docs | **Done.** Switched to `HE0110A/SamForvInk1`. See `docs/ADR/0001-income-series.md` |
 | 12 | The Par multiplier doubled an already-household median | 04 | **Done.** The multiplier is now valid arithmetic on an individual median, and lives in `src/kontantinsats/income.py` |
 | 11 | Decide whether to add HE0110M as a preliminary nowcast | pipeline | **Decided: no.** Recorded in the ADR. No overlap year means any splice assumes an uncalibrated conversion factor, which is the assumption this project removed when it stopped forward-filling income |
@@ -858,24 +1084,24 @@ in the pipeline has been changed.
 single label and nothing blocks it, so it should not wait for the rest of the
 chart work in 14 to 17.
 
-Section 6 is implemented in full. Items 13 to 19 are done and the two
-charts no longer ship as section 6 described them.
+Section 9 is implemented in full. Items 13 to 19 are done and the two
+charts no longer ship as section 9 described them.
 
 **Every item in this table is now closed.** Items 10, 11 and 12 were settled by
 the income decision recorded in `docs/ADR/0001-income-series.md`; items 5, 7 and
-9 by the work in section 8.
+9 by the work in section 11.
 
 ---
 
-## 8. Closing items 5, 7 and 9, and what each one turned out to be
+## 11. Closing items 5, 7 and 9, and what each one turned out to be
 
 Two of the three were not the task the item described. Both times the difference
 came from reading the data before building on it, which is the habit this
 document keeps recommending and which keeps paying.
 
-### 8.1 Items 5 and 7: the robustness argument was half an identity
+### 11.1 Items 5 and 7: the robustness argument was half an identity
 
-Covered in the correction to section 3. Sida 02 now carries a **Robusthet**
+Covered in the correction to section 6. Sida 02 now carries a **Robusthet**
 section that states which version drives the site, shows the risk class counts
 under all three, and explains why A and C must agree. The six previously unread
 columns are the subject of `tests/test_formula_agreement.py` rather than of a
@@ -887,7 +1113,7 @@ to disagree. "The one method that *can* rank differently does so for a quarter o
 the country, and here are the eight municipalities where the gap is widest" is a
 claim a reader can check.
 
-### 8.2 Item 9: the obvious implementation returns zero, always
+### 11.2 Item 9: the obvious implementation returns zero, always
 
 The item asked for the scenario to be applied across all 290 municipalities, so
 the page could answer "how many kommuner cross into hög risk under this
@@ -901,7 +1127,7 @@ logs removes a constant factor exactly. Measured on the committed panel, the
 largest z change under a +4 pp rate shock, a +10 % income shock or a -25 % price
 shock is 9·10⁻¹⁶.
 
-This is the same property as the A-equals-C identity in section 3, arriving in a
+This is the same property as the A-equals-C identity in section 6, arriving in a
 different costume, and it is worth naming because the failure mode is so quiet:
 you build the feature, see a table of unchanged counts, and go looking for a bug
 in the code.

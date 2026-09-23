@@ -26,7 +26,7 @@ CPI_MIN, CPI_MAX = -5.0, 10.0
 GRID_STEP = 0.5
 
 #: The real-rate floor, in percentage points. Mirrors `simulate`, which applies
-#: it independently; see the caution in docs/ANALYSIS_GUIDE.md section 4 about
+#: it independently; see the caution in docs/APP_GUIDE.md section 7 about
 #: the floor living in two files in two different units.
 REAL_RATE_FLOOR = 0.5
 

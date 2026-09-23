@@ -7,7 +7,7 @@ methodology document and the couple multiplier on Sida 04 described **individual
 gross** income. The column had the right name, the right dtype, the right region
 count and the right year range. It was the wrong number.
 
-`docs/ANALYSIS_GUIDE.md` section 4 makes the same point about a table that was
+`docs/APP_GUIDE.md` section 7, *Can the variables be changed or updated?*, makes the same point about a table that was
 *not* adopted: repointing the pipeline at AM0106 `Kommun17g` would fetch
 cleanly, rebuild the panel and keep the suite green, while silently changing the
 denominator from "income of people who live here" to "salary of people employed

@@ -17,7 +17,7 @@ from __future__ import annotations
 #: The regime the pages present as today's rules. Every headline number on Sida
 #: 04 is this regime's, and the reachability chart's deposit share must be the
 #: same one, so the choice is stated once here rather than spelled out at each
-#: reading site. Item 19 in docs/ANALYSIS_GUIDE.md: two statements of one fact
+#: reading site. Item 19 in docs/APP_GUIDE.md: two statements of one fact
 #: desync silently, because nothing compares them.
 BASELINE_REGIME = "latt_2026"
 
