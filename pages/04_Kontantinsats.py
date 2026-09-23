@@ -29,6 +29,7 @@ from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     _compact,
     page_title,
+    purpose_panel,
     format_sek,
     format_pct,
     card_header,
@@ -97,6 +98,20 @@ page_title(
     subtitle="Historiska och nuvarande regelverk och insatskrav",
     year=selected_year,
 )
+
+# What the page is for, before any caveat about which SCB table is published at
+# which geographic level. Methodology arriving ahead of purpose leaves a reader
+# who does not already know what this page does with no way to find out.
+with st.container(border=True):
+    st.markdown(
+        purpose_panel(
+            L("ki.syfte_rubrik"),
+            [L("ki.syfte_p1"), L("ki.syfte_p2")],
+            L("ki.syfte_nar_rubrik"),
+            [L("ki.syfte_nar_1"), L("ki.syfte_nar_2"), L("ki.syfte_nar_3")],
+        ),
+        unsafe_allow_html=True,
+    )
 
 # ── Check bostadsrätt availability (county level) ────────────────────
 _has_br_column = "bostadsratt_price_sek" in county_data.columns

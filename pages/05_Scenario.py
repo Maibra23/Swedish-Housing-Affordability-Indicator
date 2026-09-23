@@ -31,7 +31,7 @@ from src.ui.chart_theme import get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.charts import rate_inflation_surface
 from src.scenario.simulator import simulate
-from src.scenario.sections import render_national_outcome
+from src.scenario.sections import render_national_outcome, render_purpose
 
 inject_css()
 selections = render_sidebar()
@@ -67,6 +67,8 @@ page_title(
     subtitle=L("sc.simulera_effekten_av_ranta_inkomst_och"),
     year=selected_year,
 )
+
+render_purpose()
 
 # ── Scope note ───────────────────────────────────────────────────────
 st.info(
