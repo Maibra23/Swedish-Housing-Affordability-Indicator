@@ -254,6 +254,46 @@ def explanation(text: str) -> None:
     st.markdown(f'<div class="shai-explanation">{text}</div>', unsafe_allow_html=True)
 
 
+def purpose_panel(
+    heading: str, paragraphs: list[str], when_label: str, when: list[str]
+) -> str:
+    """Return the "what this page is for" block that opens an analysis page.
+
+    Sida 04 and Sida 05 are the two pages that are *tools* rather than views:
+    the reader supplies inputs and the page answers a question. Both opened on a
+    subtitle describing their contents ("Historiska och nuvarande regelverk och
+    insatskrav") followed immediately by a provenance caveat about which SCB
+    table is published at which geographic level. That is methodology arriving
+    before purpose, and it leaves a reader who does not already know what the
+    page is for with no way to find out.
+
+    The material already existed, in `docs/ANALYSIS_GUIDE.md` sections 1 and 2
+    under "Why it exists" and "When to use it". It had simply never reached the
+    page it describes.
+
+    Args:
+        heading: Card title, phrased as what the page answers.
+        paragraphs: Plain sentences. The component adds the markup, so the copy
+            itself stays tag-free and therefore stays in `SWEDISH_LABELS` rather
+            than in `TEMPLATES` — see R9.
+        when_label: Heading for the list of situations.
+        when: Situations in which the page is the right tool.
+
+    Returns:
+        HTML for a `.shai-card`, to be rendered inside a bordered container.
+    """
+    body = "".join(f"<p>{para}</p>" for para in paragraphs)
+    items = "".join(f"<li>{item}</li>" for item in when)
+    return _compact(f"""
+    <div class="shai-purpose">
+        <div class="shai-card-title">{heading}</div>
+        <div class="shai-purpose-body">{body}</div>
+        <div class="shai-purpose-when-label">{when_label}</div>
+        <ul class="shai-purpose-when">{items}</ul>
+    </div>
+    """)
+
+
 def help_badge(*terms: str) -> str:
     """Return a "?" affordance revealing definitions for `terms`.
 

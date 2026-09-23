@@ -15,7 +15,7 @@ import pandas as pd
 import streamlit as st
 
 from src.scenario.panel_scenario import shock_panel
-from src.ui.components import card_header, kpi_card, render_kpi_row
+from src.ui.components import card_header, kpi_card, purpose_panel, render_kpi_row
 from src.ui.labels import L
 
 
@@ -96,3 +96,26 @@ def render_national_outcome(
             st.markdown(L("sc.riket_ingen_rorelse"))
 
         st.caption(L("sc.riket_forklaring"))
+
+
+def render_purpose() -> None:
+    """What the page is for, before any caveat about which formula it uses.
+
+    The scope note underneath explains that the simulator computes Version C
+    only. That is worth saying, and it means nothing until a reader knows why
+    they would run a simulation at all. Purpose first, methodology second.
+
+    The copy is `docs/ANALYSIS_GUIDE.md` section 2, which has carried "Why it
+    exists" and "When to use it" since the guide was written without either ever
+    reaching the page they describe.
+    """
+    with st.container(border=True):
+        st.markdown(
+            purpose_panel(
+                L("sc.syfte_rubrik"),
+                [L("sc.syfte_p1"), L("sc.syfte_p2")],
+                L("sc.syfte_nar_rubrik"),
+                [L("sc.syfte_nar_1"), L("sc.syfte_nar_2"), L("sc.syfte_nar_3")],
+            ),
+            unsafe_allow_html=True,
+        )

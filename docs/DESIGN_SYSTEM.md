@@ -68,7 +68,7 @@ The choropleth does **not** apply this scale at fixed breakpoints. See section 4
 
 ## 3. Class inventory
 
-Every `.shai-*` class in the composed stylesheet. 85 in total.
+Every `.shai-*` class in the composed stylesheet. 89 in total.
 
 | Class | Purpose |
 |-------|---------|
@@ -89,6 +89,10 @@ Every `.shai-*` class in the composed stylesheet. 85 in total.
 | `.shai-cred-pill` | Single source pill. |
 | `.shai-cred-pills` | Source pill row. |
 | `.shai-explanation` | Prose under a bare number (T3.4). |
+| `.shai-purpose` | "What this page is for", opening Sida 04 and 05. |
+| `.shai-purpose-body` | Its prose paragraphs. |
+| `.shai-purpose-when-label` | Heading above the list of situations. |
+| `.shai-purpose-when` | The list itself. |
 | `.shai-eyebrow` | Page-header eyebrow. |
 | `.shai-flow-svg` | Index flow diagram. |
 | `.shai-flow-svg-wrap` | Flow diagram wrapper. |
