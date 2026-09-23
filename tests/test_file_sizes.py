@@ -111,6 +111,7 @@ def test_the_split_modules_still_exist() -> None:
         # refresh.
         "src/provenance_build.py",
         "src/ui/tokens.py",
+        "src/ui/css_purpose.py",
         "src/ui/css_layout.py",
         "src/ui/css_components.py",
         "src/ui/css_landing.py",

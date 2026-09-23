@@ -68,7 +68,7 @@ The choropleth does **not** apply this scale at fixed breakpoints. See section 4
 
 ## 3. Class inventory
 
-Every `.shai-*` class in the composed stylesheet. 89 in total.
+Every `.shai-*` class in the composed stylesheet. 92 in total.
 
 | Class | Purpose |
 |-------|---------|
@@ -89,6 +89,9 @@ Every `.shai-*` class in the composed stylesheet. 89 in total.
 | `.shai-cred-pill` | Single source pill. |
 | `.shai-cred-pills` | Source pill row. |
 | `.shai-explanation` | Prose under a bare number (T3.4). |
+| `.shai-mood-good` | KPI delta colour when the movement is good for *this* metric. |
+| `.shai-mood-bad` | The same, when it is bad. |
+| `.shai-mood-neutral` | The same, when the metric carries no direction. |
 | `.shai-purpose` | "What this page is for", opening Sida 04 and 05. |
 | `.shai-purpose-body` | Its prose paragraphs. |
 | `.shai-purpose-when-label` | Heading above the list of situations. |

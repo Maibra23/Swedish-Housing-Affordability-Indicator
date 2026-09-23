@@ -21,6 +21,7 @@ import streamlit as st
 from src.ui.css_components import CSS as _COMPONENTS
 from src.ui.css_interpret import CSS as _INTERPRET
 from src.ui.css_landing import CSS as _LANDING
+from src.ui.css_purpose import CSS as _PURPOSE
 from src.ui.css_layout import CSS as _LAYOUT
 from src.ui.css_responsive import CSS as _RESPONSIVE
 from src.ui.tokens import COLORS, DIVERGING_SCALE
@@ -28,7 +29,7 @@ from src.ui.tokens import COLORS, DIVERGING_SCALE
 __all__ = ["COLORS", "DIVERGING_SCALE", "GLOBAL_CSS", "inject_css"]
 
 # Order is cascade order. Do not sort these.
-GLOBAL_CSS = _LAYOUT + _COMPONENTS + _INTERPRET + _LANDING + _RESPONSIVE
+GLOBAL_CSS = _LAYOUT + _COMPONENTS + _INTERPRET + _PURPOSE + _LANDING + _RESPONSIVE
 
 
 def inject_css() -> None:

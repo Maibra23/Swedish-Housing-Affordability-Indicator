@@ -24,7 +24,7 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     vintage_badge,
-    page_title, kpi_card, render_kpi_row, format_sek, format_pct,
+    page_title, delta_meta, kpi_card, render_kpi_row, format_sek, format_pct,
     card_header, footer_note,
 )
 from src.ui.chart_theme import get_chart_layout
@@ -251,7 +251,7 @@ render_kpi_row([
         value=f"{result['delta']:+.1f}".replace(".", ","),
         unit=L("sc.poang"),
         delta=f"{result['delta_pct']:+.1f}%".replace(".", ","),
-        delta_direction=change_direction,
+        **delta_meta(result["delta"], higher_is_better=True),
         variant=change_variant,
         tooltip=L("sc.skillnad_mellan_scenario_och_basfall"),
     ),

@@ -26,6 +26,7 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     page_title,
+    delta_meta,
     kpi_card,
     render_kpi_row,
     format_sek,
@@ -118,7 +119,8 @@ render_kpi_row([
         value=f"{mean_vc:,.1f}".replace(",", "\u00A0").replace(".", ","),
         unit=L("rv.poang"),
         delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
-        delta_direction="up" if delta_vc > 0 else "down" if delta_vc < 0 else "flat",
+        # Version C is an affordability ratio: higher is better, so a fall is bad.
+        **delta_meta(delta_vc, higher_is_better=True),
         variant="default",
         tooltip=L("rv.genomsnittlig_version_c_poang_rakvot_inkomst", v0=N_KOMMUNER),
     ),
@@ -136,7 +138,8 @@ render_kpi_row([
         value=f"{mean_kt:.2f}".replace(".", ","),
         unit="genomsnitt",
         delta=f"{delta_kt_pct:+.1f}%".replace(".", ","),
-        delta_direction="up" if delta_kt_pct > 0 else "down" if delta_kt_pct < 0 else "flat",
+        # K/T is price against assessed value: a rise means more expensive.
+        **delta_meta(delta_kt_pct, higher_is_better=False),
         variant="accent",
         tooltip=L("rv.genomsnittlig_kopeskillingskoefficient_k_t"),
     ),
@@ -144,7 +147,9 @@ render_kpi_row([
         label=L("rv.befolkningsforandring"),
         value=format_pct(pop_change_pct),
         delta=f"{(pop_now - pop_prev):+,.0f}".replace(",", "\u00A0"),
-        delta_direction="up" if pop_change_pct > 0 else "down" if pop_change_pct < 0 else "flat",
+        # Population change is neither good nor bad for affordability. Colouring
+        # it asserted a judgement the data does not make.
+        **delta_meta(pop_change_pct, higher_is_better=None),
         variant="success",
         tooltip=L("rv.procentuell_befolkningsforandring_jamfort"),
     ),
@@ -206,9 +211,9 @@ with col_hist:
             # second copy of them in this page is exactly how the classes drifted
             # out of sync before (Finding N).
             for risk_class, color, name in [
-                ("lag", COLORS["low_risk"], L("rv.lag_risk")),
-                ("medel", COLORS["medium_risk"], "Medel risk"),
-                ("hog", COLORS["high_risk"], L("rv.hog_risk")),
+                ("lag", COLORS["low_risk"], L("rv.riskklass_lag")),
+                ("medel", COLORS["medium_risk"], L("rv.riskklass_medel")),
+                ("hog", COLORS["high_risk"], L("rv.riskklass_hog")),
             ]:
                 subset = df_ranked.loc[df_ranked["risk_c"] == risk_class, "z_c"].dropna()
                 if len(subset) > 0:
@@ -227,8 +232,11 @@ with col_hist:
                 line_dash="dash",
                 line_color=COLORS["primary"],
                 line_width=1.5,
-                annotation_text=f"Median: {median_z:.2f}",
-                annotation_position="top",
+                # Anchored inside the plot rather than "top": at "top" the
+                # annotation sat on the legend row and the two overlapped.
+                annotation_text=f"Median: {median_z:.2f}".replace(".", ","),
+                annotation_position="top right",
+                annotation_yshift=-12,
                 annotation_font=dict(size=11, color=COLORS["primary"]),
             )
 
@@ -238,6 +246,13 @@ with col_hist:
                 yaxis_title="Antal kommuner",
             )
             layout["barmode"] = "stack"
+            # The legend sat inside the plot and clipped "Låg risk" against the
+            # right edge. Above the plot it has the full width.
+            layout["legend"] = dict(
+                orientation="h", yanchor="bottom", y=1.04,
+                xanchor="left", x=0, font=dict(size=11),
+            )
+            layout["margin"] = dict(l=50, r=20, t=48, b=50)
             fig.update_layout(**layout)
 
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
