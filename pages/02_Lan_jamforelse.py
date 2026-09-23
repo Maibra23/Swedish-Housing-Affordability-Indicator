@@ -86,7 +86,23 @@ page_title(
 )
 
 # ── Formula config ───────────────────────────────────────────────────
+# Realversion (C) first, because it is the one the site runs on: the map, the
+# risk classes, the KPI row, the forecasts and the simulator all read C. The
+# tab order is also the default tab, and opening on Bankversion (A) led with
+# the formula this page's own copy calls a robustness check.
 FORMULA_INFO = {
+    "Realversion (C)": {
+        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
+        "desc": (
+            L("lj.den_rekommenderade_versionen_justerar_for")
+        ),
+        "col": "version_c",
+        "color_highlight": COLORS["low_risk"],
+        "color_others": CHART_PALETTE[5],
+        "footnote": (
+            L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
+        ),
+    },
     "Bankversion (A)": {
         "formula": r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}",
         "desc": (
@@ -106,18 +122,6 @@ FORMULA_INFO = {
         "color_others": CHART_PALETTE[4],
         "footnote": (
             L("lj.arbetsloshet_avser_oppet_arbetslosa_enligt")
-        ),
-    },
-    "Realversion (C)": {
-        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
-        "desc": (
-            L("lj.den_rekommenderade_versionen_justerar_for")
-        ),
-        "col": "version_c",
-        "color_highlight": COLORS["low_risk"],
-        "color_others": CHART_PALETTE[5],
-        "footnote": (
-            L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
     },
 }
@@ -175,6 +179,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 # resolves from provenance at the top. Re-deriving it from the
                 # frame was R2's third site.
                 yr_range = PERIOD
+                vcol = info["col"]
 
                 layout = get_chart_layout(
                     title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=yr_range),
@@ -184,6 +189,27 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                     showlegend=False,
                 )
                 layout["xaxis"]["dtick"] = 1
+                # A and C are ratios with the policy rate in the denominator, so
+                # when the rate approached zero in 2015 to 2021 they ran to 400+
+                # and squashed 2022 onward flat against the axis: the years a
+                # reader cares about were the unreadable ones. A log axis is the
+                # same treatment decision D6 already applies to these two for
+                # z-scoring, and for the same reason. B is a weighted sum of
+                # z-scores that goes negative, where a log is undefined.
+                if vcol in ("version_a", "version_c"):
+                    layout["yaxis"]["type"] = "log"
+                    # Explicit ticks: Plotly's log minors label 90 and 9 both as
+                    # "9", which on a chart spanning one to several hundred is
+                    # ambiguous in exactly the range that matters.
+                    import math
+
+                    _vals = county_versions[vcol].dropna()
+                    _hi = float(_vals.max()) if len(_vals) else 100.0
+                    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100, 200, 500)
+                             if t <= _hi * 1.6]
+                    layout["yaxis"]["tickmode"] = "array"
+                    layout["yaxis"]["tickvals"] = ticks
+                    layout["yaxis"]["ticktext"] = [str(t) for t in ticks]
                 fig.update_layout(**layout)
                 st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 

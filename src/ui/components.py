@@ -113,12 +113,57 @@ def page_title(
 # ── KPI card ──────────────────────────────────────────────────────────
 
 
+def delta_meta(change: float, higher_is_better: bool | None = None) -> dict[str, str]:
+    """Split a change into the two independent facts a KPI delta needs.
+
+    A delta says two things, and conflating them is how this app spent a release
+    telling readers that a one-third fall in affordability was good news.
+
+    **Direction** is a property of the arithmetic: the number went up, down or
+    nowhere. **Sentiment** is a property of the *metric*: whether going up is
+    good depends entirely on what is being measured, and the component cannot
+    know that.
+
+    Before this, `delta_direction` drove both, with the stylesheet hardcoding
+    up as red and down as green — an assumption that only holds for risk-shaped
+    quantities. Pages measuring the opposite bent the parameter to get the
+    colour they wanted, which broke the arrow. The result was the same quantity
+    rendering as a green ▼ on Sida 01, a red ▲ on Sida 03 and a ▼ beside a
+    positive number on Sida 05.
+
+    Args:
+        change: The signed change. Only its sign is used.
+        higher_is_better: True where a rise is good (affordability), False where
+            a rise is bad (a price-to-income ratio, a high-risk count), None
+            where the metric carries no inherent direction (population change).
+            `None` is a real answer, not a default to fall back on: colouring a
+            neutral metric asserts a judgement the data does not make.
+
+    Returns:
+        Keyword arguments for :func:`kpi_card`.
+    """
+    if change > 0:
+        direction = "up"
+    elif change < 0:
+        direction = "down"
+    else:
+        direction = "flat"
+
+    if higher_is_better is None or direction == "flat":
+        sentiment = "neutral"
+    else:
+        sentiment = "good" if (direction == "up") == higher_is_better else "bad"
+
+    return {"delta_direction": direction, "delta_sentiment": sentiment}
+
+
 def kpi_card(
     label: str,
     value: str,
     unit: str = "",
     delta: str = "",
     delta_direction: str = "flat",
+    delta_sentiment: str = "neutral",
     variant: str = "default",
     tooltip: str | None = None,
 ) -> str:
@@ -129,7 +174,11 @@ def kpi_card(
         value: Main display value.
         unit: Optional unit suffix.
         delta: Delta text (e.g. "+2.3%").
-        delta_direction: "up", "down", or "flat".
+        delta_direction: Which way the number moved: "up", "down" or "flat".
+            This chooses the **arrow** and nothing else.
+        delta_sentiment: Whether that movement is "good", "bad" or "neutral"
+            *for this metric*. This chooses the **colour** and nothing else.
+            Use :func:`delta_meta` rather than setting the two by hand.
         variant: "default", "accent", "danger", or "success".
         tooltip: Optional tooltip text shown on hover.
     """
@@ -137,7 +186,8 @@ def kpi_card(
     if delta:
         arrows = {"up": "\u25B2", "down": "\u25BC", "flat": "\u25C6"}
         arrow = arrows.get(delta_direction, "")
-        delta_html = f'<div class="shai-kpi-delta {delta_direction}">{arrow} {delta}</div>'
+        classes = f"shai-dir-{delta_direction} shai-mood-{delta_sentiment}"
+        delta_html = f'<div class="shai-kpi-delta {classes}">{arrow} {delta}</div>'
 
     unit_html = f'<span class="shai-kpi-unit">{unit}</span>' if unit else ""
     tip_attr = f'title="{tooltip}"' if tooltip else ""

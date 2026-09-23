@@ -27,6 +27,7 @@ These outlive it.
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 | R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
 | R15 | Numbers quoted in docstrings and markdown are guarded nowhere | Medium | **CLOSED** |
+| R16 | ARIMA's first forecast year is implausible for every county | **High** | OPEN |
 
 ---
 
@@ -900,6 +901,74 @@ adding one pattern per checkable fact rather than attempting a general solution.
 
 **Revisit if:** a second class of artifact-derived figure starts appearing in prose, at
 which point the pattern list becomes a registry and deserves the structure that implies.
+
+---
+
+## R16 — ARIMA's first forecast year is implausible for every county
+
+**Severity: High.** Displayed on Sida 03, one click from the default tab, and recommended
+by the page's own copy.
+
+Found on 2026-09-23 while fixing the forecast chart's geography seam. With the seam gone the
+forecast line became readable, and what it shows is not a forecast.
+
+**Every county drops to roughly a quarter of its last observed value in 2025, then
+rebounds.** Not some counties. All 21:
+
+| Län | 2024 observed | 2025 forecast |
+|---|---|---|
+| 01 Stockholm | 7,7 | **1,9** |
+| 03 Uppsala | 12,1 | **3,0** |
+| 04 Södermanland | 13,5 | **3,2** |
+| 06 Jönköping | 17,0 | **4,1** |
+| 07 Kronoberg | 19,9 | **4,9** |
+
+Stockholm's full path is 7,7 → 1,9 → 13,1 → 13,8 → 14,5 → 15,0 → 15,5. The dip is one year
+deep and then undone, which is the shape of an artefact rather than a projection.
+
+**Prophet does this for zero of 21 counties**, which is what makes it diagnostic rather than
+a property of short series.
+
+### The mechanism
+
+The pipeline forecasts each component separately and recombines them into Version C, so an
+error in one input propagates into the index without anything checking the result is
+sensible. The policy rate is the input in question:
+
+    ARIMA rate path:    2,56  1,12  −0,07  −0,73  −0,88  −0,68
+    Prophet rate path:  2,53  2,85   3,18   3,50   3,83   4,15
+
+Two different problems in one series. The 2025 value of 2,56 % is high against a falling
+observed rate, which compresses Version C that year. And the path then goes **negative and
+stays there to 2030**, which Sweden has seen but is a strong claim to publish without
+comment.
+
+`_validate_widening_bands` runs after fitting and checks the confidence intervals widen with
+horizon. It does not check that the central path is plausible, and a one-year collapse and
+rebound passes it.
+
+### Why the tab order was reverted rather than fixed
+
+Sida 03 has a real inconsistency: it opens on Prophet while its own caption says *"För
+analys av makroekonomisk årlig data rekommenderas ARIMA-fliken"*. Defaulting to ARIMA was
+tried, and reverted on this evidence — it would have shown every reader a broken forecast on
+first load. The contradiction is therefore left standing, deliberately, and recorded here
+instead.
+
+**Recommendation.** Decide which of the two is true before changing the interface:
+
+1. **The recommendation is right and the pipeline is broken.** Then constrain the rate
+   forecast (a floor near zero, or forecast the real rate directly rather than recombining),
+   and add a sanity check beside `_validate_widening_bands` asserting the first forecast
+   year is within a plausible band of the last observed one. That check is three lines and
+   would have caught this at refresh time rather than in a screenshot.
+2. **Prophet is the better model here and the copy is wrong.** Then withdraw the
+   recommendation and say why.
+
+Either way the page should stop recommending a model it does not show.
+
+**Revisit if:** income publishes for 2025 and the training window moves, which re-fits every
+series and may change the picture entirely.
 
 ---
 

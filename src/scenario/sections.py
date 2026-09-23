@@ -15,7 +15,13 @@ import pandas as pd
 import streamlit as st
 
 from src.scenario.panel_scenario import shock_panel
-from src.ui.components import card_header, kpi_card, purpose_panel, render_kpi_row
+from src.ui.components import (
+    card_header,
+    delta_meta,
+    kpi_card,
+    purpose_panel,
+    render_kpi_row,
+)
 from src.ui.labels import L
 
 
@@ -73,16 +79,16 @@ def render_national_outcome(
                 value=str(after),
                 unit=L("sc.riket_kommuner"),
                 delta=(f"{after - before:+d}" if after != before else ""),
-                delta_direction=(
-                    "up" if after > before else "down" if after < before else "flat"
-                ),
+                # More municipalities in hög risk is bad; more in låg risk is
+                # good; the middle class carries no direction of its own.
+                **delta_meta(after - before, higher_is_better=better),
                 variant=variant,
                 tooltip=L("sc.riket_tooltip_v0", v0=str(before)),
             )
-            for label, before, after, variant in (
-                (L("sc.riket_hog"), outcome.before["hog"], outcome.after["hog"], "accent"),
-                (L("sc.riket_medel"), outcome.before["medel"], outcome.after["medel"], "default"),
-                (L("sc.riket_lag"), outcome.before["lag"], outcome.after["lag"], "default"),
+            for label, before, after, variant, better in (
+                (L("sc.riket_hog"), outcome.before["hog"], outcome.after["hog"], "accent", False),
+                (L("sc.riket_medel"), outcome.before["medel"], outcome.after["medel"], "default", None),
+                (L("sc.riket_lag"), outcome.before["lag"], outcome.after["lag"], "default", True),
             )
         ])
 

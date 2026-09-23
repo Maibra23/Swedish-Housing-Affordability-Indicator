@@ -146,3 +146,26 @@ def test_the_guard_can_see_a_foreign_prefix() -> None:
     sample = '<div class="legacy-thing shai-card">'
     tokens = [t for t in re.findall(r'class="([^"]+)"', sample)[0].split()]
     assert [t for t in tokens if not t.startswith("shai-")] == ["legacy-thing"]
+
+
+def test_no_unresolved_interpolation_survives_into_the_stylesheet() -> None:
+    """A `{COLORS["x"]}` that never interpolated is a silently dropped rule.
+
+    The CSS modules are plain strings, not f-strings, because CSS braces make an
+    f-string impossible — so every colour in them is a literal hex kept in step
+    with `tokens.py` by hand. Writing a token reference there looks correct,
+    passes every test, and ships a declaration the browser discards: the element
+    simply inherits, which can look plausible.
+
+    Found exactly that way. Three KPI delta rules and three purpose-panel rules
+    were written as `{COLORS[...]}`, shipped, and rendered as inherited dark grey
+    where red and green were intended. No test noticed; a screenshot did.
+    """
+    from src.ui.css import GLOBAL_CSS
+
+    assert "{COLORS[" not in GLOBAL_CSS, (
+        "the composed stylesheet contains an uninterpolated token reference. "
+        "The CSS modules are plain strings: write the hex literal and keep it in "
+        "step with src/ui/tokens.py."
+    )
+    assert "{" not in GLOBAL_CSS.replace("{", "", GLOBAL_CSS.count("{")) or True

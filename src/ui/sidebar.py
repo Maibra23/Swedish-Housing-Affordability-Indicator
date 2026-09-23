@@ -16,17 +16,15 @@ from src.ui.filters import RISK_LABELS
 
 PAGES = [
     ("app.py", "Startsida"),
-    # Numbered to match the "Sida NN" eyebrow each page renders, and the
-    # "Sida 04" references throughout docs/. Without the numbers the two
-    # disagreed: a reader on a page headed "SIDA 03" counted three entries down
-    # the unnumbered list and landed on Sida 02, because "Startsida" occupies
-    # the first row. The numbers are also the reading order, broad to specific.
-    ("pages/01_Riksoversikt.py", "01 · Riksöversikt"),
-    ("pages/02_Lan_jamforelse.py", "02 · Län jämförelse"),
-    ("pages/03_Kommun_djupanalys.py", "03 · Kommun djupanalys"),
-    ("pages/04_Kontantinsats.py", "04 · Kontantinsats analys"),
-    ("pages/05_Scenario.py", "05 · Scenariosimulator"),
-    ("pages/06_Metodologi.py", "06 · Metodologi och källor"),
+    # Names only. The numbers were tried and removed: they matched the "Sida NN"
+    # eyebrows but made the rail busy, and the order is already legible without
+    # them (national, county, municipality, calculator, scenario, method).
+    ("pages/01_Riksoversikt.py", "Riksöversikt"),
+    ("pages/02_Lan_jamforelse.py", "Län jämförelse"),
+    ("pages/03_Kommun_djupanalys.py", "Kommun djupanalys"),
+    ("pages/04_Kontantinsats.py", "Kontantinsats analys"),
+    ("pages/05_Scenario.py", "Scenariosimulator"),
+    ("pages/06_Metodologi.py", "Metodologi och källor"),
 ]
 
 # The selector offers exactly the years the affordability index covers, both
