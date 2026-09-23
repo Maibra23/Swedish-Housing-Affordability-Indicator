@@ -36,7 +36,7 @@ individual reading is 9.4.
 **No test could have caught it.** The suite checks that a column exists, that it
 covers 290 municipalities, that rank 1 is the best. A wrong-but-well-formed
 series satisfies all of that. The same reasoning appears in
-`docs/ANALYSIS_GUIDE.md` section 4 about a table that was *not* adopted: pointing
+`docs/APP_GUIDE.md` section 7 about a table that was *not* adopted: pointing
 the pipeline at AM0106 `Kommun17g` would fetch cleanly, rebuild the panel and
 keep the suite green while changing the denominator from "income of people who
 live here" to "salary of people employed by this council".
@@ -192,7 +192,7 @@ Each guard was run against the defect it is meant to catch before being kept.
 
 ## Related
 
-- `docs/ANALYSIS_GUIDE.md` section 4, the investigation this came out of
+- `docs/APP_GUIDE.md` section 7, the investigation this came out of
 - `docs/METHODOLOGY.md` limitation F14, on what the Par case models
 - `src/kontantinsats/income.py`, the only place an individual income becomes a
   household one

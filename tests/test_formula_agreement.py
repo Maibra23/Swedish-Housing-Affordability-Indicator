@@ -2,7 +2,7 @@
 
 The ranked artifact carries `z`, `rank` and `risk` for each of Versions A, B and
 C. Until 2026-09-21 the interface read only the `_c` three. Item 7 of
-`docs/ANALYSIS_GUIDE.md` posed the question as "display them or stop computing
+`docs/APP_GUIDE.md` posed the question as "display them or stop computing
 them", on the reasoning that six unused columns in a committed artifact will
 eventually drift or confuse.
 

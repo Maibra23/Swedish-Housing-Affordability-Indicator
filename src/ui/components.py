@@ -317,7 +317,7 @@ def purpose_panel(
     before purpose, and it leaves a reader who does not already know what the
     page is for with no way to find out.
 
-    The material already existed, in `docs/ANALYSIS_GUIDE.md` sections 1 and 2
+    The material already existed, in `docs/APP_GUIDE.md` sections 4 and 5
     under "Why it exists" and "When to use it". It had simply never reached the
     page it describes.
 

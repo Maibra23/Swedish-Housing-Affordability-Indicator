@@ -111,7 +111,7 @@ def render_purpose() -> None:
     only. That is worth saying, and it means nothing until a reader knows why
     they would run a simulation at all. Purpose first, methodology second.
 
-    The copy is `docs/ANALYSIS_GUIDE.md` section 2, which has carried "Why it
+    The copy is `docs/APP_GUIDE.md` section 5, which has carried "Why it
     exists" and "When to use it" since the guide was written without either ever
     reaching the page they describe.
     """

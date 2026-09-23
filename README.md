@@ -97,7 +97,7 @@ their terms.
 | File | Contents |
 |------|----------|
 | `docs/METHODOLOGY.md` | Formulas, variables, limitations |
-| `docs/ANALYSIS_GUIDE.md` | How to read Kontantinsats and Scenariosimulator, and what A/B/C are for |
+| `docs/APP_GUIDE.md` | What each page is for and how to read its results; the formulas, and what can be refreshed |
 | `docs/DEPLOYMENT.md` | Deployment, data refresh, file inventory |
 | `docs/REVITALIZATION_PLAN.md` | Work plan, audit findings, session log |
 | `docs/OPTIMIZATION_PLAN.md` | Performance work and its measurements |

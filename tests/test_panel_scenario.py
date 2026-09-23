@@ -1,6 +1,6 @@
 """The national scenario view, and the property that forced its design.
 
-Item 9 of `docs/ANALYSIS_GUIDE.md` asked for the scenario to be applied across
+Item 9 of `docs/APP_GUIDE.md` asked for the scenario to be applied across
 all 290 municipalities rather than one county, so the page could answer "how many
 kommuner cross into hög risk under this scenario".
 

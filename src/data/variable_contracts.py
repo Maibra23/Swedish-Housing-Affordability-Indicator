@@ -11,7 +11,7 @@ built on a denominator two definitions away from the one the site claimed.
 
 That class of defect survives a green run because a wrong-but-well-formed series
 is indistinguishable from a right one by shape alone. The same reasoning is why
-`docs/ANALYSIS_GUIDE.md` section 4 rejects AM0106 `Kommun17g`: it would fetch
+`docs/APP_GUIDE.md` section 7 rejects AM0106 `Kommun17g`: it would fetch
 cleanly, the panel would rebuild, the suite would stay green, and the denominator
 would quietly have become "salary of people employed by this council" instead of
 "income of people who live here".
