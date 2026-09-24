@@ -5,7 +5,9 @@ Pulls KPI N03937: Öppet arbetslösa av befolkningen, 18–65 år, andel (%).
 Source provider: Arbetsförmedlingen (Swedish Public Employment Service).
 Distribution channel: Kolada (RKA — Rådet för kommunal analys).
 
-Coverage: All 290 municipalities, 2010–2024 (15 years, consistent methodology).
+Coverage: all municipalities, from 2010 (the first year of the current
+methodology) through whatever Kolada has most recently published. The upper bound
+is resolved at fetch time, never written down — see fetch_unemployment.
 Result cached to data/raw/kolada_unemployment.parquet.
 """
 
@@ -15,6 +17,7 @@ import json
 import logging
 import time
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -25,6 +28,25 @@ BASE_URL = "https://api.kolada.se/v3"
 KPI_ID = "N03937"
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
 CACHE_MAX_AGE_HOURS = 24
+
+# The first year of the KPI's current methodology. A real boundary, unlike the
+# upper one, which is whatever Kolada has published by now.
+FIRST_YEAR = 2010
+
+
+def _latest_possible_year() -> int:
+    """Upper bound for the request window.
+
+    Deliberately optimistic: Kolada answers HTTP 200 with zero records for a year
+    it has not published, so over-asking costs one empty page and under-asking
+    costs a year of data nobody notices is missing. The previous default of 2024
+    meant a full refresh ran to completion while silently leaving unemployment a
+    year behind the SCB series.
+
+    The clock decides how far the *fetcher reaches*, never what the app claims
+    about vintage — that comes from the artifact. See T1.5.
+    """
+    return date.today().year
 
 
 def _cache_path() -> Path:
@@ -56,8 +78,8 @@ def _fetch_paginated(url: str, timeout: int = 30) -> list[dict]:
 
 
 def fetch_unemployment(
-    start_year: int = 2010,
-    end_year: int = 2024,
+    start_year: int = FIRST_YEAR,
+    end_year: int | None = None,
     force: bool = False,
 ) -> pd.DataFrame:
     """Fetch municipal unemployment rate from Kolada KPI N03937.
@@ -72,6 +94,9 @@ def fetch_unemployment(
     pd.DataFrame
         Columns: municipality_code, year, unemployment_rate
     """
+    if end_year is None:
+        end_year = _latest_possible_year()
+
     cache = _cache_path()
     if not force and _cache_is_fresh():
         logger.info("Using cached %s", cache)
@@ -93,16 +118,23 @@ def fetch_unemployment(
                     "year": year,
                     "unemployment_rate": v["value"],
                 })
-    df = pd.DataFrame(rows)
+    # Named columns even when empty: callers index by key, and a bare
+    # DataFrame() would fail on the column rather than on the missing data.
+    df = pd.DataFrame(rows, columns=["municipality_code", "year", "unemployment_rate"])
 
     # Filter to 4-digit municipality codes (exclude county/national aggregates)
-    df_muni = df[df["municipality_code"].str.len() == 4].copy()
+    df_muni = df[df["municipality_code"].astype(str).str.len() == 4].copy()
     df_muni = df_muni.sort_values(["municipality_code", "year"]).reset_index(drop=True)
 
     df_muni.to_parquet(cache, index=False)
-    logger.info("Saved %s  (%d rows, %d municipalities, years %d–%d)",
-                cache, len(df_muni), df_muni["municipality_code"].nunique(),
-                df_muni["year"].min(), df_muni["year"].max())
+    if len(df_muni):
+        logger.info("Saved %s  (%d rows, %d municipalities, years %d–%d)",
+                    cache, len(df_muni), df_muni["municipality_code"].nunique(),
+                    df_muni["year"].min(), df_muni["year"].max())
+    else:
+        logger.warning("Saved %s but Kolada returned no municipal values for "
+                       "%d–%d — check KPI %s upstream", cache, start_year,
+                       end_year, KPI_ID)
 
     # Also save the full dataset (including county/national) for reference
     df.to_parquet(DATA_DIR / "kolada_unemployment_all.parquet", index=False)

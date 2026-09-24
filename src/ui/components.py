@@ -9,7 +9,30 @@ from __future__ import annotations
 import re
 import streamlit as st
 
-from src.ui.css import COLORS
+from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.provenance import generated_at
+from src.ui.labels import L
+from src.ui.tokens import COLORS
+
+
+def _panel_facts(
+    kommun_count: int | None = None,
+    period_start: int | None = None,
+    period_end: int | None = None,
+) -> tuple[int, int, int]:
+    """Resolve the panel's dimensions, reading the artifact for anything omitted.
+
+    Landing copy used to state `290 kommuner` and `2014–2024` as literals, which
+    made the sentences independent of the data they describe — see Finding H.
+    Resolution happens per call rather than at import so a refresh mid-session
+    is picked up, and the explicit arguments exist so tests can vary the panel
+    without writing a file.
+    """
+    return (
+        n_kommuner() if kommun_count is None else kommun_count,
+        first_year() if period_start is None else period_start,
+        complete_case_max_year() if period_end is None else period_end,
+    )
 
 
 def _compact(html: str) -> str:
@@ -29,6 +52,21 @@ def format_sek(value: float, decimals: int = 0) -> str:
     else:
         formatted = f"{value:,.{decimals}f}"
     return formatted.replace(",", "\u00A0").replace(".", ",")
+
+
+def format_sek_compact(value: float) -> str:
+    """Format a SEK value short: "Mkr" from 1 000 000, "tkr" from 10 000.
+
+    For places where the grouped form ("2 041 350 SEK") is wider than its
+    container, such as the five-across regime cards on sida 04. The CSS lets a
+    long value wrap rather than clip; this keeps it from needing to.
+    """
+    magnitude = abs(value)
+    if magnitude >= 1_000_000:
+        return f"{value / 1_000_000:.2f}".replace(".", ",") + " Mkr"
+    if magnitude >= 10_000:
+        return f"{value / 1_000:.0f}".replace(".", ",") + " tkr"
+    return format_sek(value) + " SEK"
 
 
 def format_pct(value: float, decimals: int = 1) -> str:
@@ -75,12 +113,57 @@ def page_title(
 # ── KPI card ──────────────────────────────────────────────────────────
 
 
+def delta_meta(change: float, higher_is_better: bool | None = None) -> dict[str, str]:
+    """Split a change into the two independent facts a KPI delta needs.
+
+    A delta says two things, and conflating them is how this app spent a release
+    telling readers that a one-third fall in affordability was good news.
+
+    **Direction** is a property of the arithmetic: the number went up, down or
+    nowhere. **Sentiment** is a property of the *metric*: whether going up is
+    good depends entirely on what is being measured, and the component cannot
+    know that.
+
+    Before this, `delta_direction` drove both, with the stylesheet hardcoding
+    up as red and down as green — an assumption that only holds for risk-shaped
+    quantities. Pages measuring the opposite bent the parameter to get the
+    colour they wanted, which broke the arrow. The result was the same quantity
+    rendering as a green ▼ on Sida 01, a red ▲ on Sida 03 and a ▼ beside a
+    positive number on Sida 05.
+
+    Args:
+        change: The signed change. Only its sign is used.
+        higher_is_better: True where a rise is good (affordability), False where
+            a rise is bad (a price-to-income ratio, a high-risk count), None
+            where the metric carries no inherent direction (population change).
+            `None` is a real answer, not a default to fall back on: colouring a
+            neutral metric asserts a judgement the data does not make.
+
+    Returns:
+        Keyword arguments for :func:`kpi_card`.
+    """
+    if change > 0:
+        direction = "up"
+    elif change < 0:
+        direction = "down"
+    else:
+        direction = "flat"
+
+    if higher_is_better is None or direction == "flat":
+        sentiment = "neutral"
+    else:
+        sentiment = "good" if (direction == "up") == higher_is_better else "bad"
+
+    return {"delta_direction": direction, "delta_sentiment": sentiment}
+
+
 def kpi_card(
     label: str,
     value: str,
     unit: str = "",
     delta: str = "",
     delta_direction: str = "flat",
+    delta_sentiment: str = "neutral",
     variant: str = "default",
     tooltip: str | None = None,
 ) -> str:
@@ -91,7 +174,11 @@ def kpi_card(
         value: Main display value.
         unit: Optional unit suffix.
         delta: Delta text (e.g. "+2.3%").
-        delta_direction: "up", "down", or "flat".
+        delta_direction: Which way the number moved: "up", "down" or "flat".
+            This chooses the **arrow** and nothing else.
+        delta_sentiment: Whether that movement is "good", "bad" or "neutral"
+            *for this metric*. This chooses the **colour** and nothing else.
+            Use :func:`delta_meta` rather than setting the two by hand.
         variant: "default", "accent", "danger", or "success".
         tooltip: Optional tooltip text shown on hover.
     """
@@ -99,11 +186,12 @@ def kpi_card(
     if delta:
         arrows = {"up": "\u25B2", "down": "\u25BC", "flat": "\u25C6"}
         arrow = arrows.get(delta_direction, "")
-        delta_html = f'<div class="shai-kpi-delta {delta_direction}">{arrow} {delta}</div>'
+        classes = f"shai-dir-{delta_direction} shai-mood-{delta_sentiment}"
+        delta_html = f'<div class="shai-kpi-delta {classes}">{arrow} {delta}</div>'
 
     unit_html = f'<span class="shai-kpi-unit">{unit}</span>' if unit else ""
     tip_attr = f'title="{tooltip}"' if tooltip else ""
-    tip_class = " kpi-card--tipped" if tooltip else ""
+    tip_class = " shai-kpi-card--tipped" if tooltip else ""
 
     return f"""
     <div class="shai-kpi-card variant-{variant}{tip_class}" {tip_attr}>
@@ -177,258 +265,132 @@ def risk_pill(level: str) -> str:
 def footer_note(
     source: str = "SCB, Riksbanken, Kolada",
     version: str = "SHAI v1.3",
+    updated: str | None = None,
 ) -> None:
-    """Render the standard page footer."""
+    """Render the standard page footer.
+
+    Args:
+        source: Attribution line.
+        version: App version.
+        updated: ISO timestamp of the data build. Defaults to the provenance
+            artifact; pass a value only to override it in a test.
+    """
+    stamp = (updated or generated_at())[:10]
     html = f"""
     <div class="shai-footer-note">
         <span><strong>KÄLLA:</strong> {source}</span>
+        <span>{L("ui.data_uppdaterad_v0", v0=stamp)}</span>
         <span><code>{version}</code></span>
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
 
 
-# ══════════════════════════════════════════════════════════════════════
-# LANDING PAGE COMPONENTS
-# ══════════════════════════════════════════════════════════════════════
+# ── Explanation, glossary and vintage ─────────────────────────────────
 
 
-def render_landing_hero() -> None:
-    """Render the KRI-style landing hero section."""
-    html = """
-    <div class="lp-hero">
-        <div class="lp-hero-inner">
-            <div class="lp-eyebrow">Bostadsekonomisk hållbarhetsanalys</div>
-            <h1 class="lp-headline">Swedish Housing<br>Affordability Indicator</h1>
-            <p class="lp-hero-lead">
-                Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner
-                och 21 län &mdash; med tre ekonometriska formler, prognoser och scenariosimulering.
-            </p>
-        </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+def explanation(text: str) -> None:
+    """Render a prose line explaining the numbers directly above it.
 
-
-def render_landing_stat_strip(stats: list[dict]) -> None:
-    """Render a stat strip connected to the hero.
+    A dashboard's default failure is a confident number with no statement of what
+    it means or what it cannot show. Every KPI row, chart and stat strip in this
+    app now carries one of these. See T3.4.
 
     Args:
-        stats: List of dicts with keys: label, value, unit.
+        text: The explanation, from `SWEDISH_LABELS`. Interpolate any figure it
+            quotes from the data — a number typed into an explanation is the
+            defect T4.1 exists to catch, one layer down.
     """
-    cells = ""
-    for s in stats:
-        cells += f"""
-        <div class="lp-stat-cell">
-            <div class="lp-stat-label">{s['label']}</div>
-            <div class="lp-stat-value">{s['value']}</div>
-            <div class="lp-stat-unit">{s.get('unit', '')}</div>
-        </div>
-        """
-    html = f'<div class="lp-stat-strip">{cells}</div>'
-    st.markdown(_compact(html), unsafe_allow_html=True)
+    st.markdown(f'<div class="shai-explanation">{text}</div>', unsafe_allow_html=True)
 
 
-def render_landing_what_is_block() -> None:
-    """Render the 'Vad ar SHAI?' explanation block."""
-    html = """
-    <div class="lp-section">
-        <div class="lp-section-title">Vad är SHAI?</div>
-        <div class="lp-card-light lp-explain-card">
-            <div class="lp-body">
-                SHAI (Swedish Housing Affordability Indicator) mäter strukturell
-                bostadsekonomisk hållbarhet genom tre ekonometriska formler som
-                kombinerar inkomst, bostadspriser, räntor och inflation.
-            </div>
-            <div class="lp-body-secondary">
-                Indikatorn analyserar Sveriges 290 kommuner och 21 län med data
-                från SCB, Riksbanken och Kolada. Utöver indexet erbjuds prognoser
-                (Prophet och ARIMA), kontantinsatsanalys under fyra regelverk,
-                och en scenariosimulator för stresstester.
-            </div>
-        </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
-
-
-def render_index_visual_block() -> None:
-    """Render the index overview block with weight bars and flow diagram."""
-    weights = [
-        ("K/T-kvot (prisnivå)", 35, COLORS["secondary"]),
-        ("Medianinkomst", 25, "#3D8B6E"),
-        ("Styrränta (nominal)", 20, COLORS["accent"]),
-        ("Inflation (KPI)", 10, "#D4785A"),
-        ("Arbetslöshet", 10, "#7B68A8"),
-    ]
-
-    bars_html = ""
-    for name, pct, color in weights:
-        bars_html += f"""
-        <div class="lp-weight-row">
-            <span class="lp-weight-name">{name}</span>
-            <div class="lp-weight-bar-wrap">
-                <div class="lp-weight-bar" style="width:{pct}%;background:{color};"></div>
-            </div>
-            <span class="lp-weight-pct">{pct}%</span>
-        </div>
-        """
-
-    flow_svg = """
-    <div class="lp-flow-svg-wrap">
-        <svg viewBox="0 0 580 130" class="lp-flow-svg" aria-hidden="true">
-            <defs>
-                <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#C4A35A"/>
-                </marker>
-                <marker id="arr-g" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2E7D5B"/>
-                </marker>
-                <marker id="arr-y" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#D4A03C"/>
-                </marker>
-                <marker id="arr-r" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#B94A48"/>
-                </marker>
-            </defs>
-
-            <!-- Input indicators -->
-            <rect x="0" y="8" width="110" height="26" rx="4" fill="rgba(74,111,165,0.1)" stroke="#4A6FA5" stroke-width="1"/>
-            <text x="55" y="25" text-anchor="middle" fill="#4A6FA5" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Inkomst</text>
-
-            <rect x="0" y="42" width="110" height="26" rx="4" fill="rgba(61,139,110,0.1)" stroke="#3D8B6E" stroke-width="1"/>
-            <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">K/T-kvot</text>
-
-            <rect x="0" y="76" width="110" height="26" rx="4" fill="rgba(196,163,90,0.1)" stroke="#C4A35A" stroke-width="1"/>
-            <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Ränta &amp; Inflation</text>
-
-            <!-- Arrows to center -->
-            <line x1="115" y1="21" x2="210" y2="55" stroke="#C4A35A" stroke-width="1.5" marker-end="url(#arr)"/>
-            <line x1="115" y1="55" x2="210" y2="55" stroke="#C4A35A" stroke-width="1.5" marker-end="url(#arr)"/>
-            <line x1="115" y1="89" x2="210" y2="55" stroke="#C4A35A" stroke-width="1.5" marker-end="url(#arr)"/>
-
-            <!-- SHAI box -->
-            <rect x="215" y="32" width="130" height="46" rx="5" fill="#0B1F3F" stroke="#C4A35A" stroke-width="1.5"/>
-            <text x="280" y="52" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="bold" font-family="Source Sans 3, sans-serif">SHAI Index</text>
-            <text x="280" y="68" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="9" font-family="IBM Plex Mono, monospace">A · B · C</text>
-
-            <!-- Arrows to outputs -->
-            <line x1="350" y1="42" x2="420" y2="21" stroke="#2E7D5B" stroke-width="1.5" marker-end="url(#arr-g)"/>
-            <line x1="350" y1="55" x2="420" y2="55" stroke="#D4A03C" stroke-width="1.5" marker-end="url(#arr-y)"/>
-            <line x1="350" y1="68" x2="420" y2="89" stroke="#B94A48" stroke-width="1.5" marker-end="url(#arr-r)"/>
-
-            <!-- Risk class outputs -->
-            <rect x="425" y="8" width="110" height="26" rx="4" fill="rgba(46,125,91,0.12)" stroke="#2E7D5B" stroke-width="1"/>
-            <text x="480" y="25" text-anchor="middle" fill="#2E7D5B" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Låg risk</text>
-
-            <rect x="425" y="42" width="110" height="26" rx="4" fill="rgba(212,160,60,0.12)" stroke="#D4A03C" stroke-width="1"/>
-            <text x="480" y="59" text-anchor="middle" fill="#D4A03C" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Medel risk</text>
-
-            <rect x="425" y="76" width="110" height="26" rx="4" fill="rgba(185,74,72,0.12)" stroke="#B94A48" stroke-width="1"/>
-            <text x="480" y="93" text-anchor="middle" fill="#B94A48" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Hög risk</text>
-        </svg>
-    </div>
-    """
-
-    html = f"""
-    <div class="lp-section">
-        <div class="lp-section-title">Indexet i överblick</div>
-        <div class="lp-card-light lp-visual">
-            {bars_html}
-            <div style="height:24px;"></div>
-            {flow_svg}
-        </div>
-    </div>
-    """
-    st.markdown(_compact(html), unsafe_allow_html=True)
-
-
-def render_landing_steps() -> None:
-    """Render the 3-step pipeline explanation."""
-    steps = [
-        (
-            "01",
-            "Datainsamling",
-            "SCB, Riksbanken och Kolada levererar kommunal inkomst, "
-            "K/T-kvot, styrränta, inflation och arbetslöshet.",
-        ),
-        (
-            "02",
-            "Normalisering",
-            "Värden z-standardiseras över hela panelen "
-            "(2014\u20132024, 290 kommuner) för jämförbar ranking.",
-        ),
-        (
-            "03",
-            "Klassificering",
-            "Tre formler (A, B, C) beräknas och kommuner klassas "
-            "som låg, medel eller hög risk.",
-        ),
-    ]
-
-    steps_html = ""
-    for i, (num, title, text) in enumerate(steps):
-        connector = ""
-        if i < len(steps) - 1:
-            connector = """
-            <div class="lp-step-connector">
-                <svg class="lp-step-arrow-svg" viewBox="0 0 40 24" aria-hidden="true">
-                    <path d="M0 12h30l-6-6M30 12l-6 6" fill="none" stroke="#C4A35A" stroke-width="2"/>
-                </svg>
-            </div>
-            """
-        steps_html += f"""
-        <div class="lp-step">
-            <div class="lp-step-num">{num}</div>
-            <div class="lp-step-title">{title}</div>
-            <div class="lp-step-text">{text}</div>
-        </div>
-        {connector}
-        """
-
-    html = f"""
-    <div class="lp-section">
-        <div class="lp-section-title">Så fungerar det i korthet</div>
-        <div class="lp-steps">{steps_html}</div>
-    </div>
-    """
-    # st.markdown parses as Markdown; indented HTML is treated as code blocks and
-    # the first step loses its tags (plain text inside .lp-steps). st.html is raw HTML.
-    st.html(_compact(html))
-
-
-def render_landing_nav_card(
-    title: str,
-    desc: str,
-    tag: str = "",
+def purpose_panel(
+    heading: str, paragraphs: list[str], when_label: str, when: list[str]
 ) -> str:
-    """Return HTML for a landing navigation card."""
-    tag_html = f'<span class="lp-nav-tag">{tag}</span>' if tag else ""
-    return f"""
-    <div class="lp-nav-card">
-        <div class="lp-nav-card-head">
-            {tag_html}
-        </div>
-        <div class="lp-nav-title">{title}</div>
-        <div class="lp-nav-desc">{desc}</div>
-    </div>
+    """Return the "what this page is for" block that opens an analysis page.
+
+    Sida 04 and Sida 05 are the two pages that are *tools* rather than views:
+    the reader supplies inputs and the page answers a question. Both opened on a
+    subtitle describing their contents ("Historiska och nuvarande regelverk och
+    insatskrav") followed immediately by a provenance caveat about which SCB
+    table is published at which geographic level. That is methodology arriving
+    before purpose, and it leaves a reader who does not already know what the
+    page is for with no way to find out.
+
+    The material already existed, in `docs/APP_GUIDE.md` sections 4 and 5
+    under "Why it exists" and "When to use it". It had simply never reached the
+    page it describes.
+
+    Args:
+        heading: Card title, phrased as what the page answers.
+        paragraphs: Plain sentences. The component adds the markup, so the copy
+            itself stays tag-free and therefore stays in `SWEDISH_LABELS` rather
+            than in `TEMPLATES` — see R9.
+        when_label: Heading for the list of situations.
+        when: Situations in which the page is the right tool.
+
+    Returns:
+        HTML for a `.shai-card`, to be rendered inside a bordered container.
     """
+    body = "".join(f"<p>{para}</p>" for para in paragraphs)
+    items = "".join(f"<li>{item}</li>" for item in when)
+    return _compact(f"""
+    <div class="shai-purpose">
+        <div class="shai-card-title">{heading}</div>
+        <div class="shai-purpose-body">{body}</div>
+        <div class="shai-purpose-when-label">{when_label}</div>
+        <ul class="shai-purpose-when">{items}</ul>
+    </div>
+    """)
 
 
-def render_landing_credibility(version: str = "") -> None:
-    """Render the credibility/data source block."""
-    version_str = f"SHAI v{version} &middot; " if version else ""
-    html = f"""
-    <div class="lp-cred">
-        <div class="lp-cred-pills">
-            <span class="lp-cred-pill">SCB</span>
-            <span class="lp-cred-pill">Riksbanken</span>
-            <span class="lp-cred-pill">Kolada</span>
-            <span class="lp-cred-pill">Finansinspektionen</span>
-        </div>
-        <div class="lp-cred-meta">
-            {version_str}Öppen data &middot; 290 kommuner &middot; 2014&ndash;2024
-        </div>
-    </div>
+def help_badge(*terms: str) -> str:
+    """Return a "?" affordance revealing definitions for `terms`.
+
+    Replaces bare `title=` tooltips, which are invisible to keyboard users and to
+    anyone on a touch screen. The popover is plain markup: it needs no JavaScript,
+    opens on focus as well as hover, and carries an aria-label so a screen reader
+    announces it as a definition list rather than a stray question mark.
+
+    Args:
+        terms: Glossary keys, each `SWEDISH_LABELS["glossary.<term>"]`.
+
+    Returns:
+        HTML for inclusion in a card header.
+
+    Raises:
+        KeyError: If a term has no glossary entry — loudly, because a silent miss
+            renders a "?" that explains nothing.
     """
-    st.markdown(html, unsafe_allow_html=True)
+    if not terms:
+        return ""
+    items = "".join(
+        f"<dt>{L(f'glossary.{term}.term')}</dt><dd>{L(f'glossary.{term}.def')}</dd>"
+        for term in terms
+    )
+    label = L("ui.forklaring_av_begrepp")
+    return (
+        '<span class="shai-help">'
+        f'<button class="shai-help-mark" type="button" aria-label="{label}">?</button>'
+        f'<span class="shai-help-pop" role="note"><dl>{items}</dl></span>'
+        "</span>"
+    )
+
+
+def vintage_badge(updated: str | None = None) -> None:
+    """Render the data vintage as a visible badge.
+
+    Finding C was the app claiming freshness from `date.today()`. T1.5 fixed the
+    source; this makes the answer visible rather than a sidebar footnote, so a
+    reader knows how old the numbers are without going looking.
+
+    Args:
+        updated: ISO timestamp. Defaults to the provenance artifact's
+            `generated_at` — when the *data* was built, never when the page ran.
+    """
+    stamp = (updated or generated_at())[:10]
+    st.markdown(
+        f'<div class="shai-vintage"><span class="shai-vintage-dot"></span>'
+        f'{L("ui.data_uppdaterad_v0", v0=stamp)}</div>',
+        unsafe_allow_html=True,
+    )

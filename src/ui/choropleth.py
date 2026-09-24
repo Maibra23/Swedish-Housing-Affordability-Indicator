@@ -15,15 +15,39 @@ import branca.colormap as cm
 import folium
 import pandas as pd
 import streamlit as st
+
+from src.ui.labels import L
+from src.ui.map_labels import (
+    _label_latlon,
+    _mean_latlon_from_geometry,
+    _municipality_label_div,
+)
 from branca.element import MacroElement
 from folium.features import DivIcon
 from folium.template import Template
-from streamlit_folium import folium_static
+import streamlit.components.v1 as components
 
 from src.ui.css import DIVERGING_SCALE
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 GEOJSON_PATH = PROJECT_ROOT / "data" / "geo" / "kommuner.geojson"
+
+# Basemap. Was ``tiles="CartoDB.PositronNoLabels"`` until basemaps.cartocdn.com
+# began stamping "API KEY REQUIRED" across anonymous requests — the watermark
+# renders on top of the choropleth. KRI hit this first and moved to Esri's
+# light-grey canvas; this matches its MAP_TILES constant.
+MAP_TILES = {
+    "url": (
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+        "World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+    ),
+    "attribution": "Tiles &copy; Esri: Esri, DeLorme, NAVTEQ",
+    "name": "Ljus gråskala",
+    "max_zoom": 16,
+    # Drawn behind the tiles so an unreachable host degrades to a clean canvas
+    # rather than a black void.
+    "background": "#F2F3F5",
+}
 
 # Initial map zoom; labels appear only after this many zoom-in steps from here.
 _MAP_ZOOM_START = 5
@@ -75,72 +99,100 @@ def _load_geojson() -> dict | None:
         return None
 
 
-def _mean_latlon_from_geometry(geometry: dict) -> tuple[float, float] | None:
-    """Mean coordinate of GeoJSON Polygon/MultiPolygon rings (lon,lat → lat,lon)."""
-    if not geometry or "coordinates" not in geometry:
-        return None
-    lats: list[float] = []
-    lons: list[float] = []
-
-    def walk(node: object) -> None:
-        if isinstance(node, (list, tuple)) and node:
-            if isinstance(node[0], (int, float)) and len(node) >= 2:
-                lon, lat = float(node[0]), float(node[1])
-                lons.append(lon)
-                lats.append(lat)
-            else:
-                for child in node:
-                    walk(child)
-
-    walk(geometry["coordinates"])
-    if not lats:
-        return None
-    return sum(lats) / len(lats), sum(lons) / len(lons)
 
 
-def _label_latlon(feature: dict) -> tuple[float, float] | None:
-    props = feature.get("properties") or {}
-    gp = props.get("geo_point_2d")
-    if isinstance(gp, (list, tuple)) and len(gp) >= 2:
-        return float(gp[0]), float(gp[1])
-    geom = feature.get("geometry")
-    if geom:
-        return _mean_latlon_from_geometry(geom)
-    return None
 
 
-def _municipality_label_div(name: str) -> str:
-    """Small always-on label; halo keeps text legible on any fill colour."""
-    safe = html.escape(name or "", quote=True)
-    return (
-        '<div style="font-size:7.5px;line-height:1.05;color:#1A1A2E;'
-        "text-align:center;font-family:'Source Sans Pro',sans-serif;"
-        "font-weight:600;white-space:nowrap;max-width:96px;"
-        "overflow:hidden;text-overflow:ellipsis;"
-        "text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,"
-        '0 0 4px #fff;pointer-events:none;">'
-        + safe
-        + "</div>"
+
+
+def build_colormap(scores: pd.Series) -> cm.LinearColormap:
+    """Diverging colour scale anchored on the spread of the scores being drawn.
+
+    The domain used to be a fixed ``vmin=-2.5, vmax=2.5``. SHAI's ``z_c`` is
+    strongly left-skewed — across the eleven years it reaches -6.10 but never
+    exceeds +1.47 — so that domain was wrong at both ends at once. It clipped
+    104 municipality-years off the green end, rendering Åsele (-3.76) and
+    Överkalix (-3.08) as the same flat shade, while the top 43 % of the red ramp
+    went unused because no municipality ever got there.
+
+    Stops are placed on the data instead: the ends at the actual minimum and
+    maximum, the neutral colour at the median, and the green and red steps at
+    the 25th and 75th percentiles — the same quartiles that set ``risk_c``, so
+    the map and the ranking tables tell one story.
+
+    Orientation follows ``indices/normalize.py``: lower z is more affordable, so
+    the low end is green.
+
+    Args:
+        scores: The values about to be drawn. NaNs are ignored.
+
+    Returns:
+        A colormap whose domain covers every score passed in.
+    """
+    clean = pd.Series(scores, dtype=float).dropna()
+    if clean.empty:
+        clean = pd.Series([-1.0, 1.0])
+
+    low = float(clean.min())
+    high = float(clean.max())
+    q25 = float(clean.quantile(0.25))
+    median = float(clean.median())
+    q75 = float(clean.quantile(0.75))
+
+    stops = [low, (low + q25) / 2, q25, median, q75, (q75 + high) / 2, high]
+
+    # A degenerate spread — one municipality selected, or every score equal —
+    # yields repeated stops, which branca rejects. Fall back to an evenly spaced
+    # domain around the value rather than crashing the page.
+    if any(b <= a for a, b in zip(stops, stops[1:])):
+        centre = median
+        extent = max(high - low, abs(centre), 1.0) / 2
+        step = 2 * extent / (len(DIVERGING_SCALE) - 1)
+        stops = [centre - extent + i * step for i in range(len(DIVERGING_SCALE))]
+
+    return cm.LinearColormap(
+        colors=list(DIVERGING_SCALE),
+        index=stops,
+        vmin=stops[0],
+        vmax=stops[-1],
+        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
     )
 
 
-def render_choropleth(
+# 24 entries x ~1.2 MB = ~29 MB, which is the deliberate ceiling. The full input
+# space is 11 years x 7 risk combinations = 77; caching all of it would cost
+# ~116 MB, too much to spend on a 1 GB Streamlit Cloud instance for an
+# interaction nobody performs exhaustively. Year changes — the common move — fit
+# comfortably; unusual risk combinations pay the rebuild once.
+@st.cache_data(show_spinner=False, max_entries=24)
+def _map_html(
     data: pd.DataFrame,
     value_col: str = "z_c",
     name_col: str = "region_name",
     risk_col: str = "risk_c",
     height: int = 480,
-    key: str = "shai_choropleth",
-) -> None:
-    """Render a full polygon choropleth of Swedish municipalities.
+) -> str:
+    """Build the map and return it as a standalone HTML document.
+
+    Cached because this is where the time goes: folium renders the map through
+    Jinja2 into a ~1.2 MB document, measured at 83 % of the choropleth cost, and
+    Streamlit re-executes the whole script on any widget change — so toggling a
+    risk pill used to rebuild a megabyte of HTML. Keyed on the dataframe, so a
+    year change rebuilds and nothing else does.
+
+    The frame arrives already risk-filtered, so each filter combination is its
+    own entry. That is the trade-off behind `max_entries`; see the note above.
 
     Args:
         data: One row per municipality with region_code and SHAI values.
-        value_col: Column with the numeric z-score to visualize.
-        name_col: Column with the municipality name.
+        value_col: Column holding the numeric z-score to visualise.
+        name_col: Column holding the municipality name.
         risk_col: Risk class column (lag/medel/hog).
         height: Map height in pixels.
-        key: Unique key for the component.
+
+    Returns:
+        The rendered map document, or an empty string when the GeoJSON is
+        missing — the caller turns that into a warning.
     """
     risk_labels = {"lag": "Låg", "medel": "Medel", "hog": "Hög"}
 
@@ -174,8 +226,7 @@ def render_choropleth(
     # Load and enrich GeoJSON
     _raw = _load_geojson()
     if _raw is None:
-        st.warning("Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.")
-        return
+        return ""
     geojson = json.loads(json.dumps(_raw))
 
     for feat in geojson["features"]:
@@ -190,28 +241,34 @@ def render_choropleth(
         feat["properties"]["SHAI Poäng"] = d.get("shai_fmt", "Saknas")
         feat["properties"]["Z-poäng"] = d.get("z_fmt", "Saknas")
         feat["properties"]["Rang"] = d.get("rank_fmt", "Saknas")
-        feat["properties"]["Medianpris"] = d.get("price_fmt", "Saknas")
+        feat["properties"]["Medelpris"] = d.get("price_fmt", "Saknas")
         feat["properties"]["Medianinkomst"] = d.get("income_fmt", "Saknas")
         feat["properties"]["Arbetslöshet"] = d.get("unemp_fmt", "Saknas")
         feat["properties"]["_z"] = d.get("z_score", 0.0)
 
-    # Color scale — diverging green→neutral→red, matching KRI design
-    colormap = cm.LinearColormap(
-        colors=list(DIVERGING_SCALE),
-        vmin=-2.5,
-        vmax=2.5,
-        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
-    )
+    # This must be the whole year, not a filtered subset. When it was the subset,
+    # moving a risk pill rescaled the legend and the same colour meant different
+    # things before and after the click — Stockholm went #c56f43 to #b94a48 with
+    # its z_c unchanged. See Q1 in docs/OPTIMIZATION_PLAN.md.
+    colormap = build_colormap(sub[value_col].astype(float))
 
-    # Basemap — light polygons only (no OSM placenames: Positron "with labels"
-    # shows cities worldwide and reads as unrelated to SHAI).
+    # Basemap — light polygons only (no OSM placenames: a labelled basemap shows
+    # cities worldwide and reads as unrelated to SHAI).
     m = folium.Map(
         location=[63.0, 17.5],
         zoom_start=_MAP_ZOOM_START,
-        tiles="CartoDB.PositronNoLabels",
+        tiles=MAP_TILES["url"],
+        attr=MAP_TILES["attribution"],
+        name=MAP_TILES["name"],
+        max_zoom=MAP_TILES["max_zoom"],
         prefer_canvas=True,
         zoom_control=True,
         scrollWheelZoom=False,
+    )
+    m.get_root().header.add_child(
+        folium.Element(
+            f"<style>.folium-map {{ background: {MAP_TILES['background']}; }}</style>"
+        )
     )
 
     def _style(feature: dict) -> dict:
@@ -249,11 +306,11 @@ def render_choropleth(
         tooltip=folium.GeoJsonTooltip(
             fields=[
                 "Kommun", "Riskklass", "SHAI Poäng", "Z-poäng", "Rang",
-                "Medianpris", "Medianinkomst", "Arbetslöshet",
+                "Medelpris", "Medianinkomst", "Arbetslöshet",
             ],
             aliases=[
                 "<b>Kommun</b>", "<b>Riskklass</b>", "SHAI Poäng", "Z-poäng", "Rang",
-                "Medianpris", "Medianinkomst", "Arbetslöshet",
+                "Medelpris", "Medianinkomst", "Arbetslöshet",
             ],
             sticky=True,
             style=tooltip_css,
@@ -285,4 +342,31 @@ def render_choropleth(
 
     colormap.add_to(m)
 
-    folium_static(m, width=None, height=height)
+    return m.get_root().render()
+
+
+def render_choropleth(
+    data: pd.DataFrame,
+    value_col: str = "z_c",
+    name_col: str = "region_name",
+    risk_col: str = "risk_c",
+    height: int = 480,
+    key: str = "shai_choropleth",
+) -> None:
+    """Render a full polygon choropleth of Swedish municipalities.
+
+    Args:
+        data: One row per municipality with region_code and SHAI values.
+        value_col: Column with the numeric z-score to visualize.
+        name_col: Column with the municipality name.
+        risk_col: Risk class column (lag/medel/hog).
+        height: Map height in pixels.
+        key: Unique key for the component.
+    """
+    html = _map_html(data, value_col, name_col, risk_col, height)
+    if not html:
+        st.warning(L("rv.kartfilen_saknas"))
+        return
+    # `st.components.v1.html` directly, rather than `folium_static`, which is
+    # deprecated and scheduled for removal (R8). This is what it did anyway.
+    components.html(html, height=height, scrolling=False)

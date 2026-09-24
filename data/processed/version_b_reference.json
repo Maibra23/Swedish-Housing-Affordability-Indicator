@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "note": "Frozen z-score reference for Version B. Scoring against stored moments is what stops a refresh re-basing every historical value; see R1 in docs/OPEN_RISKS.md and src/indices/b_reference.py. Do not regenerate this file as part of an ordinary refresh.",
+  "levels": {
+    "county": {
+      "derived_from": {
+        "min_year": 2014,
+        "max_year": 2024,
+        "rows": 231
+      },
+      "moments": {
+        "pi_ratio": {
+          "mean": 8.5526086877809,
+          "std": 3.0117245047131673
+        },
+        "policy_rate": {
+          "mean": 0.575552823971717,
+          "std": 1.4550121184407874
+        },
+        "unemployment_rate": {
+          "mean": 2.98937174891775,
+          "std": 0.6403235677755476
+        },
+        "cpi_yoy_pct": {
+          "mean": 2.6242424242424245,
+          "std": 2.917210357757861
+        }
+      }
+    },
+    "municipal": {
+      "derived_from": {
+        "min_year": 2014,
+        "max_year": 2024,
+        "rows": 3190
+      },
+      "moments": {
+        "pi_ratio": {
+          "mean": 7.5854908720464875,
+          "std": 4.836336101785277
+        },
+        "policy_rate": {
+          "mean": 0.5755528239717171,
+          "std": 1.4520869434211285
+        },
+        "unemployment_rate": {
+          "mean": 2.8836020664576805,
+          "std": 0.9632842065820298
+        },
+        "cpi_yoy_pct": {
+          "mean": 2.624242424242424,
+          "std": 2.91134556064899
+        }
+      }
+    },
+    "national": {
+      "derived_from": {
+        "min_year": 2014,
+        "max_year": 2024,
+        "rows": 11
+      },
+      "moments": {
+        "pi_ratio": {
+          "mean": 10.431415855538063,
+          "std": 0.8250162633615806
+        },
+        "policy_rate": {
+          "mean": 0.5755528239717171,
+          "std": 1.5227229071417645
+        },
+        "unemployment_rate": {
+          "mean": 3.143092090909091,
+          "std": 0.4212149450457461
+        },
+        "cpi_yoy_pct": {
+          "mean": 2.6242424242424245,
+          "std": 3.0529663501836266
+        }
+      }
+    }
+  }
+}

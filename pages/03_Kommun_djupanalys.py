@@ -1,10 +1,13 @@
 """Sida 03 — Kommun djupanalys.
 
 Prognos och detaljanalys per kommun med Prophet och ARIMA.
-Historisk SHAI 2014–2024 + prognos 2025–2030.
+Historisk SHAI över indexets hela period + prognos sex år framåt.
 """
 
 import streamlit as st
+
+from src.ui.labels import L
+from src.ui.templates import T
 
 st.set_page_config(
     page_title="SHAI · Kommun djupanalys",
@@ -18,30 +21,51 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, card_header, footer_note, kpi_card, render_kpi_row, format_pct
+from src.ui.components import (
+    card_header,
+    explanation,
+    footer_note,
+    format_pct,
+    delta_meta,
+    kpi_card,
+    page_title,
+    render_kpi_row,
+    vintage_badge,
+)
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
 
 inject_css()
-selections = render_sidebar(page_key="kd")
+selections = render_sidebar()
+
+# Period and panel size come from the provenance artifact: a literal
+# "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+PERIOD = f"{PERIOD_START}–{PERIOD_END}"
+N_YEARS = PERIOD_END - PERIOD_START + 1
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
+        municipal = load_artifact("affordability_municipal.parquet")
+        # The forecast is computed at county level, so the chart needs the county
+        # history to continue rather than the municipality's.
+        county_hist = load_artifact("affordability_county.parquet")
 
         try:
-            forecast_prophet = pd.read_parquet("data/processed/forecast_prophet.parquet")
+            forecast_prophet = load_artifact("forecast_prophet.parquet")
         except FileNotFoundError:
             forecast_prophet = pd.DataFrame()
 
         try:
-            forecast_arima = pd.read_parquet("data/processed/forecast_arima.parquet")
+            forecast_arima = load_artifact("forecast_arima.parquet")
         except FileNotFoundError:
             forecast_arima = pd.DataFrame()
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("kd.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -58,7 +82,7 @@ page_title(
 # ── Kommun selector ──────────────────────────────────────────────────
 kommun_list = sorted(municipal["region_name"].unique())
 selected_kommun = st.selectbox(
-    "Välj kommun",
+    L("kd.valj_kommun"),
     kommun_list,
     index=kommun_list.index("Stockholm") if "Stockholm" in kommun_list else 0,
     key="kd_kommun_select",
@@ -67,10 +91,11 @@ selected_kommun = st.selectbox(
 kommun_data = municipal[municipal["region_name"] == selected_kommun].sort_values("year")
 
 if len(kommun_data) == 0:
-    st.warning("Inga data tillgängliga för den valda kommunen.")
+    st.warning(L("kd.inga_data_tillgangliga_for_den_valda"))
     st.stop()
 
 lan_code = kommun_data["lan_code"].iloc[0]
+_county_hist = county_hist[county_hist["lan_code"] == lan_code].sort_values("year")
 
 # ── KPI summary for selected kommun ─────────────────────────────────
 latest = kommun_data[kommun_data["year"] == selected_year]
@@ -87,30 +112,32 @@ if len(latest) > 0:
         kpi_card(
             label="SHAI (Version C)",
             value=f"{lat['version_c']:.1f}".replace(".", ","),
-            unit="poäng",
+            unit=L("kd.poang"),
             delta=f"{vc_delta_pct:+.1f}%".replace(".", ",") if len(prev) > 0 else "",
-            delta_direction="down" if vc_delta > 0 else "up" if vc_delta < 0 else "flat",
+            # Was deliberately inverted to force a red colour, which made the
+            # arrow point the opposite way to the number it labelled.
+            **delta_meta(vc_delta, higher_is_better=True),
             variant="accent",
-            tooltip="Realversion. Inkomst / (Pris × max(R−π, 0,5%)). Högre = bättre överkomlighet. Råkvot, ej ett 0–100 index.",
+            tooltip=L("kd.realversion_inkomst_pris_max_r_0_5_hogre"),
         ),
         kpi_card(
             label="Medianinkomst",
             value=f"{lat['median_income']:,.0f}".replace(",", "\u00A0"),
             unit="SEK",
             variant="default",
-            tooltip="Sammanräknad förvärvsinkomst, medelvärde per individ (SCB HE0110). Individuell bruttoinkomst — ej hushållsinkomst.",
+            tooltip=L("kd.sammanraknad_forvarvsinkomst_medelvarde_per"),
         ),
         kpi_card(
             label="K/T-kvot",
             value=f"{lat['kt_ratio']:.2f}".replace(".", ","),
             variant="default",
-            tooltip="Köpeskillingskoefficient: köpeskilling / taxeringsvärde. Speglar relativ prisnivå. Obs: K/T ingår ej i SHAI-formeln — transaktionspriset i SEK används.",
+            tooltip=L("kd.kopeskillingskoefficient_kopeskilling"),
         ),
         kpi_card(
-            label="Styrränta",
+            label=L("kd.styrranta"),
             value=f"{lat['policy_rate']:.2f}%".replace(".", ","),
             variant="default",
-            tooltip="Riksbankens styrränta, årsgenomsnitt. Nationell — samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
+            tooltip=L("kd.riksbankens_styrranta_arsgenomsnitt"),
         ),
     ])
 
@@ -118,9 +145,7 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 # ── Caveat callout ───────────────────────────────────────────────────
 st.warning(
-    "**Prognoser baseras på 11 årliga observationer (2014–2024).** "
-    "Konfidensintervall vidgas snabbt efter år 3. "
-    "Tolka långtidsprognoser med försiktighet."
+    L("kd.prognoser_baseras_pa_v0_arliga_observationer", v0=N_YEARS, v1=PERIOD)
 )
 
 
@@ -129,8 +154,23 @@ def _build_forecast_chart(
     forecast_df: pd.DataFrame,
     lan_code: str,
     model_name: str,
+    county_hist: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """Build combined historical + forecast chart for Version C."""
+    """Historical Version C for the municipality, with the county forecast.
+
+    The two are different geographies and the chart used to hide that. It drew
+    the forecast starting from the *municipality's* last value, so Stockholm's
+    line ran along at about 6 and then jumped to the county's 2025 forecast near
+    11. That reads as a forecast of a sudden improvement; it is a seam between
+    two series.
+
+    SCB publishes no municipal forecast, and the pipeline fits at county level
+    (`arima_pipeline.forecast_county`). So the county's own history is drawn as
+    the line the forecast actually continues, and the forecast is anchored to
+    the county's last observed value rather than the municipality's. The
+    municipal line stays as the page's subject. Nothing is stitched across a
+    geography any more.
+    """
     fig = go.Figure()
 
     # Historical line
@@ -138,11 +178,23 @@ def _build_forecast_chart(
         x=hist_data["year"],
         y=hist_data["version_c"],
         mode="lines+markers",
-        name="Historisk",
+        name=L("kd.serie_kommunen"),
         line=dict(color=COLORS["primary"], width=2.5),
         marker=dict(size=6, color=COLORS["primary"]),
         hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra>Historisk</extra>",
     ))
+
+    # The county series, which is what the forecast continues. Lighter than the
+    # municipal line because the municipality is the page's subject.
+    if county_hist is not None and len(county_hist) > 0:
+        fig.add_trace(go.Scatter(
+            x=county_hist["year"],
+            y=county_hist["version_c"],
+            mode="lines",
+            name=L("kd.serie_lanet"),
+            line=dict(color=COLORS["secondary"], width=1.5, dash="dot"),
+            hovertemplate=L("kd.lanets_historik_hover"),
+        ))
 
     # Mark imputed years
     if "is_imputed_income" in hist_data.columns:
@@ -154,7 +206,7 @@ def _build_forecast_chart(
                 mode="markers",
                 name="Framskriven inkomst",
                 marker=dict(size=10, color=COLORS["accent"], symbol="diamond"),
-                hovertemplate="<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
+                hovertemplate=L("kd.x_framskrivet_fran_2024"),
             ))
 
     # Forecast
@@ -165,8 +217,10 @@ def _build_forecast_chart(
         ].sort_values("target_year")
 
         if len(fc) > 0:
-            last_hist_year = hist_data["year"].max()
-            last_hist_val = hist_data[hist_data["year"] == last_hist_year]["version_c"].iloc[0]
+            # Anchor on the county, which is what the forecast extends.
+            anchor = county_hist if county_hist is not None and len(county_hist) else hist_data
+            last_hist_year = anchor["year"].max()
+            last_hist_val = anchor[anchor["year"] == last_hist_year]["version_c"].iloc[0]
 
             fc_years = [last_hist_year] + fc["target_year"].tolist()
             fc_mean = [last_hist_val] + fc["mean"].tolist()
@@ -180,7 +234,7 @@ def _build_forecast_chart(
                 fill="toself",
                 fillcolor="rgba(74, 111, 165, 0.12)",
                 line=dict(width=0),
-                name="80% konfidensintervall",
+                name=L("kd.serie_intervall"),
                 hoverinfo="skip",
             ))
 
@@ -189,7 +243,7 @@ def _build_forecast_chart(
                 x=fc_years,
                 y=fc_mean,
                 mode="lines+markers",
-                name=f"Prognos ({model_name})",
+                name=L("kd.serie_prognos"),
                 line=dict(color=COLORS["secondary"], width=2, dash="dash"),
                 marker=dict(size=5, color=COLORS["secondary"]),
                 hovertemplate=f"<b>%{{x}}</b><br>Prognos: %{{y:,.1f}}<extra>{model_name}</extra>",
@@ -197,7 +251,7 @@ def _build_forecast_chart(
 
     layout = get_chart_layout(
         height=380,
-        xaxis_title="År",
+        xaxis_title=L("kd.ar"),
         yaxis_title="SHAI (Version C)",
     )
     layout["xaxis"]["dtick"] = 1
@@ -206,18 +260,31 @@ def _build_forecast_chart(
 
 
 # ── Forecast tabs ────────────────────────────────────────────────────
+# Prophet stays the default, deliberately, and this is NOT the inconsistency
+# resolved. The page recommends ARIMA while opening on Prophet, which is a real
+# contradiction — but resolving it by defaulting to ARIMA was tried and reverted
+# on evidence: ARIMA's first forecast year is implausible for **21 of 21
+# counties**, every one collapsing to roughly a quarter of its last observed
+# value in 2025 before rebounding (Stockholm 7,7 -> 1,9 -> 13,1). It also
+# forecasts the policy rate to -0,88 % by 2029. Prophet does this for zero
+# counties.
+#
+# So the contradiction is left standing rather than resolved in the direction
+# that would show every reader a broken forecast by default. Fixing it properly
+# means either repairing the ARIMA pipeline or withdrawing the recommendation,
+# and both are methodology decisions rather than interface ones.
 tab_prophet, tab_arima = st.tabs(["Prophet (standard)", "ARIMA (rekommenderad)"])
 
 with tab_prophet:
     with st.container(border=True):
         st.markdown(
-            card_header(f"Prognos — {selected_kommun}", "Prophet-modell", "PROPHET"),
+            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "Prophet-modell", "PROPHET"),
             unsafe_allow_html=True,
         )
-        st.caption("Prophet är optimerat för dagliga affärsserier. För analys av makroekonomisk årlig data rekommenderas ARIMA-fliken.")
-        st.caption(f"Prognoserna beräknas på länsnivå ({kommun_data['lan_code'].iloc[0]}) — inte per kommun.")
+        st.caption(L("kd.prophet_ar_optimerat_for_dagliga"))
+        st.caption(L("kd.prognoserna_beraknas_pa_lansniva_v0_inte_per", v0=kommun_data['lan_code'].iloc[0]))
         if len(forecast_prophet) > 0:
-            fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet")
+            fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet", _county_hist)
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
         else:
             st.info("Prognosdata (Prophet) saknas.")
@@ -225,11 +292,11 @@ with tab_prophet:
 with tab_arima:
     with st.container(border=True):
         st.markdown(
-            card_header(f"Prognos — {selected_kommun}", "ARIMA-modell (auto-AIC)", "ARIMA"),
+            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "ARIMA-modell (auto-AIC)", "ARIMA"),
             unsafe_allow_html=True,
         )
         if len(forecast_arima) > 0:
-            fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA")
+            fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA", _county_hist)
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
         else:
             st.info("Prognosdata (ARIMA) saknas.")
@@ -239,16 +306,16 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
-        card_header("Komponentuppdelning", f"{selected_kommun} · 2014–2024", "KOMPONENTER"),
+        card_header("Komponentuppdelning", f"{selected_kommun} · {PERIOD}", "KOMPONENTER"),
         unsafe_allow_html=True,
     )
 
     col1, col2, col3 = st.columns(3)
 
     component_configs = [
-        ("Medianinkomst", "median_income", "SEK", col1, "#3D8B6E"),
-        ("K/T-kvot", "kt_ratio", "kvot", col2, "#4A6FA5"),
-        ("Styrränta", "policy_rate", "%", col3, "#D4785A"),
+        ("Medianinkomst", "median_income", "SEK", col1, CHART_PALETTE[6]),
+        ("K/T-kvot", "kt_ratio", "kvot", col2, CHART_PALETTE[0]),
+        (L("kd.styrranta"), "policy_rate", "%", col3, CHART_PALETTE[5]),
     ]
 
     # Compute driver
@@ -293,10 +360,16 @@ with st.container(border=True):
 
     if driver:
         st.markdown(
-            f"<div style='font-size:13px;color:{COLORS['text_secondary']};text-align:center;padding:8px 0;'>"
-            f"<strong>{driver}</strong> har störst relativ variation och driver mest av "
-            f"SHAI-förändringen för {selected_kommun}.</div>",
+            T("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
             unsafe_allow_html=True,
         )
 
+explanation(L("kd.forklaring_prognos", v0=N_YEARS))
+with st.expander(L("kd.om_prognosen")):
+    st.markdown(L("kd.om_prognosen_text", v0=N_YEARS))
+
+with st.expander(L("kd.om_komponenterna")):
+    st.markdown(L("kd.om_komponenterna_text"))
+
+vintage_badge()
 footer_note()

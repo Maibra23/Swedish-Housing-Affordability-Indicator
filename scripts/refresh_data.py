@@ -6,7 +6,8 @@ publish annual updates, usually Q1 of each year for the prior year's data).
 Steps executed:
   1. Fetch all raw data from SCB PxWeb, Riksbanken Swea, and Kolada APIs
   2. Rebuild the three panel parquets (municipal, county, national)
-  3. Compute affordability indices A/B/C and save affordability parquets
+  3. Compute affordability indices A/B/C, save affordability parquets, and
+     record the data vintage in data/processed/data_provenance.json
   4. Run ARIMA and Prophet forecast pipelines and save forecast parquets
 
 Usage:
@@ -99,14 +100,32 @@ def step_compute_indices() -> None:
 
     import pandas as pd
     from src.indices.affordability import compute_all as compute_affordability
+    from src.indices.affordability import complete_case, scorable_rows
+    from src.indices.b_reference import reference_for
     from src.indices.normalize import normalize_and_rank
+    from src.provenance_build import write_provenance
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     t0 = time.time()
 
+    # Score the observed panel only. Version B pools its component z-scores across
+    # every row it is given, so an imputed-income year — which no page can render,
+    # because the sidebar stops at complete_case_max_year() — would silently
+    # re-base version_b for every year that is rendered. See complete_case().
     for level in ("municipal", "county", "national"):
         panel = pd.read_parquet(DATA_DIR / f"panel_{level}.parquet")
-        aff = compute_affordability(panel)
+        observed = complete_case(panel)
+        if len(observed) < len(panel):
+            logger.info(
+                "  %s: scoring %d of %d rows (%d imputed-income rows held back)",
+                level, len(observed), len(panel), len(panel) - len(observed),
+            )
+        # Version B is scored against a stored reference, not against this
+        # panel. Without it, appending a single year re-bases every historical
+        # value: measured at 3190 of 3190 rows moving and 947 ranks changing on
+        # an ordinary refresh, and 225 risk classes on a source change. R1.
+        b_reference = reference_for(scorable_rows(observed), level)
+        aff = compute_affordability(observed, b_reference)
         out = DATA_DIR / f"affordability_{level}.parquet"
         aff.to_parquet(out, index=False)
         logger.info("  Saved %s  (%d rows)", out.name, len(aff))
@@ -124,6 +143,14 @@ def step_compute_indices() -> None:
         len(ranked),
         ranked["year"].nunique(),
     )
+
+    # Record the vintage of what was just built. The panel is ragged — income
+    # ends before prices and the policy rate — so the UI must be told which year
+    # actually carries every index input rather than assuming the panel's max.
+    # This runs here, not in a separate step, so it cannot be skipped while the
+    # artifacts it describes are rebuilt. See src/provenance.py.
+    panel_municipal = pd.read_parquet(DATA_DIR / "panel_municipal.parquet")
+    write_provenance(panel_municipal, ranked)
 
     logger.info("Step 3 done in %.1f s", time.time() - t0)
 

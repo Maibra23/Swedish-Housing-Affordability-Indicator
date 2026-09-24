@@ -5,8 +5,10 @@ Nationell överblick med KPI-kort, karta, histogram och rankingtabeller.
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
-    page_title="SHAI · Riksöversikt",
+    page_title=L("rv.shai_riksoversikt"),
     page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
@@ -15,14 +17,16 @@ st.set_page_config(
 
 import re
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import n_kommuner
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     page_title,
+    delta_meta,
     kpi_card,
     render_kpi_row,
     format_sek,
@@ -30,77 +34,60 @@ from src.ui.components import (
     risk_pill,
     card,
     card_header,
+    explanation,
     footer_note,
+    help_badge,
+    vintage_badge,
 )
 from src.ui.choropleth import render_choropleth
+from src.ui.data_table import Column, render_table
+from src.ui.filters import by_risk
 from src.ui.chart_theme import get_chart_layout
 
 inject_css()
-selections = render_sidebar(page_key="rv")
+selections = render_sidebar()
 
 # ── Load data ────────────────────────────────────────────────────────
+# affordability_ranked carries every column of the municipal affordability
+# panel plus z_*, rank_* and risk_*. `indices/normalize.py` is the only
+# producer of those columns — nothing on this page recomputes them. An earlier
+# inline copy here omitted the sign inversion that normalize.py applies to
+# versions A and C, which rendered the risk classes upside down for every year
+# except 2014. See tests/test_ranked_artifact.py.
 try:
     with st.spinner("Laddar data..."):
-        ranked = pd.read_parquet("data/processed/affordability_ranked.parquet")
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("rv.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
 selected_year = selections["selected_year"]
 selected_risks = selections["selected_risks"]
 
-# Filter to selected year from municipal panel
-mun_year = municipal[municipal["year"] == selected_year].copy()
-mun_prev = municipal[municipal["year"] == selected_year - 1].copy()
+# The panel's own municipality count — never a literal 290, which stops being
+# true the moment a merger or a coverage gap changes the panel. See T1.10.
+N_KOMMUNER = n_kommuner()
 
-# Use ranked data (always 2024, latest) for rankings/z-scores
-if selected_year == ranked["year"].iloc[0]:
-    df_ranked = ranked.copy()
-else:
-    df_ranked = mun_year.copy()
-    if "version_c" in df_ranked.columns and len(df_ranked) > 0:
-        mean_c = df_ranked["version_c"].mean()
-        std_c = df_ranked["version_c"].std()
-        if std_c > 0:
-            df_ranked["z_c"] = (df_ranked["version_c"] - mean_c) / std_c
-        else:
-            df_ranked["z_c"] = 0.0
-        df_ranked["rank_c"] = df_ranked["z_c"].rank(method="min").astype(int)
-        df_ranked["risk_c"] = pd.cut(
-            df_ranked["z_c"],
-            bins=[-np.inf, -0.67, 0.67, np.inf],
-            labels=["lag", "medel", "hog"],
-        )
+mun_year = ranked[ranked["year"] == selected_year]
+mun_prev = ranked[ranked["year"] == selected_year - 1]
 
-# Apply risk filter from multi-select pills
-risk_label_map = {"Hög": "hog", "Medel": "medel", "Låg": "lag"}
-if "risk_c" in df_ranked.columns and len(selected_risks) < 3:
-    allowed = [risk_label_map[r] for r in selected_risks if r in risk_label_map]
-    df_ranked = df_ranked[df_ranked["risk_c"].isin(allowed)]
-
-# Empty state
-if len(mun_year) == 0:
-    st.warning("Inga data tillgängliga för den valda perioden.")
+# Empty state — checked before anything reads these frames.
+if mun_year.empty:
+    st.warning(L("rv.inga_data_tillgangliga_for_den_valda"))
     st.stop()
+
+# Apply risk filter from the multi-select pills. An empty selection is
+# normalised to "all three" by the sidebar, so len < 3 means a real filter.
+df_ranked = by_risk(mun_year, selected_risks)
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
-    eyebrow="Sida 01 · Nationell översikt",
-    title="Riksöversikt",
-    subtitle=f"Strukturell bostadsekonomisk hållbarhet i Sveriges 290 kommuner · {selected_year}",
+    eyebrow=L("rv.sida_01_nationell_oversikt"),
+    title=L("rv.riksoversikt"),
+    subtitle=L("rv.strukturell_bostadsekonomisk_hallbarhet_i", v0=N_KOMMUNER, v1=selected_year),
     year=selected_year,
 )
-
-# Imputed income warning for 2025+
-_imputed_years_in_view = mun_year["is_imputed_income"].any() if "is_imputed_income" in mun_year.columns else False
-if _imputed_years_in_view:
-    st.warning(
-        f"**Imputerat inkomstår {selected_year}:** Inkomstdata för {selected_year} saknas från SCB. "
-        "Värdet är framskrivet från 2024 med 3 % nominell tillväxt per år. "
-        "Affordabilitysiffrorna för detta år bör tolkas med extra försiktighet."
-    )
 
 # ── KPI cards ────────────────────────────────────────────────────────
 mean_vc = mun_year["version_c"].mean() if len(mun_year) > 0 else 0
@@ -108,18 +95,15 @@ mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
 delta_vc = mean_vc - mean_vc_prev
 delta_vc_pct = (delta_vc / mean_vc_prev * 100) if mean_vc_prev != 0 else 0
 
-n_hog = len(df_ranked[df_ranked["risk_c"] == "hog"]) if "risk_c" in df_ranked.columns else 0
-if len(mun_prev) > 0 and "version_c" in mun_prev.columns:
-    mean_prev = mun_prev["version_c"].mean()
-    std_prev = mun_prev["version_c"].std()
-    if std_prev > 0:
-        z_prev = (mun_prev["version_c"] - mean_prev) / std_prev
-        n_hog_prev = int((z_prev > 0.67).sum())
-    else:
-        n_hog_prev = 0
-else:
-    n_hog_prev = n_hog
-delta_hog = n_hog - n_hog_prev
+# Risk class is a *within-year* quantile: normalize.py z-scores the municipalities
+# against each other inside each year and cuts at ±0.67σ, so the share landing in
+# "hog" is near-constant by construction and its year-on-year change measures
+# wobble around a fixed boundary, not a change in affordability. The delta is
+# therefore gone (T1.9); the national trend belongs to the level series above.
+#
+# Counted on mun_year, not on the risk-filtered frame: this card says "N of all
+# municipalities", so it must not turn into a readout of the sidebar pills.
+n_hog = int((mun_year["risk_c"] == "hog").sum())
 
 mean_kt = mun_year["kt_ratio"].mean() if "kt_ratio" in mun_year.columns and len(mun_year) > 0 else 0
 mean_kt_prev = mun_prev["kt_ratio"].mean() if "kt_ratio" in mun_prev.columns and len(mun_prev) > 0 else mean_kt
@@ -133,39 +117,46 @@ render_kpi_row([
     kpi_card(
         label="Genomsnittligt SHAI",
         value=f"{mean_vc:,.1f}".replace(",", "\u00A0").replace(".", ","),
-        unit="poäng",
+        unit=L("rv.poang"),
         delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
-        delta_direction="up" if delta_vc > 0 else "down" if delta_vc < 0 else "flat",
+        # Version C is an affordability ratio: higher is better, so a fall is bad.
+        **delta_meta(delta_vc, higher_is_better=True),
         variant="default",
-        tooltip="Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla 290 kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
+        tooltip=L("rv.genomsnittlig_version_c_poang_rakvot_inkomst", v0=N_KOMMUNER),
     ),
     kpi_card(
-        label="Högrisk kommuner",
+        label=L("rv.hogrisk_kommuner"),
         value=str(n_hog),
-        unit="av 290",
-        delta=f"{delta_hog:+d}" if delta_hog != 0 else "oförändrat",
-        delta_direction="up" if delta_hog > 0 else "down" if delta_hog < 0 else "flat",
+        unit=f"av {N_KOMMUNER} · relativ position {selected_year}",
         variant="danger",
-        tooltip="Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög).",
+        tooltip=(
+            L("rv.antal_kommuner_med_z_poang_0_67")
+        ),
     ),
     kpi_card(
         label="K/T-kvot (genomsnitt)",
         value=f"{mean_kt:.2f}".replace(".", ","),
         unit="genomsnitt",
         delta=f"{delta_kt_pct:+.1f}%".replace(".", ","),
-        delta_direction="up" if delta_kt_pct > 0 else "down" if delta_kt_pct < 0 else "flat",
+        # K/T is price against assessed value: a rise means more expensive.
+        **delta_meta(delta_kt_pct, higher_is_better=False),
         variant="accent",
-        tooltip="Genomsnittlig köpeskillingskoefficient (K/T): köpeskilling / taxeringsvärde. Dimensionslös kvot, typiskt 1,0–4,0. Högre = dyrare relativt taxeringsvärde. Obs: K/T ingår ej i formeln — transaktionspriset i SEK används.",
+        tooltip=L("rv.genomsnittlig_kopeskillingskoefficient_k_t"),
     ),
     kpi_card(
-        label="Befolkningsförändring",
+        label=L("rv.befolkningsforandring"),
         value=format_pct(pop_change_pct),
         delta=f"{(pop_now - pop_prev):+,.0f}".replace(",", "\u00A0"),
-        delta_direction="up" if pop_change_pct > 0 else "down" if pop_change_pct < 0 else "flat",
+        # Population change is neither good nor bad for affordability. Colouring
+        # it asserted a judgement the data does not make.
+        **delta_meta(pop_change_pct, higher_is_better=None),
         variant="success",
-        tooltip="Procentuell befolkningsförändring jämfört med föregående år.",
+        tooltip=L("rv.procentuell_befolkningsforandring_jamfort"),
     ),
 ])
+
+explanation(L("rv.forklaring_kpi", v0=N_KOMMUNER, v1=selected_year))
+vintage_badge()
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
@@ -175,46 +166,56 @@ col_map, col_hist = st.columns([3, 2])
 with col_map:
     with st.container(border=True):
         st.markdown(
-            card_header("Geografisk fördelning", f"Version C · {selected_year}", "KOROPLETKARTA"),
+            card_header(
+                L("rv.geografisk_fordelning") + help_badge("zpoang", "riskklass"),
+                f"Version C · {selected_year}",
+                "KOROPLETKARTA",
+            ),
             unsafe_allow_html=True,
         )
         if len(df_ranked) > 0:
-            render_choropleth(df_ranked, key="rv_choropleth")
-            st.caption("Färgskala: Grön = låg risk (z ≤ −0,67) · Gul = medel risk · Röd = hög risk (z > 0,67)")
+            # The whole year, not `df_ranked`: the map is the national picture and
+            # the risk pills filter the lists below it. Passing the filtered frame
+            # painted 208 excluded municipalities in the median colour and rescaled
+            # the legend on every pill click. See Decision Q1 in
+            # docs/OPTIMIZATION_PLAN.md, answered No.
+            render_choropleth(mun_year, key="rv_choropleth")
+            st.caption(L("rv.fargskala_gron_lag_risk_z_0_67_gul_medel"))
+            explanation(L("rv.forklaring_karta"))
         else:
-            st.info("Ingen data tillgänglig för kartvisning.")
-        with st.expander("Om kartan"):
+            st.info(L("rv.ingen_data_tillganglig_for_kartvisning"))
+        with st.expander(L("rv.om_kartan")):
             st.markdown(
-                "Varje kommun visas som ett ifyllt polygon. Färgen baseras på "
-                "z-poängen (Version C). Grön = låg risk, röd = hög risk. "
-                "Håll musen över en kommun för att se detaljer. "
-                "Små kommunnamn visas först när du zoomat in två steg från "
-                "startläget (zoomkontrollen +). De är förankrade i kartfilens "
-                "centrum. Bakgrundskartan visar inga världsstäder — övrig text "
-                "kommer från SHAI-data.",
+                L("rv.varje_kommun_visas_som_ett_ifyllt_polygon"),
             )
 
 with col_hist:
     with st.container(border=True):
         st.markdown(
-            card_header("Fördelning av SHAI poäng", f"Version C · {selected_year}", "HISTOGRAM"),
+            card_header(
+                L("rv.fordelning_av_shai_poang") + help_badge("zpoang", "version_c"),
+                f"Version C · {selected_year}",
+                "HISTOGRAM",
+            ),
             unsafe_allow_html=True,
         )
-        st.caption("Z-poäng = standardavvikelser från riksgenomsnittet. Noll = rikssnitt. Högre z = bättre överkomlighet.")
+        st.caption(L("rv.z_poang_standardavvikelser_pa_logaritmisk"))
+        explanation(L("rv.forklaring_histogram", v0=N_KOMMUNER))
         if "z_c" in df_ranked.columns and len(df_ranked) > 0:
             z_vals = df_ranked["z_c"].dropna()
 
             fig = go.Figure()
 
-            bins_low = z_vals[z_vals <= -0.67]
-            bins_mid = z_vals[(z_vals > -0.67) & (z_vals <= 0.67)]
-            bins_high = z_vals[z_vals > 0.67]
-
-            for subset, color, name in [
-                (bins_low, COLORS["low_risk"], "Låg risk"),
-                (bins_mid, COLORS["medium_risk"], "Medel risk"),
-                (bins_high, COLORS["high_risk"], "Hög risk"),
+            # Colour by the artifact's own risk_c column rather than re-cutting
+            # the z-scale here. normalize.py owns the class boundaries; keeping a
+            # second copy of them in this page is exactly how the classes drifted
+            # out of sync before (Finding N).
+            for risk_class, color, name in [
+                ("lag", COLORS["low_risk"], L("rv.riskklass_lag")),
+                ("medel", COLORS["medium_risk"], L("rv.riskklass_medel")),
+                ("hog", COLORS["high_risk"], L("rv.riskklass_hog")),
             ]:
+                subset = df_ranked.loc[df_ranked["risk_c"] == risk_class, "z_c"].dropna()
                 if len(subset) > 0:
                     fig.add_trace(go.Histogram(
                         x=subset,
@@ -231,26 +232,34 @@ with col_hist:
                 line_dash="dash",
                 line_color=COLORS["primary"],
                 line_width=1.5,
-                annotation_text=f"Median: {median_z:.2f}",
-                annotation_position="top",
+                # Anchored inside the plot rather than "top": at "top" the
+                # annotation sat on the legend row and the two overlapped.
+                annotation_text=f"Median: {median_z:.2f}".replace(".", ","),
+                annotation_position="top right",
+                annotation_yshift=-12,
                 annotation_font=dict(size=11, color=COLORS["primary"]),
             )
 
             layout = get_chart_layout(
                 height=400,
-                xaxis_title="SHAI poäng (z-poäng)",
+                xaxis_title=L("rv.shai_poang_z_poang"),
                 yaxis_title="Antal kommuner",
             )
             layout["barmode"] = "stack"
+            # The legend sat inside the plot and clipped "Låg risk" against the
+            # right edge. Above the plot it has the full width.
+            layout["legend"] = dict(
+                orientation="h", yanchor="bottom", y=1.04,
+                xanchor="left", x=0, font=dict(size=11),
+            )
+            layout["margin"] = dict(l=50, r=20, t=48, b=50)
             fig.update_layout(**layout)
 
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
-        with st.expander("Om fördelningsgrafen"):
+        with st.expander(L("rv.om_fordelningsgrafen")):
             st.markdown(
-                "Histogrammet visar hur SHAI-poängen (z-poäng) fördelar sig bland kommunerna. "
-                "Färgerna speglar riskklasserna: grön (z ≤ −0,67), gul (−0,67 < z ≤ 0,67), "
-                "röd (z > 0,67). Den streckade linjen visar medianen.",
+                L("rv.histogrammet_visar_hur_shai_poangen_z_poang"),
             )
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
@@ -258,54 +267,34 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 # ── Table row: Top 15 worst + Top 15 best ────────────────────────────
 
 
-def _build_ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
-    """Build HTML table for top/bottom municipalities."""
-    if ascending:
-        subset = df.nsmallest(15, "z_c")
-    else:
-        subset = df.nlargest(15, "z_c")
+def _ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
+    """Render the top or bottom fifteen municipalities by Version C.
 
-    rows_html = ""
-    for i, (_, row) in enumerate(subset.iterrows(), 1):
-        name = row.get("region_name", "")
-        z_val = row.get("z_c", 0)
-        vc_val = row.get("version_c", 0)
-        risk = row.get("risk_c", "medel")
-        pill = risk_pill(risk)
-        rows_html += f"""
-        <tr>
-            <td class="rank-cell">{i}</td>
-            <td class="kommun-name">{name}</td>
-            <td class="num">{z_val:.2f}</td>
-            <td class="num">{vc_val:.1f}</td>
-            <td>{pill}</td>
-        </tr>"""
+    Args:
+        df: The filtered year frame.
+        ascending: True for the most affordable end, False for the least.
+        title: Card title.
 
-    return f"""
-    <div class="shai-card">
-        <div class="shai-card-header">
-            <div>
-                <div class="shai-card-title">{title}</div>
-                <div class="shai-card-subtitle">Version C · {selected_year}</div>
-            </div>
-            <span class="shai-card-tag">RANKING</span>
-        </div>
-        <table class="shai-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Kommun</th>
-                    <th class="num">Z-poäng</th>
-                    <th class="num">SHAI</th>
-                    <th>Risk</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
-    </div>
+    Returns:
+        HTML for one `.shai-table` card, built by the shared renderer so the
+        rank cell, name cell, numeric alignment and risk pill are decided in one
+        place rather than per page. See T3.8.
     """
+    subset = (df.nsmallest(15, "z_c") if ascending else df.nlargest(15, "z_c")).copy()
+    subset["_rank"] = range(1, len(subset) + 1)
+    return render_table(
+        subset,
+        [
+            Column("#", lambda row: str(row["_rank"]), kind="rank"),
+            Column(L("rv.kommun"), lambda row: str(row.get("region_name", "")), kind="name"),
+            Column(L("rv.z_poang"), lambda row: f"{row.get('z_c', 0):.2f}", numeric=True),
+            Column(L("rv.shai"), lambda row: f"{row.get('version_c', 0):.1f}", numeric=True),
+            Column(L("rv.risk"), lambda row: risk_pill(row.get("risk_c", "medel")), kind="pill"),
+        ],
+        title=title + help_badge("rang", "version_c", "riskklass"),
+        subtitle=f"Version C · {selected_year}",
+        tag=L("rv.ranking"),
+    )
 
 
 if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
@@ -313,25 +302,25 @@ if "z_c" in df_ranked.columns and len(df_ranked) >= 15:
 
     with col_worst:
         st.markdown(
-            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
-                df_ranked, ascending=False, title="Sämst överkomlighet (topp 15)"
-            )),
+            _ranking_table(
+                df_ranked, ascending=False, title=L("rv.samst_overkomlighet_topp_15")
+            ),
             unsafe_allow_html=True,
         )
 
     with col_best:
         st.markdown(
-            re.sub(r'\n[ \t]*\n', '\n', _build_ranking_table(
-                df_ranked, ascending=True, title="Bäst överkomlighet (topp 15)"
-            )),
+            _ranking_table(
+                df_ranked, ascending=True, title=L("rv.bast_overkomlighet_topp_15")
+            ),
             unsafe_allow_html=True,
         )
 
-    with st.expander("Om rankningstabellerna"):
+    explanation(L("rv.forklaring_tabell", v0=selected_year))
+
+    with st.expander(L("rv.om_rankningstabellerna")):
         st.markdown(
-            "Tabellerna visar de 15 kommuner med sämst respektive bäst överkomlighet "
-            "enligt Version C (realversion). Z-poängen anger hur långt kommunen avviker "
-            "från riksgenomsnittet i standardavvikelser."
+            L("rv.tabellerna_visar_de_15_kommuner_med_samst")
         )
 
 # ── Footer ───────────────────────────────────────────────────────────
