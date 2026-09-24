@@ -6,21 +6,26 @@ Landing page with hero, stat strip, explanation, index visual, steps, nav cards,
 
 import streamlit as st
 
+from src.ui.labels import L
+from src.ui.templates import T
+
 st.set_page_config(
-    page_title="SHAI — Bostadsekonomisk hållbarhet",
+    page_title=L("landing.shai_bostadsekonomisk_hallbarhet"),
     page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         "Get Help": None,
         "Report a bug": None,
-        "About": "SHAI — Bostadsekonomisk hållbarhet. Data: SCB, Riksbanken, Kolada.",
+        "About": L("landing.shai_bostadsekonomisk_hallbarhet_data_scb"),
     },
 )
 
+from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.ui.css import inject_css
 from src.ui.sidebar import render_sidebar, APP_VERSION
-from src.ui.components import (
+from src.ui.components import explanation, footer_note, vintage_badge
+from src.ui.landing import (
     render_landing_hero,
     render_landing_stat_strip,
     render_landing_what_is_block,
@@ -28,22 +33,34 @@ from src.ui.components import (
     render_landing_steps,
     render_landing_nav_card,
     render_landing_credibility,
-    footer_note,
 )
 
 inject_css()
-selections = render_sidebar(page_key="main")
+selections = render_sidebar()
 
 # ── Hero ──────────────────────────────────────────────────────────────
 render_landing_hero()
 
 # ── Stat strip (connected to hero) ───────────────────────────────────
+# Panel dimensions come from the provenance artifact, so the strip cannot keep
+# advertising a period the index no longer covers. See Finding H / T1.10.
+N_KOMMUNER = n_kommuner()
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+N_YEARS = PERIOD_END - PERIOD_START + 1
+
 render_landing_stat_strip([
-    {"label": "Analysperiod", "value": "2014–2024", "unit": f"11 år  ·  v{APP_VERSION}"},
-    {"label": "Kommuner", "value": "290", "unit": "analyserade"},
-    {"label": "Län", "value": "21", "unit": "jämförda"},
+    {
+        "label": "Analysperiod",
+        "value": f"{PERIOD_START}–{PERIOD_END}",
+        "unit": L("landing.v0_ar_v_v1", v0=N_YEARS, v1=APP_VERSION),
+    },
+    {"label": "Kommuner", "value": str(N_KOMMUNER), "unit": "analyserade"},
+    {"label": L("landing.lan"), "value": "21", "unit": L("landing.jamforda")},
     {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},
 ])
+
+explanation(L("landing.forklaring_statistik", v0=N_KOMMUNER, v1=N_YEARS, v2=PERIOD_END))
+vintage_badge()
 
 # ── What is SHAI? ────────────────────────────────────────────────────
 render_landing_what_is_block()
@@ -55,22 +72,18 @@ render_index_visual_block()
 render_landing_steps()
 
 # ── Navigation cards ─────────────────────────────────────────────────
-st.markdown("""
-<div class="lp-section">
-    <div class="lp-section-title">Vad hittar du här?</div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(T("landing.vad_hittar_du_har"), unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(render_landing_nav_card(
-        "Riksöversikt",
-        "Nationell överblick med karta, histogram och rankingtabeller för 290 kommuner.",
+        L("landing.riksoversikt"),
+        L("landing.nationell_overblick_med_karta_histogram_och", v0=N_KOMMUNER),
         tag="SIDA 01",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
-        "Län jämförelse",
-        "21 län jämförda under tre ekonometriska formler (A, B, C).",
+        L("landing.lan_jamforelse"),
+        L("landing.21_lan_jamforda_under_tre_ekonometriska"),
         tag="SIDA 02",
     ), unsafe_allow_html=True)
 with col2:
@@ -81,18 +94,18 @@ with col2:
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
         "Kontantinsats",
-        "Jämför insatskrav under fem regulatoriska regimer sedan 2010.",
+        L("landing.jamfor_insatskrav_under_fem_regulatoriska"),
         tag="SIDA 04",
     ), unsafe_allow_html=True)
 with col3:
     st.markdown(render_landing_nav_card(
         "Scenariosimulator",
-        "Stresstesta med ränta-, inkomst- och prisförändringar per län.",
+        L("landing.stresstesta_med_ranta_inkomst_och"),
         tag="SIDA 05",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
         "Metodologi",
-        "Formler, datakällor, begränsningar (F1–F10) och validering.",
+        L("landing.formler_datakallor_begransningar_f1f10_och"),
         tag="SIDA 06",
     ), unsafe_allow_html=True)
 

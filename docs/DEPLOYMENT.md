@@ -2,15 +2,49 @@
 
 **Version:** 1.3.0
 **Target:** Streamlit Community Cloud
-**Last updated:** 2026-04-18
+**Last updated:** 2026-09-15
 
 ---
 
 ## Prerequisites
 
-- Python 3.11 (Streamlit Cloud default; pinned in `pyproject.toml`)
+- Python **3.11 or newer** (`src/ui/sidebar.py` needs stdlib `tomllib`; the floor is
+  declared as `requires-python = ">=3.11"` in `pyproject.toml`). Verified on 3.11 and 3.12.
 - A GitHub repository connected to Streamlit Cloud
 - No secrets or API keys required — all data is pre-built and committed
+
+---
+
+## Data vintage — what the deployed app is serving
+
+The composite index covers **2014–2024** and **cannot currently advance past 2024**.
+
+All three formulas require **median income** (SCB HE0110), which is published only
+through 2024. The panel is ragged: several component series already have 2025.
+
+| Source | Max year upstream | SHAI ships |
+|--------|-------------------|-----------|
+| Median income (SCB HE0110) | **2024** | 2024 |
+| Småhus price (SCB BO0501B) | 2025 | **2025** |
+| Bostadsrätt price (SCB BO0501C) | 2025 | 2024 |
+| Price index (SCB BO0501A) | 2025 | **2025** |
+| Unemployment (Kolada N03937) | 2025 | **2025** |
+| CPI (SCB PR0101) | 2026M08 | 2026 |
+| Policy rate (Riksbanken SWEA) | live | 2026 |
+
+`data/processed/data_provenance.json` records both bounds separately — `panel_max_year`
+for the component series and `complete_case_max_year` for the index — and the UI reads
+its vintage from that artifact rather than from the system clock. A refresh therefore
+moves `panel_max_year` and leaves the years offered in the sidebar unchanged.
+
+**The index is scored on observed rows only.** `step_compute_indices` passes each panel
+through `complete_case()` before computing, dropping the forward-filled income tail.
+This is not cosmetic: `compute_version_b` z-scores its components *pooled across every
+row it is handed*, so a single imputed year shifts the pooled mean and standard
+deviation and re-bases `version_b` for every historical year. Versions A and C are
+within-year (D5) and are immune. Measured when the 2025 component data first landed:
+`z_b` moved on all 3190 rows and 19 changed risk class — published numbers altered by a
+year no page can render.
 
 ---
 
@@ -28,13 +62,37 @@ during normal operation.
 
 ## Local development setup
 
+Two installs, for two audiences. The runtime set is the one that gets deployed.
+
+**Running the app** — what Streamlit Community Cloud performs:
+
 ```bash
 python -m venv .venv
 # Windows:  .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -r requirements.txt
 streamlit run app.py
+```
+
+Eight packages, no compilers, no API calls at startup.
+
+**Refreshing the data** — adds the API clients and the forecast toolchain:
+
+```bash
+pip install -e ".[pipeline]"
+```
+
+`prophet` and `pmdarima` build from source. That cost belongs on a developer's machine,
+never on the serving host, which is why `requirements.txt` and
+`[project.optional-dependencies] pipeline` are kept apart. `tests/test_packaging.py`
+and `tests/test_runtime_dependencies.py` fail if the two ever drift.
+
+**Running the tests:**
+
+```bash
+pip install -e ".[dev]"
+pytest tests/
 ```
 
 ---
@@ -76,7 +134,8 @@ python scripts/refresh_data.py --no-fetch --no-forecast
 Commit the updated parquet files and push to trigger a Streamlit Cloud redeploy:
 
 ```bash
-git add data/processed/ data/raw/
+# data/raw/ is a local cache and is gitignored — only data/processed/ deploys
+git add data/processed/
 git commit -m "chore: refresh SHAI data — <YYYY-MM-DD>"
 git push
 ```
@@ -124,6 +183,9 @@ The sidebar displays a warning banner `⚠ Inkomst 2025–<year> är modellberä
 when imputed years are active. This disappears automatically once a data refresh
 brings in new published income data.
 
+Imputed rows stay in the **panels** — they keep the frame rectangular and the component
+charts continuous — but they never reach the **index**. See the complete-case note above.
+
 ---
 
 ## File inventory (must be committed for deploy)
@@ -143,7 +205,12 @@ brings in new published income data.
 | `forecast_prophet.parquet` | Prophet 6-year county forecasts |
 | `arima_metadata.parquet` | ARIMA model orders and AIC |
 
-### `data/raw/` — cached API responses
+### `data/raw/` — cached API responses (**not committed**)
+
+`.gitignore` excludes `data/raw/*`. These are a local fetch cache that lets
+`--no-fetch` rebuild without hitting the APIs; the deployed app never reads them.
+A fresh clone has an empty `data/raw/` and runs correctly, because everything the
+app needs is already in `data/processed/`.
 
 | File | Source | Refresh frequency |
 |------|--------|-------------------|
@@ -164,13 +231,13 @@ brings in new published income data.
 
 | File | Description |
 |------|-------------|
-| `kommuner.geojson` | 290 municipality polygons for choropleth map (843 KB) |
+| `kommuner.geojson` | 290 municipality polygons for the choropleth (428 KB, coordinates at 5 dp — regenerate with `python scripts/shrink_geojson.py`) |
 
 ---
 
 ## Known limitations
 
-See `docs/METHODOLOGY_v2.md` section 7 for the full list (F1–F15). Key ones for ops:
+See `docs/METHODOLOGY.md` section 7 for the full list (F1–F15). Key ones for ops:
 
 | ID | Description | Impact |
 |----|-------------|--------|

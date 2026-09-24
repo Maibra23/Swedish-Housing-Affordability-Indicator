@@ -2,6 +2,7 @@
 Generate municipality_coords.csv with approximate lat/lon for all 290 Swedish municipalities.
 Coordinates are approximate centroids (administrative center / town center).
 """
+from pathlib import Path
 import csv
 import os
 
@@ -712,7 +713,9 @@ print(f"Total municipalities in dict: {len(MUNICIPALITIES)}")
 print(f"Total required: {len(required_codes)}")
 
 # Write CSV
-output_path = r"C:\Users\Mustafa Ibrahim\OneDrive - student.lnu.se\Desktop\Swedish Housing Affordability Indicator\data\processed\municipality_coords.csv"
+# Resolved from this file rather than hardcoded: the previous absolute path
+# pinned the script to one Windows machine and one user account.
+output_path = Path(__file__).resolve().parents[1] / "data" / "processed" / "municipality_coords.csv"
 
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

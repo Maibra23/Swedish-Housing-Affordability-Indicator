@@ -1,4 +1,4 @@
-"""Kontantinsats regime engine per METHODOLOGY_v2.md section 6.
+"""Kontantinsats regime engine per METHODOLOGY.md section 6.
 
 Models five Swedish regulatory regimes for housing down payments and
 amortization requirements. Uses transaction_price_sek directly from
@@ -13,6 +13,13 @@ Regimes:
 """
 
 from __future__ import annotations
+
+#: The regime the pages present as today's rules. Every headline number on Sida
+#: 04 is this regime's, and the reachability chart's deposit share must be the
+#: same one, so the choice is stated once here rather than spelled out at each
+#: reading site. Item 19 in docs/APP_GUIDE.md: two statements of one fact
+#: desync silently, because nothing compares them.
+BASELINE_REGIME = "latt_2026"
 
 REGIMES = {
     "pre_2010": {

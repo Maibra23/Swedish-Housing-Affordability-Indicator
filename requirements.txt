@@ -1,0 +1,35 @@
+# Runtime dependencies — what Streamlit Community Cloud installs to serve the app.
+#
+# This file is deliberately NOT the project's full dependency set. The refresh
+# pipeline (prophet, pmdarima, statsmodels, requests) runs on a developer's
+# machine and writes parquet artifacts that are committed; the server only reads
+# them. Prophet and pmdarima compile from source, so shipping them here bought a
+# slow, fragile cold start and nothing else. See docs/REVITALIZATION_PLAN.md,
+# Finding I / T2.1.
+#
+#   running the app   pip install -r requirements.txt
+#   refreshing data   pip install -e ".[pipeline]"
+#
+# Each bound is lower..upper. The lower bound is the version this app is verified
+# against; the upper caps the next MAJOR, and deliberately sits above what a
+# clean install currently resolves to. T2.5 built an empty venv from this file
+# and got pandas 3.0.5 and numpy 2.5.3 against the 2.3.3 / 1.26.2 recorded here
+# — two major boundaries crossed with nobody choosing it. All 67 page renders
+# passed on that set, so the caps are not a downgrade; they exist so the *next*
+# boundary is a visible resolution failure instead of a silent production break.
+# The 0.x packages get <1, which still admits breaking minor bumps: a residual
+# risk, recorded as R7 in docs/OPEN_RISKS.md.
+#
+# tests/test_runtime_dependencies.py derives the expected package set from the
+# import graph and asserts these specifiers match pyproject.toml exactly, so
+# adding an import to a page fails the suite until this file catches up.
+
+streamlit>=1.55.0,<2
+pandas>=2.3.3,<4
+numpy>=1.26.2,<3
+plotly>=6.6.0,<8
+folium>=0.20.0,<1
+branca>=0.8.2,<1
+
+# Not imported anywhere — pandas needs it to read the .parquet artifacts.
+pyarrow>=23.0.1,<26

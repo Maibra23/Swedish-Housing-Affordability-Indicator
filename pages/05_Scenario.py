@@ -5,6 +5,8 @@ Stresstesta bostadsöverkomlighet (Version C) med ränta-, inkomst- och prisför
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
     page_title="SHAI · Scenariosimulator",
     page_icon=None,
@@ -16,35 +18,45 @@ st.set_page_config(
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import n_kommuner, selectable_years
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
-    page_title, kpi_card, render_kpi_row, format_sek, format_pct,
+    vintage_badge,
+    page_title, delta_meta, kpi_card, render_kpi_row, format_sek, format_pct,
     card_header, footer_note,
 )
 from src.ui.chart_theme import get_chart_layout
+from src.ui.interpret import interpret_scenario, render_findings
+from src.scenario.charts import rate_inflation_surface
 from src.scenario.simulator import simulate
+from src.scenario.sections import render_national_outcome, render_purpose
 
 inject_css()
-selections = render_sidebar(page_key="sc")
+selections = render_sidebar()
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        county_panel = pd.read_parquet("data/processed/panel_county.parquet")
+        county_panel = load_artifact("panel_county.parquet")
+        # The national view needs every municipality, not one county.
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("sc.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
+panel_kommuner = n_kommuner()
 selected_year = selections["selected_year"]
 county_year = county_panel[county_panel["year"] == selected_year]
 
 if len(county_year) == 0:
-    _available = sorted(county_panel["year"].unique(), reverse=True)
+    # From provenance, not from the frame: the panel runs past the last year
+    # the index can be computed for, so suggesting its years offers blanks. R2.
+    _available = sorted(selectable_years(), reverse=True)
     st.warning(
-        f"Inga data tillgängliga för {selected_year}. "
-        f"Välj ett år med data: {', '.join(str(y) for y in _available[:5])}."
+        L("sc.inga_data_tillgangliga_for_v0_valj_ett_ar", v0=selected_year, v1=', '.join(str(y) for y in _available[:5]))
     )
     st.stop()
 
@@ -52,15 +64,15 @@ if len(county_year) == 0:
 page_title(
     eyebrow="Sida 05 · Scenarioanalys",
     title="Scenariosimulator",
-    subtitle="Simulera effekten av ränta-, inkomst- och prisförändringar på bostadsöverkomligheten",
+    subtitle=L("sc.simulera_effekten_av_ranta_inkomst_och"),
     year=selected_year,
 )
 
+render_purpose()
+
 # ── Scope note ───────────────────────────────────────────────────────
 st.info(
-    "**Scenariosimulatorn** beräknar om Version C (realversion) för valt län. "
-    "Versionerna A och B innehåller ytterligare variabler (arbetslöshet) som inte "
-    "ingår i simulatorn för att hålla gränssnittet enkelt."
+    L("sc.scenariosimulatorn_beraknar_om_version_c")
 )
 
 # ── Controls ─────────────────────────────────────────────────────────
@@ -70,7 +82,7 @@ county_options = dict(zip(county_names["region_name"], county_names["lan_code"])
 col_county, col_empty = st.columns([2, 1])
 with col_county:
     selected_county_name = st.selectbox(
-        "Välj län",
+        L("sc.valj_lan"),
         list(county_options.keys()),
         index=0,
         key="sc_county_select",
@@ -78,19 +90,19 @@ with col_county:
 selected_county_code = county_options[selected_county_name]
 
 # ── Preset scenario buttons ───────────────────────────────────────────
-st.markdown("**Förinställda scenarier:**")
+st.markdown(L("sc.forinstallda_scenarier"))
 preset_col1, preset_col2, preset_col3, preset_col4 = st.columns(4)
 
 _presets = {
     "riksbanken_2022": {"rate": 4.0, "income": 0, "price": -15, "cpi": 8},
     "deflation_risk":  {"rate": -1.0, "income": 0, "price": -10, "cpi": -2},
-    "löneboom":        {"rate": 1.0, "income": 5, "price": 10, "cpi": 3},
+    L("sc.loneboom"):        {"rate": 1.0, "income": 5, "price": 10, "cpi": 3},
     "reset":           {"rate": 0.0, "income": 0, "price": 0, "cpi": 0},
 }
 
 with preset_col1:
-    if st.button("Riksbanken 2022", use_container_width=True, key="sc_preset_2022",
-                 help="+4pp ränta, +8pp KPI, −15% pris"):
+    if st.button("Riksbanken 2022", width="stretch", key="sc_preset_2022",
+                 help=L("sc.4pp_ranta_8pp_kpi_15_pris")):
         p = _presets["riksbanken_2022"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -98,8 +110,8 @@ with preset_col1:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col2:
-    if st.button("Deflationsrisk", use_container_width=True, key="sc_preset_deflation",
-                 help="−1pp ränta, −2pp KPI, −10% pris"):
+    if st.button("Deflationsrisk", width="stretch", key="sc_preset_deflation",
+                 help=L("sc.1pp_ranta_2pp_kpi_10_pris")):
         p = _presets["deflation_risk"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -107,17 +119,17 @@ with preset_col2:
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col3:
-    if st.button("Löneboom", use_container_width=True, key="sc_preset_wage",
-                 help="+1pp ränta, +5% lön, +10% pris"):
-        p = _presets["löneboom"]
+    if st.button(L("sc.loneboom_2"), width="stretch", key="sc_preset_wage",
+                 help=L("sc.1pp_ranta_5_lon_10_pris")):
+        p = _presets[L("sc.loneboom")]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
         st.session_state["sc_price_slider"] = int(p["price"])
         st.session_state["sc_cpi_slider"] = float(p["cpi"])
         st.rerun()
 with preset_col4:
-    if st.button("Återställ", use_container_width=True, key="sc_preset_reset",
-                 help="Nollställ alla scenariojusteringar till basfall"):
+    if st.button(L("sc.aterstall"), width="stretch", key="sc_preset_reset",
+                 help=L("sc.nollstall_alla_scenariojusteringar_till")):
         p = _presets["reset"]
         st.session_state["sc_rate_slider"] = float(p["rate"])
         st.session_state["sc_income_slider"] = int(p["income"])
@@ -131,25 +143,25 @@ col_rate, col_income, col_price, col_cpi = st.columns(4)
 
 with col_rate:
     rate_shock = st.slider(
-        "Räntechock (pp)",
+        L("sc.rantechock_pp"),
         min_value=-2.0,
         max_value=5.0,
         value=float(st.session_state.get("sc_rate_slider", 0.0)),
         step=0.25,
         format="%.2f",
         key="sc_rate_slider",
-        help="+4 pp ≈ Riksbankens höjningscykel 2022–2023. Adderas till styrräntan. Kombinera med KPI-chock för realistiska scenarier.",
+        help=L("sc.4_pp_riksbankens_hojningscykel_20222023"),
     )
 
 with col_income:
     income_shock_pct = st.slider(
-        "Inkomsttillväxt (%)",
+        L("sc.inkomsttillvaxt"),
         min_value=-10,
         max_value=10,
         value=int(st.session_state.get("sc_income_slider", 0)),
         step=1,
         key="sc_income_slider",
-        help="+3–4 % ≈ ett års normal löneutveckling i Sverige. −5 % simulerar recession med lönesänkningar.",
+        help=L("sc.34_ett_ars_normal_loneutveckling_i_sverige_5"),
     )
 
 with col_price:
@@ -172,14 +184,14 @@ with col_cpi:
         step=0.5,
         format="%.1f",
         key="sc_cpi_slider",
-        help="+8 pp ≈ svensk inflationstopp 2022. Påverkar realräntan (R−π). Höjd KPI med oförändrad ränta sänker realräntan → bättre affordability.",
+        help=L("sc.8_pp_svensk_inflationstopp_2022_paverkar"),
     )
 
 # ── Run simulation ───────────────────────────────────────────────────
 county_row = county_year[county_year["lan_code"] == selected_county_code]
 
 if len(county_row) == 0:
-    st.warning("Inga data tillgängliga för det valda länet och året.")
+    st.warning(L("sc.inga_data_tillgangliga_for_det_valda_lanet"))
     st.stop()
 
 county_row = county_row.iloc[0]
@@ -201,7 +213,7 @@ try:
         cpi_shock=cpi_shock,                         # pp — new in Phase 3
     )
 except Exception as e:
-    st.error("Beräkningsfel. Se metodologisidan för detaljer.")
+    st.error(L("sc.berakningsfel_se_metodologisidan_for"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -225,25 +237,75 @@ render_kpi_row([
         value=f"{result['baseline_v_c']:.1f}".replace(".", ","),
         unit="Version C",
         variant="default",
-        tooltip="Basfall: beräknat från faktiska data för valt län och år.",
+        tooltip=L("sc.basfall_beraknat_fran_faktiska_data_for_valt"),
     ),
     kpi_card(
         label="Scenario SHAI",
         value=f"{result['scenario_v_c']:.1f}".replace(".", ","),
         unit="Version C",
         variant="accent",
-        tooltip="Scenario: beräknat med justerade parametrar.",
+        tooltip=L("sc.scenario_beraknat_med_justerade_parametrar"),
     ),
     kpi_card(
-        label="Förändring",
+        label=L("sc.forandring"),
         value=f"{result['delta']:+.1f}".replace(".", ","),
-        unit="poäng",
+        unit=L("sc.poang"),
         delta=f"{result['delta_pct']:+.1f}%".replace(".", ","),
-        delta_direction=change_direction,
+        **delta_meta(result["delta"], higher_is_better=True),
         variant=change_variant,
-        tooltip="Skillnad mellan scenario och basfall. Positivt = bättre överkomlighet.",
+        tooltip=L("sc.skillnad_mellan_scenario_och_basfall"),
     ),
 ])
+
+# Why the number moved, and the reading this page invites but does not support.
+# Placed directly under the result rather than in the expander at the foot of
+# the page: the misreading forms here, so the correction belongs here.
+render_findings(
+    interpret_scenario(
+        result=result,
+        rate_shock=rate_shock,
+        income_shock_pct=income_shock_pct,
+        price_shock_pct=price_shock_pct,
+        cpi_shock=cpi_shock,
+    ),
+    title=L("sc.tolk_rubrik"),
+)
+
+st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+
+# The sliders show one point on the rate/inflation plane. The surface shows the
+# plane, where equal values of R - pi form diagonal bands, which is the lesson
+# the page exists to teach and cannot deliver one slider at a time.
+with st.container(border=True):
+    st.markdown(
+        card_header(L("sc.yta_rubrik"), L("sc.yta_underrubrik"), L("sc.yta_tagg")),
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(
+        rate_inflation_surface(
+            county_kod=selected_county_code,
+            baseline_panel=baseline_panel,
+            income_shock=income_shock_pct / 100.0,
+            price_shock=price_shock_pct / 100.0,
+            rate_shock=rate_shock,
+            cpi_shock=cpi_shock,
+        ),
+        width="stretch",
+        config={"displayModeBar": "hover"},
+    )
+    st.caption(L("sc.yta_forklaring"))
+
+st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+
+render_national_outcome(
+    ranked,
+    selected_year,
+    rate_shock=rate_shock,
+    cpi_shock=cpi_shock,
+    income_shock=income_shock_pct / 100.0,
+    price_shock=price_shock_pct / 100.0,
+    n_kommuner=panel_kommuner,
+)
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
@@ -254,7 +316,7 @@ with col_chart:
     with st.container(border=True):
         st.markdown(
             card_header(
-                f"SHAI Version C — {selected_county_name}",
+                L("sc.shai_version_c_for_v0", v0=selected_county_name),
                 "Basfall vs scenario",
                 "SIMULERING",
             ),
@@ -277,14 +339,14 @@ with col_chart:
             width=0.5,
         ))
 
-        layout = get_chart_layout(height=350, yaxis_title="SHAI poäng", showlegend=False)
+        layout = get_chart_layout(height=350, yaxis_title=L("sc.shai_poang"), showlegend=False)
         fig.update_layout(**layout)
         st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
 with col_table:
     with st.container(border=True):
         st.markdown(
-            card_header("Jämförelsetabell", "Basfall vs scenario", "DETALJER"),
+            card_header(L("sc.jamforelsetabell"), "Basfall vs scenario", "DETALJER"),
             unsafe_allow_html=True,
         )
 
@@ -292,9 +354,9 @@ with col_table:
             "Variabel": [
                 "Medianinkomst (SEK)",
                 "Transaktionspris (SEK)",
-                "Styrränta (%)",
+                L("sc.styrranta"),
                 "KPI-inflation (%)",
-                "Realränta (%)",
+                L("sc.realranta"),
                 "SHAI (Version C)",
             ],
             "Basfall": [
@@ -320,32 +382,8 @@ with col_table:
         )
 
 # ── Explanation ──────────────────────────────────────────────────────
-with st.expander("Förklaring"):
-    st.markdown("""
-    **Version C (realversion)** beräknas som:
+with st.expander(L("sc.forklaring")):
+    st.markdown(L("sc.version_c_realversion_beraknas_som_text"))
 
-    $$\\text{Affordability}_C = \\frac{\\text{Inkomst}}{\\text{Transaktionspris} \\times \\max(R - \\pi,\\; 0{,}5) / 100}$$
-
-    Där:
-    - **Inkomst** = median disponibel hushållsinkomst (SEK)
-    - **Transaktionspris** = median transaktionspris för bostäder (SEK, SCB BO0501)
-    - **R** = Riksbankens styrränta i procentenheter (årsgenomsnitt)
-    - **π** = KPI-inflation i procentenheter (årsgenomsnitt)
-    - **0,5** = golv (procentenheter) för att förhindra division med noll vid negativ realränta
-
-    **Tolkning:** Högre värde = bättre bostadsöverkomlighet.
-
-    **Scenariomekanik:**
-    - Räntechock adderas till styrräntan (procentenheter)
-    - Inkomsttillväxt multipliceras med inkomsten (relativ förändring)
-    - Prischock multipliceras med transaktionspriset (relativ förändring)
-
-    **Begränsning F15 — Inflationen (π) hålls konstant:**
-    Scenariosimulatorn ändrar inte KPI-inflationen när räntan chockas. Det innebär att
-    en räntehöjning på +3 pp tolkas som en ökning av realräntan med +3 pp, vilket inte
-    stämmer om höjningen är ett svar på hög inflation (som i 2022–2023 då realräntan
-    förblev låg trots tredubblade nominella räntor). Resultaten gäller nominell räntechock
-    med oförändrad inflation.
-    """)
-
+vintage_badge()
 footer_note()

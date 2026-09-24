@@ -5,8 +5,10 @@ Jämför 21 län under tre formelversioner (A, B, C) med trendlinjer och ranking
 
 import streamlit as st
 
+from src.ui.labels import L
+
 st.set_page_config(
-    page_title="SHAI · Län jämförelse",
+    page_title=L("lj.shai_lan_jamforelse"),
     page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
@@ -17,21 +19,46 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.provenance import (
+    complete_case_max_year,
+    first_year,
+    n_kommuner,
+    selectable_years,
+)
+from src.ui.data import load as load_artifact
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
-from src.ui.components import page_title, card, card_header, footer_note
-from src.ui.chart_theme import get_chart_layout
+from src.ui.components import (
+    card,
+    risk_pill,
+    card_header,
+    explanation,
+    footer_note,
+    page_title,
+    vintage_badge,
+)
+from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
+from src.ui.data_table import Column, render_table
+from src.indices.agreement import measure_agreement, where_b_and_c_disagree
 
 inject_css()
-selections = render_sidebar(page_key="lj")
+selections = render_sidebar()
+
+# Period and panel size come from the provenance artifact: a literal
+# "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
+PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
+PERIOD = f"{PERIOD_START}–{PERIOD_END}"
+N_YEARS = PERIOD_END - PERIOD_START + 1
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
-        municipal = pd.read_parquet("data/processed/affordability_municipal.parquet")
-        county_panel = pd.read_parquet("data/processed/panel_county.parquet")
+        municipal = load_artifact("affordability_municipal.parquet")
+        county_panel = load_artifact("panel_county.parquet")
+        # The risk classes live on the ranked artifact, not the municipal one.
+        ranked = load_artifact("affordability_ranked.parquet")
 except Exception as e:
-    st.error("Kunde inte hämta data. Försök igen senare.")
+    st.error(L("lj.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
     st.stop()
 
@@ -50,62 +77,51 @@ county_versions = county_versions.merge(county_names, on="lan_code", how="left")
 
 selected_year = selections["selected_year"]
 
-# Identify imputed-income years for visual annotation
-_imputed_years = set()
-if "is_imputed_income" in municipal.columns:
-    _imputed_years = set(
-        municipal[municipal["is_imputed_income"] == True]["year"].unique()
-    )
-
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
-    eyebrow="Sida 02 · Regional jämförelse",
-    title="Län jämförelse",
-    subtitle="21 län jämförda under tre bostadsekonomiska formler",
+    eyebrow=L("lj.sida_02_regional_jamforelse"),
+    title=L("lj.lan_jamforelse"),
+    subtitle=L("lj.21_lan_jamforda_under_tre_bostadsekonomiska"),
     year=selected_year,
 )
 
 # ── Formula config ───────────────────────────────────────────────────
+# Realversion (C) first, because it is the one the site runs on: the map, the
+# risk classes, the KPI row, the forecasts and the simulator all read C. The
+# tab order is also the default tab, and opening on Bankversion (A) led with
+# the formula this page's own copy calls a robustness check.
 FORMULA_INFO = {
+    "Realversion (C)": {
+        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
+        "desc": (
+            L("lj.den_rekommenderade_versionen_justerar_for")
+        ),
+        "col": "version_c",
+        "color_highlight": COLORS["low_risk"],
+        "color_others": CHART_PALETTE[5],
+        "footnote": (
+            L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
+        ),
+    },
     "Bankversion (A)": {
         "formula": r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}",
         "desc": (
-            "Den enklaste versionen — mäter hushållets betalningsförmåga relativt "
-            "bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. "
-            "Högre värde = bättre överkomlighet."
+            L("lj.den_enklaste_versionen_mater_hushallets")
         ),
         "col": "version_a",
-        "color_highlight": "#B94A48",
-        "color_others": "#4A6FA5",
+        "color_highlight": COLORS["high_risk"],
+        "color_others": COLORS["secondary"],
     },
     "Makroversion (B)": {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
         "desc": (
-            "En sammansatt riskindikator som viktar fyra makrovariabler: pris/inkomst, "
-            "ränta, arbetslöshet och inflation. Speglar centralbankens makrotillsynsperspektiv. "
-            "Högre värde = högre risk."
+            L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
         ),
         "col": "version_b",
-        "color_highlight": "#C4A35A",
-        "color_others": "#7B68A8",
+        "color_highlight": COLORS["accent"],
+        "color_others": CHART_PALETTE[4],
         "footnote": (
-            "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. "
-            "Obs: R och π är nationella variabler — de bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13)."
-        ),
-    },
-    "Realversion (C)": {
-        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
-        "desc": (
-            "Den rekommenderade versionen — justerar för inflation genom att använda "
-            "realräntan istället för nominalräntan. Akademiskt förankrad. "
-            "Högre värde = bättre överkomlighet."
-        ),
-        "col": "version_c",
-        "color_highlight": "#2E7D5B",
-        "color_others": "#D4785A",
-        "footnote": (
-            "Att olika formler rangordnar länen olika är förväntat och inte ett fel — "
-            "de mäter olika ekonomiska perspektiv."
+            L("lj.arbetsloshet_avser_oppet_arbetslosa_enligt")
         ),
     },
 }
@@ -124,7 +140,7 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
         if "footnote" in info:
             st.caption(f"ℹ️ {info['footnote']}")
 
-        st.caption("Stockholm visas som referenslän (markerat med starkare linje).")
+        st.caption(L("lj.stockholm_visas_som_referenslan_markerat_med"))
 
         col_chart, col_table = st.columns([3, 2])
 
@@ -149,38 +165,51 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                             color=info["color_highlight"] if is_sthlm else info["color_others"],
                         ),
                         opacity=1.0 if is_sthlm else 0.35,
-                        hovertemplate=f"<b>{name}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}<extra></extra>",
+                        hovertemplate=L("lj.v0_ar_x_varde_y_2f", v0=name),
                     ))
 
-                # Shade imputed-income years
-                all_years = sorted(county_versions["year"].unique())
-                max_real_year = max((y for y in all_years if y not in _imputed_years), default=None)
-                if max_real_year and _imputed_years:
-                    # Add a shaded rectangle from first imputed year - 0.5 to last + 0.5
-                    imp_start = min(_imputed_years) - 0.5
-                    imp_end = max(_imputed_years) + 0.5
-                    fig.add_vrect(
-                        x0=imp_start, x1=imp_end,
-                        fillcolor="rgba(212, 120, 90, 0.08)",
-                        line_width=0,
-                        annotation_text="Imputerad inkomst",
-                        annotation_position="top left",
-                        annotation_font_size=10,
-                        annotation_font_color=COLORS["accent"],
-                    )
-
-                # Determine title suffix
-                all_yrs = sorted(county_versions["year"].unique())
-                yr_range = f"{min(all_yrs)}–{max(all_yrs)}" if all_yrs else "2014–2024"
+                # No imputed-income shading here, deliberately. T2.4 made
+                # `step_compute_indices` score only `complete_case()` rows, so the
+                # affordability artifacts this page reads carry zero forward-filled
+                # years by construction — the flag is False on all 3190 rows. The
+                # shading that used to sit here could not render, and advertising
+                # an annotation that never appears is worse than not having one.
+                # The imputed tail is visible where it exists, in the panel.
+                # The plotted range is the index period, which this page already
+                # resolves from provenance at the top. Re-deriving it from the
+                # frame was R2's third site.
+                yr_range = PERIOD
+                vcol = info["col"]
 
                 layout = get_chart_layout(
-                    title=f"{tab_name} — Länsutveckling {yr_range}",
+                    title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=yr_range),
                     height=420,
-                    xaxis_title="År",
-                    yaxis_title="Indexvärde",
+                    xaxis_title=L("lj.ar"),
+                    yaxis_title=L("lj.indexvarde"),
                     showlegend=False,
                 )
                 layout["xaxis"]["dtick"] = 1
+                # A and C are ratios with the policy rate in the denominator, so
+                # when the rate approached zero in 2015 to 2021 they ran to 400+
+                # and squashed 2022 onward flat against the axis: the years a
+                # reader cares about were the unreadable ones. A log axis is the
+                # same treatment decision D6 already applies to these two for
+                # z-scoring, and for the same reason. B is a weighted sum of
+                # z-scores that goes negative, where a log is undefined.
+                if vcol in ("version_a", "version_c"):
+                    layout["yaxis"]["type"] = "log"
+                    # Explicit ticks: Plotly's log minors label 90 and 9 both as
+                    # "9", which on a chart spanning one to several hundred is
+                    # ambiguous in exactly the range that matters.
+                    import math
+
+                    _vals = county_versions[vcol].dropna()
+                    _hi = float(_vals.max()) if len(_vals) else 100.0
+                    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100, 200, 500)
+                             if t <= _hi * 1.6]
+                    layout["yaxis"]["tickmode"] = "array"
+                    layout["yaxis"]["tickvals"] = ticks
+                    layout["yaxis"]["ticktext"] = [str(t) for t in ticks]
                 fig.update_layout(**layout)
                 st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
@@ -189,36 +218,38 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
             vcol = info["col"]
 
             if len(year_data) > 0:
-                ascending = vcol != "version_b"
-                year_data = year_data.sort_values(vcol, ascending=ascending)
+                # Rank 1 = best affordability, in every tab. version_a and
+                # version_c read "higher is better" so they sort descending;
+                # version_b is a risk score, so it sorts ascending. Sorting all
+                # three the same way put the worst county at #1 while the
+                # caption above the table said the opposite.
+                year_data = year_data.sort_values(
+                    vcol, ascending=(vcol == "version_b")
+                )
                 year_data["rank"] = range(1, len(year_data) + 1)
 
-                rows_html = ""
-                for _, row in year_data.iterrows():
-                    rows_html += f"""
-                    <tr>
-                        <td class="rank-cell">{row['rank']}</td>
-                        <td class="kommun-name">{row['region_name']}</td>
-                        <td class="num">{f"{row[vcol]:.2f}".replace(".", ",")}</td>
-                    </tr>"""
-
-                st.markdown(f"""
-                <div class="shai-card">
-                    <div class="shai-card-header">
-                        <div>
-                            <div class="shai-card-title">Länsranking {selected_year}</div>
-                            <div class="shai-card-subtitle">{tab_name}</div>
-                        </div>
-                        <span class="shai-card-tag">RANKING</span>
-                    </div>
-                    <table class="shai-table">
-                        <thead>
-                            <tr><th>#</th><th>Län</th><th class="num">Värde</th></tr>
-                        </thead>
-                        <tbody>{rows_html}</tbody>
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(
+                    render_table(
+                        year_data,
+                        [
+                            Column("#", lambda row: str(row["rank"]), kind="rank"),
+                            Column(
+                                L("lj.lan"),
+                                lambda row: str(row["region_name"]),
+                                kind="name",
+                            ),
+                            Column(
+                                L("lj.varde"),
+                                lambda row, c=vcol: f"{row[c]:.2f}".replace(".", ","),
+                                numeric=True,
+                            ),
+                        ],
+                        title=L("lj.lansranking_v0", v0=selected_year),
+                        subtitle=L("lj.ranking_subtitle_v0", v0=tab_name),
+                        tag=L("lj.ranking"),
+                    ),
+                    unsafe_allow_html=True,
+                )
 
 # ── Cross-formula comparison ─────────────────────────────────────────
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
@@ -226,9 +257,9 @@ st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 with st.container(border=True):
     st.markdown(
         card_header(
-            "Varför skiljer sig versionerna åt?",
-            "Topp 5 och botten 5 län under varje formel",
-            "JÄMFÖRELSE",
+            L("lj.varfor_skiljer_sig_versionerna_at"),
+            L("lj.topp_5_och_botten_5_lan_under_varje_formel"),
+            L("lj.jamforelse"),
         ),
         unsafe_allow_html=True,
     )
@@ -237,7 +268,7 @@ with st.container(border=True):
 
     if len(year_data) > 0:
         cols = st.columns(3)
-        formula_colors = ["#4A6FA5", "#7B68A8", "#3D8B6E"]
+        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4], CHART_PALETTE[6]]
         for col_idx, (name, info) in enumerate(FORMULA_INFO.items()):
             with cols[col_idx]:
                 st.markdown(
@@ -249,13 +280,88 @@ with st.container(border=True):
                 ascending = vcol != "version_b"
 
                 worst = year_data.nsmallest(5, vcol) if ascending else year_data.nlargest(5, vcol)
-                st.markdown("*Sämst överkomlighet:*")
+                st.markdown(L("lj.samst_overkomlighet"))
                 for _, r in worst.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
 
                 best = year_data.nlargest(5, vcol) if ascending else year_data.nsmallest(5, vcol)
-                st.markdown("*Bäst överkomlighet:*")
+                st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
 
+st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+
+# Which formula is load-bearing, and how much the other two corroborate it.
+# Before this section the site computed nine scoring columns and displayed three,
+# leaving a reader no way to tell which number the rest of the app runs on.
+with st.container(border=True):
+    st.markdown(
+        card_header(
+            L("lj.vilken_version_styr"),
+            L("lj.vilken_version_styr_underrubrik"),
+            L("lj.robusthet"),
+        ),
+        unsafe_allow_html=True,
+    )
+
+    agreement = measure_agreement(ranked, selected_year)
+    st.markdown(L("lj.c_driver_sajten"))
+
+    class_rows = pd.DataFrame(
+        [
+            {
+                "version": label,
+                **{cls: agreement.counts[key][cls] for cls in ("hog", "medel", "lag")},
+            }
+            for key, label in (
+                ("c", L("lj.version_c_kort")),
+                ("a", L("lj.version_a_kort")),
+                ("b", L("lj.version_b_kort")),
+            )
+        ]
+    )
+    st.markdown(
+        render_table(
+            class_rows,
+            [
+                Column(L("lj.version"), lambda row: str(row["version"]), kind="name"),
+                Column(L("lj.hog_risk"), lambda row: str(row["hog"]), numeric=True),
+                Column(L("lj.medel_risk"), lambda row: str(row["medel"]), numeric=True),
+                Column(L("lj.lag_risk"), lambda row: str(row["lag"]), numeric=True),
+            ],
+        ),
+        unsafe_allow_html=True,
+    )
+    st.caption(L("lj.antal_kommuner_per_riskklass_v0", v0=str(selected_year)))
+
+    st.markdown(
+        L(
+            "lj.a_och_c_ar_identiska",
+            v0=str(agreement.b_differs_from_c),
+            v1=str(agreement.n_kommuner),
+            v2=f"{agreement.b_differs_pct:.0f}",
+        )
+    )
+
+    divergent = where_b_and_c_disagree(ranked, selected_year)
+    if not divergent.empty:
+        st.markdown(
+            render_table(
+                divergent,
+                [
+                    Column(L("lj.kommun"), lambda row: str(row["region_name"]), kind="name"),
+                    Column(L("lj.version_c_kort"), lambda row: risk_pill(row["risk_c"]), kind="pill"),
+                    Column(L("lj.version_b_kort"), lambda row: risk_pill(row["risk_b"]), kind="pill"),
+                    Column(L("lj.rangskillnad"), lambda row: str(int(row["rank_gap"])), numeric=True),
+                ],
+            ),
+            unsafe_allow_html=True,
+        )
+        st.caption(L("lj.storst_avstand_mellan_b_och_c"))
+
+explanation(L("lj.forklaring_kpi"))
+with st.expander(L("lj.om_lansjamforelsen")):
+    st.markdown(L("lj.om_lansjamforelsen_text"))
+
+vintage_badge()
 footer_note()
