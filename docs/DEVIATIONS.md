@@ -3,7 +3,7 @@
 Documents where the implementation diverges from PLAYBOOK.md / prompts.md.
 Use this file to identify which future task prompts need adjusting before you run them.
 
-**Last updated:** 2026-04-21 after bostadsrätt integration + 2026 regime update.
+**Last updated:** 2026-09-25 after withdrawing the forecast pipelines (D19).
 
 ---
 
@@ -195,6 +195,19 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 | **Resolution** | Changed to `from src.indices.affordability import compute_all as compute_affordability` in `refresh_data.py`. |
 | **Root cause** | Function was renamed during a refactor but the call site in the refresh script was not updated. |
 | **Tasks to adjust** | None — fix is in place. |
+
+---
+
+
+## D19 — Statistical forecasting withdrawn; replaced by a conditional projection ⚠️
+
+| | |
+|--|--|
+| **Planned** | PRD §7: two model tabs on Sida 03, Prophet (default) and ARIMA (recommended), both with widening confidence bands. PRD §3 lists "21 county level forecasts using both Prophet and ARIMA" as a success criterion. |
+| **Actual** | Both pipelines deleted 2026-09-25. One chart, three conditional projection lines, no model fitting and no confidence bands. |
+| **Why** | The forecasts were measurably wrong, not merely imprecise: ARIMA's first year was implausible for **21 of 21 counties**. Backtested against a naive carry-forward over 63 county-horizons, `auto_arima` lost on every component, and no whole-index method beat naive. Version C is a reciprocal of a real rate that sits at its 0,5 pp floor in 9 of 11 years yet carries 99 % of the index's year-on-year variance, so forecasting it is forecasting Riksbank policy six years out. Full evidence: R16 in `docs/OPEN_RISKS.md` and `docs/CONDITIONAL_PROJECTION_PLAN.md`. |
+| **Cost, stated plainly** | PRD §2 names a persona — the macroeconomic analyst hiring manager — who "evaluates forecasting competence". This change removes the most legible signal of that competence. The judgement made was that a defensible conditional beats a visibly broken forecast for that same reader, but **it is a product decision, not a technical one**, and it is reversible. |
+| **Tasks to adjust** | Any task prompt citing PRD §7, the two model tabs, confidence bands, or "both forecasting models". D2/D8 had already renegotiated this section's horizon from quarters to annual steps; this supersedes it entirely. |
 
 ---
 
