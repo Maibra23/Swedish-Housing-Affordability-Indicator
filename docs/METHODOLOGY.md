@@ -53,7 +53,7 @@
 - County and national panels now apply the same 3% nominal income growth when
   forward-filling imputed years (was applying zero growth — audit fix)
 - Bostadsrätt prices forward-filled into imputed years for all three panel levels
-- Forecast pipelines detect training `END_YEAR` dynamically from panel
+- The projection reads its base year dynamically from the panel
 - Sidebar year range is now dynamic (always includes current calendar year)
 - Version string read from `pyproject.toml` — single source of truth
 
@@ -221,30 +221,53 @@ All years 2014–2024 are scored, not only the latest. 290 municipalities in the
 panel, 21 counties in the county panel. `src/indices/normalize.py` is the sole producer of
 every `z_*`, `rank_*` and `risk_*` column.
 
-## 5. Forecasting approach
+## 5. Projection approach
 
-### Prophet (default in UI)
+Until 2026-09-25 this section described two fitted models, Prophet and ARIMA. Both
+are deleted. A backtest against a naive carry-forward control showed `auto_arima`
+losing on every component of Version C, and the formula amplified the residual
+error into first-year values implausible for all 21 counties. See **R16** in
+`docs/OPEN_RISKS.md` and `docs/CONDITIONAL_PROJECTION_PLAN.md`.
 
-- Library: `prophet`
-- Decomposes into trend plus seasonality plus holidays
-- Suitable for user friendly visualization
-- **Limitation flag in UI:** "Prophet är optimerad för dagliga tidsserier. För årliga makrodata, se ARIMA fliken."
+### What replaced them
 
-### ARIMA (recommended for inference)
+`src/forecast/projection.py`. Nothing is fitted.
 
-- Library: `statsmodels.tsa.arima.model` with order selection via `pmdarima.auto_arima`
-- Suitable for methodologically rigorous forecasting
-- **Limitation flag in UI:** "Konfidensintervall vidgas snabbt efter år 3. Tolka långtidsprognoser med försiktighet."
+```
+income(n)  = last_observed_income × (1 + 0.03)ⁿ
+price(n)   = last_observed_price  × (1 + 0.02)ⁿ
+C(n)       = income(n) / (price(n) × real_rate_pp / 100)
+```
 
-### Forecast targets
+Income growth matches `IMPUTED_INCOME_GROWTH_RATE` in `src/data/panel_income.py`
+(limitation F9), so the projection and the panel's own forward-fill cannot
+disagree. Price growth is stated on the same footing.
 
-Forecast income, K/T, and policy rate separately. Compose into Version C affordability. Direct affordability forecasting introduces stationarity issues.
+### The real rate is not projected
 
-### Horizon
+It is the axis the reader chooses, because it carries 99 % of the variance in
+year-on-year changes of `log C` and is a policy instrument rather than a
+stochastic process. Three scenarios, all at or above the 0,5 pp floor:
 
-**Capped at 6 annual steps** (2024 base → 2030 horizon).
+| Key | Real rate | Meaning |
+|---|---|---|
+| `floor` | 0,5 pp | The floor binds, as it has in 9 of 11 observed years |
+| `current` | last observed | Today's real rate persists |
+| `normalised` | 2,0 pp | The real rate returns to an earlier norm |
 
-Rationale: only 11 annual observations (2014 to 2024). With such limited history, forecast intervals widen rapidly. 6 steps is the upper bound where intervals retain any interpretive value. A persistent UI callout alerts users to this constraint.
+`current` is resolved from the panel rather than hardcoded, so it stays true
+after a refresh. The three values are an editorial decision and are documented as
+one.
+
+### Level and horizon
+
+County level, six annual steps. SCB publishes nothing supporting a municipal
+projection, so Sida 03 draws the county history as its own labelled series and
+anchors the projection to it rather than to the municipality's last value.
+
+There are no confidence intervals. The spread between scenarios is the distance
+between three assumptions, not a probability statement, and the page says so.
+
 
 ## 6. Kontantinsats regime engine
 
@@ -299,9 +322,9 @@ Output: recalculated Version C affordability for selected county, with delta fro
 | F1 | Native K/T available for ~88% of municipality years; county K/T fallback used for remaining ~12% | `has_native_kt` flag in panel; full list of fallback municipalities on Metodologi page | Low |
 | F2 | National interest rate applied at municipal and county level | Documented explicitly; municipal variation in affordability comes entirely from income and K/T differences | Medium |
 | F3 | Three formulas rank municipalities differently | "Varför skiljer sig versionerna åt" comparison panel on Län jämförelse page | Low |
-| F4 | Prophet weak for annual macro data (designed for daily series) | ARIMA tab labelled "rekommenderad"; Prophet labelled "standard" | Medium |
+| F4 | Eleven annual observations cannot support a fitted forecast model | Both statistical pipelines withdrawn; replaced by a conditional projection (R16) | Medium |
 | F5 | Kontantinsats is step function not continuous | Discrete regime cards, not a slider | Low |
-| F6 | Short forecast history (11 annual observations) limits horizon | Hard cap at 6 annual steps; persistent UI caveat | Medium |
+| F6 | The projection is conditional: it states what it assumes, and the spread between scenarios is not a confidence interval | Every line labelled with its own real-rate assumption; six annual steps | Medium |
 | F7 | SCB API rate limits (30 calls/10s, 150k cells/query) | All data cached as parquet at build time; no live API calls from Streamlit | Low |
 | F8 | Translation loses banking terminology nuance | Glossary file in swedish-translation skill; banking terms curated | Low |
 | F9 | Income beyond the last published year is forward filled with **3% nominal growth per year** (`IMPUTED_INCOME_GROWTH_RATE`, build_panel.py). Zero growth was the earlier, pessimistic assumption that F9 replaced. | `is_imputed_income` flag. Imputed rows are held back from the index entirely — `step_compute_indices` filters through `complete_case()` before scoring — and the year selector stops at `complete_case_max_year()`. Both matter: the selector stops an imputed year being *displayed*, the filter stops it being *pooled into Version B*, which would re-base published values for every real year. | Low |
@@ -332,7 +355,7 @@ Before publishing each computation:
 3. **Stockholm county should rank among top 5 worst affordability under Version C** (after K/T fix). Skåne expected to rank near worst as well.
 4. Norrbotten county should rank among top 5 best affordability under Version A.
 5. K/T values should be between 1.0 and 4.0 for all included municipalities.
-6. Forecast confidence intervals should widen monotonically with horizon.
+6. No projected first year falls outside 0,25× to 4× of its county's last observed value.
 
 If any check fails, halt and investigate before proceeding.
 

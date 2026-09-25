@@ -77,16 +77,18 @@ streamlit run app.py
 
 Eight packages, no compilers, no API calls at startup.
 
-**Refreshing the data** — adds the API clients and the forecast toolchain:
+**Refreshing the data** — adds the SCB/Riksbanken/Kolada API clients:
 
 ```bash
 pip install -e ".[pipeline]"
 ```
 
-`prophet` and `pmdarima` build from source. That cost belongs on a developer's machine,
-never on the serving host, which is why `requirements.txt` and
-`[project.optional-dependencies] pipeline` are kept apart. `tests/test_packaging.py`
-and `tests/test_runtime_dependencies.py` fail if the two ever drift.
+The pipeline extra is now a single package. `prophet`, `pmdarima` and `statsmodels`
+left with the forecast pipelines on 2026-09-25 (R16), so the refresh toolchain compiles
+nothing at all. The split between `requirements.txt` and
+`[project.optional-dependencies] pipeline` is kept anyway, because the serving host has
+no business fetching from SCB; `tests/test_packaging.py` and
+`tests/test_runtime_dependencies.py` fail if the two ever drift.
 
 **Running the tests:**
 
@@ -100,7 +102,7 @@ pytest tests/
 ## Data refresh
 
 SCB and Kolada publish annual data with a lag of 12–18 months. Run the refresh
-script to pull new source data, rebuild all panels, and regenerate forecasts.
+script to pull new source data, rebuild all panels, and recompute the projection.
 
 ### Full refresh (recommended annually, Q1)
 
@@ -112,9 +114,11 @@ This runs four steps in sequence:
 1. **Fetch** — pulls all raw data from SCB PxWeb, Riksbanken Swea, and Kolada APIs
 2. **Build panels** — rebuilds `data/processed/panel_{municipal,county,national}.parquet`
 3. **Compute indices** — rebuilds `data/processed/affordability_*.parquet`
-4. **Forecast** — re-runs ARIMA + Prophet and saves `data/processed/forecast_*.parquet`
+4. **Projection** — recomputes `data/processed/projection.parquet` from the county
+   affordability panel. No model fitting; see `docs/CONDITIONAL_PROJECTION_PLAN.md`
 
-Total runtime: ~15–30 minutes (dominated by SCB API chunked fetches and Prophet fitting).
+Total runtime: ~10–20 minutes, essentially all of it SCB API chunked fetches. Step 4
+now takes well under a second.
 
 ### Faster options
 
@@ -122,11 +126,11 @@ Total runtime: ~15–30 minutes (dominated by SCB API chunked fetches and Prophe
 # Skip API calls — rebuild from existing cached raw data only
 python scripts/refresh_data.py --no-fetch
 
-# Skip forecasts — rebuild panels and indices only
-python scripts/refresh_data.py --no-forecast
+# Skip the projection — rebuild panels and indices only
+python scripts/refresh_data.py --no-projection
 
 # Both
-python scripts/refresh_data.py --no-fetch --no-forecast
+python scripts/refresh_data.py --no-fetch --no-projection
 ```
 
 ### After a refresh
@@ -158,17 +162,20 @@ the analysis automatically switches to county level (21 län selector).
 
 ---
 
-## Forecast refresh schedule
+## Projection refresh schedule
 
 | Trigger | Action |
 |---------|--------|
 | New SCB/Kolada annual data release (~Q1 each year) | Full refresh |
-| Riksbanken policy rate changes significantly | `--no-fetch --no-forecast` rebuild only |
+| Riksbanken policy rate changes significantly | `--no-fetch` rebuild; this moves the `current` scenario |
 | Bug fix or code change (no new data) | No refresh needed — push code only |
 
-Forecasts are trained on the last non-imputed year of data (auto-detected from the
+The projection starts from the last non-imputed year of data (auto-detected from the
 panel via `is_imputed_income == False`). The 6-year horizon (2025–2030 in the initial
-build) shifts forward automatically on the next full refresh.
+build) shifts forward automatically on the next full refresh. Because nothing is fitted,
+the projection is a pure function of `affordability_county.parquet`: re-running step 4 on
+an unchanged panel reproduces the artifact exactly, which `tests/test_projection.py`
+asserts.
 
 ---
 
@@ -201,9 +208,7 @@ charts continuous — but they never reach the **index**. See the complete-case 
 | `affordability_county.parquet` | Versions A/B/C + z-scores, county |
 | `affordability_national.parquet` | Versions A/B/C + z-scores, national |
 | `affordability_ranked.parquet` | Municipal + rank columns |
-| `forecast_arima.parquet` | ARIMA 6-year county forecasts |
-| `forecast_prophet.parquet` | Prophet 6-year county forecasts |
-| `arima_metadata.parquet` | ARIMA model orders and AIC |
+| `projection.parquet` | 6-year county projection, 3 real-rate scenarios (378 rows) |
 
 ### `data/raw/` — cached API responses (**not committed**)
 
@@ -257,9 +262,9 @@ Ensure all `data/processed/*.parquet` files are committed and pushed.
 **Choropleth map blank:**
 Check that `data/geo/kommuner.geojson` is committed (binary tracked by git).
 
-**Forecast page shows empty charts:**
-`data/processed/forecast_arima.parquet` or `forecast_prophet.parquet` missing.
-Run `python scripts/refresh_data.py --no-fetch` to rebuild from existing raw data.
+**Sida 03 shows no projection lines:**
+`data/processed/projection.parquet` missing. Run
+`python scripts/refresh_data.py --no-fetch` to rebuild from existing raw data.
 
 **BO0501C bostadsrätt data missing:**
 Run `python scripts/refresh_data.py` (full refresh) to fetch from SCB API.

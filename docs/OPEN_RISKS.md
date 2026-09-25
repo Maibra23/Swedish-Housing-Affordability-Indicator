@@ -27,7 +27,7 @@ These outlive it.
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 | R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
 | R15 | Numbers quoted in docstrings and markdown are guarded nowhere | Medium | **CLOSED** |
-| R16 | ARIMA's first forecast year is implausible for every county | **High** | OPEN |
+| R16 | ARIMA's first forecast year is implausible for every county | **High** | **CLOSED** |
 
 ---
 
@@ -223,6 +223,10 @@ regenerated, and the step that cannot run is the one that has to.
 as a separate, deliberate run. If it still cannot complete, make the pipeline checkpoint
 per county so a kill loses one county rather than the whole step. Worth measuring actual
 peak RSS before choosing a fix.
+
+*(Moot since 2026-09-25: R16 deleted both fitting pipelines. The step that could be
+killed no longer exists, and its replacement is arithmetic over 21 rows. The flag is now
+`--no-projection`.)*
 
 ### CLOSED 2026-09-22 — measured, and it does not
 
@@ -969,6 +973,68 @@ Either way the page should stop recommending a model it does not show.
 
 **Revisit if:** income publishes for 2025 and the training window moves, which re-fits every
 series and may change the picture entirely.
+
+### CLOSED 2026-09-25 — by deletion, because no model was the fix
+
+The recommendation above set two options against each other: repair the ARIMA pipeline, or
+withdraw the recommendation. **Both were wrong, and the measurement that showed it was a
+backtest neither option called for.**
+
+**ARIMA loses to a constant on every component.** Expanding origin over the county panel,
+fit on 2014→T, forecast T+1→2024, cutoffs at 2021, 2022 and 2023; 63 county-horizons.
+Control: carry the last observed value forward.
+
+| Series | ARIMA | Naive | ARIMA wins? |
+|---|---|---|---|
+| income / price | 9,9 % | **8,4 %** | no |
+| income | 16,2 % | **6,7 %** | no, 2,4× worse |
+| real rate | 18,2 % | **17,5 %** | no |
+| price | 19,5 % | **5,4 %** | no, 3,6× worse |
+
+Whole-index MAPE: naive **25,9 %**, forecasting Version C directly 30,5 %, forecasting the
+real rate and recombining 32,1 %, the shipped pipeline 32,9 %. **No method beats naive.**
+The backtest also exposed a second latent defect the register never carried: the price
+forecast goes non-positive at two-year horizon and `arima_pipeline.py` guarded it to `NaN`,
+so 7,9 % of projections silently vanished.
+
+**And the formula amplifies whatever error survives.** Stockholm's real rate ran
+`0,63 · 0,50 × 9 · 0,77` — at the 0,5 pp floor in **9 of 11 years**. While it binds, Version C
+is exactly 200 × (income / price). Yet variance decomposition of year-on-year changes in
+`log C` puts the **real rate at 99 %** and income/price at 18 %. Escaping the floor from 0,5
+to 3,2 pp divides C by 6,4, which is precisely what ARIMA did: its 2025 component forecast
+for Stockholm was a rate of 2,56 % and CPI of **−0,64 %**, a real rate of 3,20 pp.
+
+**The statement that closes this risk:**
+
+> An unconditional forecast of Version C is an unconditional forecast of Riksbank policy six
+> years out, delivered with a confidence interval implying statistical warrant it does not
+> have.
+
+That is why naive wins — *"the floor keeps binding"* has been right 9 times in 11 — and why
+each alternative fails. Forecasting Version C directly is never implausible but its 80 %
+intervals cover only **37 %** of outcomes: it fails quietly, which is worse.
+
+**Resolution: stop forecasting.** `src/forecast/arima_pipeline.py` (261 lines) and
+`src/forecast/prophet_pipeline.py` (296 lines) are deleted, with `prophet`, `pmdarima` and
+`statsmodels`. Sida 03 shows one chart with three conditional projections: income and price
+carried forward at documented rates, and the real rate as three labelled scenarios (0,5 pp
+floor, last observed, 2,0 pp normalised) rather than a number a model invents. The word
+changed from *Prognos* to *Projektion*, which is doing real work: one claims to know the
+future, the other states a conditional.
+
+The interface contradiction dissolves with the tabs — there is no model to recommend. The
+first-year sanity check the recommendation asked for exists as
+`tests/test_projection.py::test_no_projection_is_absurd`, but it now guards a construction
+that cannot fail it rather than a fit that did, 21 times out of 21.
+
+**This also closes the fragile half of R3 and all of R4**, and the refresh toolchain compiles
+nothing. Full evidence: `docs/CONDITIONAL_PROJECTION_PLAN.md`.
+
+**What was traded away, stated plainly.** Confidence bands are gone; the spread between
+scenarios is not one and the widening-band check is moot. And **someone owns the three
+scenario values** — 0,5 / last observed / 2,0 is an editorial decision, not a derived fact.
+It is documented as one in `projection.py`.
+
 
 ---
 

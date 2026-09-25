@@ -59,9 +59,9 @@ län only.
 **Refreshing the data**, after SCB or Kolada publish a new year:
 
 ```bash
-python scripts/refresh_data.py                  # fetch, rebuild, recompute, reforecast
+python scripts/refresh_data.py                  # fetch, rebuild, recompute, reproject
 python scripts/refresh_data.py --no-fetch       # rebuild from cached raw data
-python scripts/refresh_data.py --no-forecast    # skip forecasts, saves 5-15 min
+python scripts/refresh_data.py --no-projection  # skip the projection step
 ```
 
 Commit the regenerated files in `data/processed/`; the raw API cache in `data/raw/` is
