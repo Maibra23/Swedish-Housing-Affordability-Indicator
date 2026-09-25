@@ -12,7 +12,9 @@ def test_import_indices_package():
 
 
 def test_import_forecast_package():
-    importlib.import_module("forecast")
+    """The package now holds the conditional projection and nothing fitted."""
+    module = importlib.import_module("forecast.projection")
+    assert hasattr(module, "project_all")
 
 
 def test_import_kontantinsats_package():

@@ -50,7 +50,7 @@ def L(key: str, **values: object) -> str:
 
 SWEDISH_LABELS: dict[str, str] = {
     "rv.kartfilen_saknas": "Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.",
-    "mt.expander_4_prognoser_prophet_vs_arima": "4. Prognoser (Prophet vs ARIMA)",
+    "mt.expander_4_projektion_villkorad": "4. Projektion (villkorad, inte prognos)",
     "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats: regimhistorik",
     "mt.expander_7_datavalidering": "7. Datavalidering",
     "mt.expander_8_referenser": "8. Referenser",
@@ -601,25 +601,36 @@ SWEDISH_LABELS: dict[str, str] = {
     SCB:s BO0501C2 innehåller *medelvärdet* (medelvärde, ej median) av köpeskillingen för
     permanenta småhus (Fastighetstyp 220). Se Begränsning F11 och F12 nedan.
     """,
-    "mt.prophet_standard_i_granssnittet_bibliotek": """
-    ### Prophet (standard i gränssnittet)
-    - **Bibliotek:** Meta Prophet
-    - Dekomponerar i trend + säsongsvariation
-    - Lämplig för visualisering och icke-tekniska målgrupper
-    - **Begränsning:** Prophet är optimerat för dagliga affärsserier, inte årlig makrodata
+    "mt.projektion_tre_scenarier_realranta": """
+    Sidan räknar inte fram någon prognos. Den visar en **projektion**: vad indexet
+    blir under tre uttalade antaganden om realräntan.
 
-    ### ARIMA (rekommenderad för analys)
-    - **Bibliotek:** statsmodels + pmdarima (auto_arima)
-    - Automatisk ordningsval via AIC
-    - Metodologiskt rigorös för tidsserieanalys
-    - **Begränsning:** Konfidensintervall vidgas snabbt efter 2–3 år
+    ### Varför ingen modell anpassas
+    Version C är en invers av realräntan, alltså styrränta minus inflation, med ett
+    golv på 0,5 procentenheter. Realräntan står för 99 % av variationen i indexets
+    årliga förändringar, och golvet har bundit i nio av {v0} observerade år. Under de
+    åren är Version C exakt 200 × (inkomst / pris) och räntan bidrar ingenting.
+
+    Med {v0} årsvärden ({v1}) förlorade `auto_arima` mot en enkel framskrivning på
+    varje komponent. Att extrapolera realräntan är i praktiken att gissa Riksbankens
+    penningpolitik sex år fram, och formeln förstorar felet: ARIMA satte realräntan
+    till 3,20 procentenheter mot ett golv på 0,50 och delade Stockholms index med
+    fyra.
+
+    ### De tre scenarierna
+    - **Golvet, 0,5 pp** — golvet fortsätter binda, som det gjort i nio av {v0} år
+    - **Dagens nivå** — senast observerade realränta består
+    - **Normaliserad, 2,0 pp** — realräntan återgår till en nivå som liknar tiden innan golvet började binda
+
+    Inkomst och pris skrivs fram med 3 % respektive 2 % per år. Ingenting är
+    modellanpassat, så inget träningsfönster kan vara olyckligt.
 
     ### Viktig kaveat
-    **Alla prognoser baseras på {v0} årliga observationer ({v1}).** Detta är en
-    extremt kort tidsserie för statistisk prognos. Konfidensintervallen vidgas snabbt
-    och prognoser bortom 3 år bör tolkas med stor försiktighet.
+    **Spridningen mellan linjerna är inget konfidensintervall.** Den är avståndet
+    mellan tre antaganden, och varje linje är märkt med sitt eget. Vilket som är
+    rimligt avgör läsaren, inte modellen.
 
-    **Horisont:** 6 årliga steg (2025–2030). Begränsad till max 8 steg.
+    **Horisont:** 6 årliga steg (2025–2030).
     """,
     "mt.regelverk_period_kontantinsats": """
     | Regelverk | Period | Kontantinsats | Amorteringskrav |
@@ -639,9 +650,9 @@ SWEDISH_LABELS: dict[str, str] = {
     | **F1** | Kommunal pristäckning: länets K/T används som proxy. 88% av panelen har kommunspecifik K/T. | Flagga `has_native_kt` i data. |
     | **F2** | Nationell styrränta appliceras på alla kommuner och län. | Dokumenterat. |
     | **F3** | Tre formler ger olika rangordning av kommuner. | Korsformelsjämförelse på Sida 02. |
-    | **F4** | Prophet är svagt för årlig makrodata. | ARIMA-flik märkt "rekommenderad". |
+    | **F4** | Elva årsvärden räcker inte för att anpassa en prognosmodell. | Prognosen ersatt av en villkorad projektion med uttalade antaganden. |
     | **F5** | Kontantinsats är en stegfunktion, inte kontinuerlig. | Diskreta regimkort. |
-    | **F6** | Lång horisont vilseleder. | Max 8 steg; varningstext. |
+    | **F6** | Projektionen är villkorad: spridningen mellan scenarierna är inget konfidensintervall. | Varje linje märkt med sitt antagande om realräntan. |
     | **F7** | SCB API-gränser (30 anrop/10 s, 150k celler/fråga). | All data cachad som parquet. |
     | **F8** | Översättning tappar nyanser i bankterminologi. | Ordlista i dokumentation. |
     | **F9** | Imputering av inkomstdata efter senaste publicerade år. | `is_imputed_income`-flagga; framskrivning med 3 % nominell tillväxt per år. Dessa år är inte längre valbara i årsväljaren, indexet stannar vid senaste kompletta år. |

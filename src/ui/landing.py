@@ -83,9 +83,9 @@ def render_landing_what_is_block(kommun_count: int | None = None) -> None:
             </div>
             <div class="shai-body-secondary">
                 Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med data
-                från SCB, Riksbanken och Kolada. Utöver indexet erbjuds prognoser
-                (Prophet och ARIMA), kontantinsatsanalys under fyra regelverk,
-                och en scenariosimulator för stresstester.
+                från SCB, Riksbanken och Kolada. Utöver indexet erbjuds en villkorad
+                projektion, kontantinsatsanalys under fyra regelverk, och en
+                scenariosimulator för stresstester.
             </div>
         </div>
     </div>

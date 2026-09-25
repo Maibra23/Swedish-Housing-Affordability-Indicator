@@ -154,8 +154,14 @@ def test_index_period_spans_in_copy_match_provenance() -> None:
     )
 
 
-def test_forecast_base_year_matches_the_index_end() -> None:
-    """"Framskrivet från X" must name the last year the index actually covers."""
+def test_carried_forward_base_year_matches_the_index_end() -> None:
+    """"Framskrivet från X" must name the last year the index actually covers.
+
+    This once guarded the forecast's training year. The forecast is gone, but the
+    copy is not: Sida 03 still marks which municipal years rest on forward-filled
+    income, and that marker names a year. `NOT_A_VINTAGE` waives the literal on
+    the strength of this test, so removing it would waive it on nothing.
+    """
     end = complete_case_max_year()
     offenders = [
         (key, match.group(1))
@@ -164,9 +170,19 @@ def test_forecast_base_year_matches_the_index_end() -> None:
         if int(match.group(1)) != end
     ]
     assert not offenders, (
-        f"copy projects from a year other than the index end ({end}): {offenders}. "
-        "The forecast trains to complete_case_max_year()."
+        f"copy carries a year other than the index end ({end}): {offenders}. "
+        "Income is forward-filled from complete_case_max_year()."
     )
+
+
+def test_projection_starts_where_the_observed_data_stops() -> None:
+    """The projection extends the index; it must not overlap or skip a year."""
+    import pandas as pd
+
+    projection = pd.read_parquet(
+        Path(__file__).resolve().parents[1] / "data" / "processed" / "projection.parquet"
+    )
+    assert int(projection["target_year"].min()) == complete_case_max_year() + 1
 
 
 def test_municipality_counts_in_copy_match_the_panel() -> None:

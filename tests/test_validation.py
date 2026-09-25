@@ -164,11 +164,3 @@ def test_transaction_price_ordering(county_panel):
         f"ratio is {ratio:.2f}x, expected >= 2.5x. Check transaction_price_sek data."
     )
 
-
-# -----------------------------------------------------------------------
-# Check 7: Forecast intervals widen (placeholder — run after Day 3)
-# -----------------------------------------------------------------------
-@pytest.mark.skip(reason="Run after Day 3 when forecast data exists")
-def test_forecast_intervals_widen():
-    """Confidence bands should widen monotonically with horizon."""
-    pass
