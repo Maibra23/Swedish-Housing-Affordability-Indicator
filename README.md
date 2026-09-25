@@ -20,13 +20,14 @@ Seven pages sit on top of that index:
 
 - **Riksöversikt** · choropleth map and score distribution across all 290 kommuner.
 - **Län jämförelse** · the 21 län ranked under each formula, #1 being the most affordable.
-- **Kommun djupanalys** · per-kommun history with ARIMA and Prophet forecasts to 2030.
+- **Kommun djupanalys** · per-kommun history with a conditional projection to 2030 under
+  three stated assumptions about the real interest rate.
 - **Kontantinsats** · down payment, savings time and monthly cost under the five Swedish
   mortgage regimes, from pre-2010 to the 2026 easing, for houses or apartments.
 - **Scenariosimulator** · stress-test one län against rate, income, price and inflation shocks.
 - **Metodologi** · formulas, sources and every documented limitation.
 
-**Stack:** Streamlit · pandas · Plotly · Folium · statsmodels · pmdarima · Prophet · Parquet.
+**Stack:** Streamlit · pandas · Plotly · Folium · Parquet.
 
 **Data vintage.** The index ends at 2024 because every formula divides by median
 inkomst, and 2024 is the last year SCB has published it. Prices, unemployment and the
