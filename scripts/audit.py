@@ -163,7 +163,7 @@ req = [l.strip() for l in Path("requirements.txt").read_text(encoding="utf-8").s
 check("requirements matches pyproject exactly",
       sorted(req) == sorted(pyproject["project"]["dependencies"]), f"{len(req)} packages")
 check("no pipeline package in the runtime set",
-      not ({"prophet", "pmdarima", "statsmodels", "requests"} &
+      not ({"requests"} &
            {re.split(r"[<>=]", r)[0] for r in req}))
 check("every requirement has upper and lower bounds",
       all(">=" in r and "<" in r for r in req))

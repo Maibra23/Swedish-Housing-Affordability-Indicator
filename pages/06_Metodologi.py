@@ -120,10 +120,10 @@ with st.container(border=True):
     st.markdown(L("mt.tre_alternativa_prismatt_overvagdes"))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 4 — Prognoser (expander)
+# SECTION 4 — Projektion (expander)
 # ══════════════════════════════════════════════════════════════════════
-with st.expander(L("mt.expander_4_prognoser_prophet_vs_arima")):
-    st.markdown(L("mt.prophet_standard_i_granssnittet_bibliotek", v0=N_YEARS, v1=PERIOD))
+with st.expander(L("mt.expander_4_projektion_villkorad")):
+    st.markdown(L("mt.projektion_tre_scenarier_realranta", v0=N_YEARS, v1=PERIOD))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 5 — Kontantinsats (expander)
