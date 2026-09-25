@@ -169,68 +169,85 @@ mean would close the gap and change every value on the page.
 ### What it is
 
 One municipality at a time: its Version C history, a component KPI row, and a
-six-year forecast under two models.
+six-year **conditional projection** under three stated assumptions about the real
+interest rate.
 
 ### Why it exists
 
 It is the only per-municipality time series in the app, and the only forward-
 looking view other than the scenario simulator. Sida 01 says where a municipality
-stands now; this says how it got there and where the models think it goes.
+stands now; this says how it got there, and what the index becomes under
+assumptions the reader can accept or reject.
 
 ### How it works
 
-History is municipal. **The forecast is not.** `arima_pipeline.forecast_county`
-fits at county level over 2014 to 2024, forecasting income, transaction price,
-policy rate and CPI separately, then recombines them into `affordability_c` for
-six annual steps to 2030. SCB publishes nothing that would support a municipal
-forecast.
+History is municipal. **The projection is not.** `src/forecast/projection.py`
+carries the county's last observed income and price forward at 3 % and 2 % a
+year, then divides by each of three assumed real rates. SCB publishes nothing
+that would support a municipal projection.
+
+Nothing is fitted. Until 2026-09-25 this page ran ARIMA and Prophet; both were
+withdrawn rather than repaired, for reasons recorded in R16 and summarised below.
 
 ### When to use it
 
 - Reading one municipality's trajectory rather than its rank.
 - Seeing which component moved: the KPI row carries income, K/T and the rate
   beside the index.
-- Bounding a forward view, with the caveats below taken seriously.
+- Asking what the index would be *if* the real rate settles at a given level.
+  That is the only forward question this page now answers.
 
 ### What the numbers actually say, with real figures
 
-**The forecast is the county's, and the chart used to hide that.** It drew the
+**The projection is the county's, and the chart used to hide that.** It drew the
 forecast beginning at the *municipality's* last value, so Stockholm's line ran at
-6,2 and then jumped to the county's 2025 forecast — which reads as a predicted
+6,2 and then jumped to the county's 2025 value, which reads as a predicted
 improvement and is in fact a seam between two geographies. Stockholm kommun
-closed 2024 at 6,2; Stockholms län at 7,7. The chart now draws the county history
-as a separate series, labelled *Länet*, and anchors the forecast to it. Nothing
-is stitched across a geography.
+closed 2024 at 6,2; Stockholms län at 7,7. The chart draws the county history as
+a separate series, labelled *Länet*, and anchors the projection to it. Nothing is
+stitched across a geography. That remains true of the projection.
 
-**ARIMA's first forecast year is not usable, for any county.** All 21 collapse to
-roughly a quarter of their last observed value in 2025 and rebound the year
-after:
+**The three scenarios, for Stockholms län (observed 2024 = 7,7):**
 
-| Län | 2024 observed | 2025 forecast |
-|---|---|---|
-| Stockholm | 7,7 | **1,9** |
-| Uppsala | 12,1 | **3,0** |
-| Jönköping | 17,0 | **4,1** |
+| År | Golvet, 0,5 pp | Dagens nivå, 0,77 pp | Normaliserad, 2,0 pp |
+|---|---|---|---|
+| 2025 | 12,0 | 7,8 | 3,0 |
+| 2027 | 12,2 | 7,9 | 3,1 |
+| 2030 | 12,6 | 8,2 | 3,1 |
 
-Stockholm's full path is 7,7 → 1,9 → 13,1 → 13,8 → 14,5 → 15,0 → 15,5. Prophet
-does this for **zero** of 21. The cause is visible in the component forecasts:
-ARIMA puts the 2025 policy rate at 2,56 % against a falling observed rate, and
-then takes it to −0,88 % by 2029.
+**The first year moves by exactly 1,56× / 1,01× / 0,39× in all 21 counties.**
+That uniformity is the point, not a defect: the real rate is national, so the
+spread between the lines is a statement about monetary policy and not about any
+municipality. A reader who sees the same fan over Norrbotten as over Stockholm
+has learned the right thing.
 
-The page recommends ARIMA in its own copy while opening on Prophet. That
-contradiction is left standing deliberately: resolving it the obvious way would
-show every reader a broken forecast on first load. Recorded as **R16** in
-`docs/OPEN_RISKS.md`, where the two ways out are set against each other.
+**Why the floor is the whole story.** Version C is a reciprocal of
+`max(R − π, 0,5)`. Stockholm's real rate ran 0,63, then 0,50 for nine years, then
+0,77 — **at the floor in 9 of 11 years**. While it binds, Version C is *exactly*
+200 × (inkomst / pris) and the rate contributes nothing; the identity holds to
+four decimal places in the committed artifact. Yet the real rate carries **99 %**
+of the variance in year-on-year changes of `log C`. A variable that is clamped
+82 % of the time and still explains nearly all the movement is what makes an
+extrapolated denominator unusable.
 
-**What is checked and what is not.** `_validate_widening_bands` runs after
-fitting and asserts the confidence intervals widen with horizon, which they do.
-Nothing asserts the central path is plausible, which is why a one-year collapse
-and rebound shipped. A first-year sanity check beside it is three lines and is
-the recommendation in R16.
+**What the old forecast did, kept here as the reason.** ARIMA's first year was
+implausible for all 21 counties, each collapsing to roughly a quarter of its last
+observed value in 2025 before rebounding: Stockholm 7,7 → 1,9 → 13,1 → 13,8 →
+14,5 → 15,0 → 15,5. Backtested against a naive carry-forward, `auto_arima` lost
+on **every** component. The page also recommended ARIMA in its own copy while
+opening on Prophet. All of that is closed by removal, not by a better model; see
+R16.
 
-Beyond that, the honest bound on all of this is eleven annual observations. The
-page says so in a persistent caption, and it should be read as the binding
-constraint rather than a formality.
+**What is checked now.** `tests/test_projection.py` asserts the floor identity,
+the reciprocal sensitivity, that a rate below the floor is refused, and that no
+county's first projected year falls outside 0,25× to 4× of its last observed
+value. The old `_validate_widening_bands` checked that the confidence bands
+widened, which they did, while nothing checked the central path was plausible.
+There are no bands now, and the spread between scenarios is **not** a confidence
+interval.
+
+Beyond that, the honest bound is still eleven annual observations. The difference
+is that the page no longer spends them on a fitted model.
 
 ---
 

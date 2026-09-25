@@ -1227,7 +1227,7 @@ iteration *after* the previous iteration appended to it. Because it always selec
 - [ ] **Step 5: Regenerate and prove the output is identical**
 
 ```bash
-python scripts/refresh_data.py --no-fetch --no-forecast
+python scripts/refresh_data.py --no-fetch --no-projection
 python -c "import sys;sys.path.insert(0,'.');import pandas as pd;[print(n,(d:=pd.read_parquet(f'data/processed/panel_{n}.parquet')).shape,round(float(d.select_dtypes('number').sum().sum()),4)) for n in ('municipal','county','national')]" > /tmp/panel_after.txt
 diff /tmp/panel_before.txt /tmp/panel_after.txt && echo IDENTICAL
 ```
