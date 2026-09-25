@@ -1,7 +1,8 @@
 """Sida 03 — Kommun djupanalys.
 
-Prognos och detaljanalys per kommun med Prophet och ARIMA.
-Historisk SHAI över indexets hela period + prognos sex år framåt.
+Detaljanalys per kommun: historisk SHAI över indexets hela period, följd av en
+villkorad projektion sex år framåt under tre uttalade antaganden om realräntan.
+Ingenting modellanpassas. Se docs/CONDITIONAL_PROJECTION_PLAN.md.
 """
 
 import streamlit as st
@@ -37,6 +38,7 @@ from src.ui.components import (
     vintage_badge,
 )
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
+from src.forecast.projection import INCOME_GROWTH, PRICE_GROWTH, REAL_RATE_FLOOR
 
 inject_css()
 selections = render_sidebar()
@@ -45,25 +47,16 @@ selections = render_sidebar()
 # "2014–2024" keeps asserting itself after the panel has moved on. See T1.10.
 PERIOD_START, PERIOD_END = first_year(), complete_case_max_year()
 PERIOD = f"{PERIOD_START}–{PERIOD_END}"
-N_YEARS = PERIOD_END - PERIOD_START + 1
 
 # ── Load data ────────────────────────────────────────────────────────
 try:
     with st.spinner("Laddar data..."):
         municipal = load_artifact("affordability_municipal.parquet")
-        # The forecast is computed at county level, so the chart needs the county
-        # history to continue rather than the municipality's.
+        # The projection is computed at county level, so the chart needs the
+        # county history to continue rather than the municipality's.
         county_hist = load_artifact("affordability_county.parquet")
 
-        try:
-            forecast_prophet = load_artifact("forecast_prophet.parquet")
-        except FileNotFoundError:
-            forecast_prophet = pd.DataFrame()
-
-        try:
-            forecast_arima = load_artifact("forecast_arima.parquet")
-        except FileNotFoundError:
-            forecast_arima = pd.DataFrame()
+        projection = load_artifact("projection.parquet")
 except Exception as e:
     st.error(L("kd.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
@@ -75,7 +68,7 @@ selected_year = selections["selected_year"]
 page_title(
     eyebrow="Sida 03 · Kommunanalys",
     title="Kommun djupanalys",
-    subtitle="Historisk analys och prognos per kommun",
+    subtitle="Historisk analys och projektion per kommun",
     year=selected_year,
 )
 
@@ -143,163 +136,128 @@ if len(latest) > 0:
 
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-# ── Caveat callout ───────────────────────────────────────────────────
-st.warning(
-    L("kd.prognoser_baseras_pa_v0_arliga_observationer", v0=N_YEARS, v1=PERIOD)
-)
-
-
-def _build_forecast_chart(
+def _build_projection_chart(
     hist_data: pd.DataFrame,
-    forecast_df: pd.DataFrame,
+    county_hist: pd.DataFrame,
+    projection: pd.DataFrame,
     lan_code: str,
-    model_name: str,
-    county_hist: pd.DataFrame | None = None,
+    scenario_labels: dict[str, str],
 ) -> go.Figure:
-    """Historical Version C for the municipality, with the county forecast.
+    """Observed history for the municipality and its county, then three
+    conditional projections.
 
-    The two are different geographies and the chart used to hide that. It drew
-    the forecast starting from the *municipality's* last value, so Stockholm's
-    line ran along at about 6 and then jumped to the county's 2025 forecast near
-    11. That reads as a forecast of a sudden improvement; it is a seam between
-    two series.
+    Nothing here is fitted. The three lines differ only in their assumed real
+    rate, so the spread between them is a statement about monetary policy rather
+    than about this municipality. That is deliberate: the real rate carries 99 %
+    of the variance in Version C's year-on-year changes, and it is a policy
+    instrument, so it belongs to the reader rather than to a model.
 
-    SCB publishes no municipal forecast, and the pipeline fits at county level
-    (`arima_pipeline.forecast_county`). So the county's own history is drawn as
-    the line the forecast actually continues, and the forecast is anchored to
-    the county's last observed value rather than the municipality's. The
-    municipal line stays as the page's subject. Nothing is stitched across a
-    geography any more.
+    The municipality's own line is the page's subject. The county's is drawn too
+    because the projection extends the county, and because a projection stitched
+    onto a different geography is the defect this chart used to have.
     """
     fig = go.Figure()
 
-    # Historical line
     fig.add_trace(go.Scatter(
-        x=hist_data["year"],
-        y=hist_data["version_c"],
-        mode="lines+markers",
-        name=L("kd.serie_kommunen"),
+        x=hist_data["year"], y=hist_data["version_c"],
+        mode="lines+markers", name=L("kd.serie_kommunen"),
         line=dict(color=COLORS["primary"], width=2.5),
         marker=dict(size=6, color=COLORS["primary"]),
-        hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra>Historisk</extra>",
+        hovertemplate=L("kd.projektion_hover"),
     ))
 
-    # The county series, which is what the forecast continues. Lighter than the
-    # municipal line because the municipality is the page's subject.
-    if county_hist is not None and len(county_hist) > 0:
-        fig.add_trace(go.Scatter(
-            x=county_hist["year"],
-            y=county_hist["version_c"],
-            mode="lines",
-            name=L("kd.serie_lanet"),
-            line=dict(color=COLORS["secondary"], width=1.5, dash="dot"),
-            hovertemplate=L("kd.lanets_historik_hover"),
-        ))
+    fig.add_trace(go.Scatter(
+        x=county_hist["year"], y=county_hist["version_c"],
+        mode="lines", name=L("kd.serie_lanet"),
+        line=dict(color=COLORS["secondary"], width=1.5, dash="dot"),
+        hovertemplate=L("kd.lanet_hover"),
+    ))
 
-    # Mark imputed years
+    # Which municipal years rest on forward-filled income. Kept from the forecast
+    # chart: it is a statement about the observed series, so replacing the
+    # forecast does not make it less true.
     if "is_imputed_income" in hist_data.columns:
         imputed = hist_data[hist_data["is_imputed_income"] == True]
         if len(imputed) > 0:
             fig.add_trace(go.Scatter(
-                x=imputed["year"],
-                y=imputed["version_c"],
-                mode="markers",
-                name="Framskriven inkomst",
+                x=imputed["year"], y=imputed["version_c"],
+                mode="markers", name="Framskriven inkomst",
                 marker=dict(size=10, color=COLORS["accent"], symbol="diamond"),
                 hovertemplate=L("kd.x_framskrivet_fran_2024"),
             ))
 
-    # Forecast
-    if len(forecast_df) > 0:
-        fc = forecast_df[
-            (forecast_df["county_kod"] == lan_code)
-            & (forecast_df["variable"] == "affordability_c")
+    # Most affordable to least, so the legend reads in the same order as the
+    # lines sit on the chart.
+    scenario_colours = {
+        "floor": COLORS["low_risk"],
+        "current": COLORS["secondary"],
+        "normalised": COLORS["high_risk"],
+    }
+    anchor_year = int(county_hist["year"].max())
+    anchor_value = float(
+        county_hist.loc[county_hist["year"] == anchor_year, "version_c"].iloc[0]
+    )
+    for scenario, colour in scenario_colours.items():
+        block = projection[
+            (projection["lan_code"] == lan_code) & (projection["scenario"] == scenario)
         ].sort_values("target_year")
-
-        if len(fc) > 0:
-            # Anchor on the county, which is what the forecast extends.
-            anchor = county_hist if county_hist is not None and len(county_hist) else hist_data
-            last_hist_year = anchor["year"].max()
-            last_hist_val = anchor[anchor["year"] == last_hist_year]["version_c"].iloc[0]
-
-            fc_years = [last_hist_year] + fc["target_year"].tolist()
-            fc_mean = [last_hist_val] + fc["mean"].tolist()
-            fc_lower = [last_hist_val] + fc["lower_80"].tolist()
-            fc_upper = [last_hist_val] + fc["upper_80"].tolist()
-
-            # Confidence band
-            fig.add_trace(go.Scatter(
-                x=fc_years + fc_years[::-1],
-                y=fc_upper + fc_lower[::-1],
-                fill="toself",
-                fillcolor="rgba(74, 111, 165, 0.12)",
-                line=dict(width=0),
-                name=L("kd.serie_intervall"),
-                hoverinfo="skip",
-            ))
-
-            # Mean forecast line
-            fig.add_trace(go.Scatter(
-                x=fc_years,
-                y=fc_mean,
-                mode="lines+markers",
-                name=L("kd.serie_prognos"),
-                line=dict(color=COLORS["secondary"], width=2, dash="dash"),
-                marker=dict(size=5, color=COLORS["secondary"]),
-                hovertemplate=f"<b>%{{x}}</b><br>Prognos: %{{y:,.1f}}<extra>{model_name}</extra>",
-            ))
+        if block.empty:
+            continue
+        fig.add_trace(go.Scatter(
+            x=[anchor_year] + block["target_year"].tolist(),
+            y=[anchor_value] + block["version_c"].tolist(),
+            mode="lines", name=scenario_labels[scenario],
+            line=dict(color=colour, width=2, dash="dash"),
+            hovertemplate=L("kd.projektion_hover"),
+        ))
 
     layout = get_chart_layout(
-        height=380,
+        height=420,
         xaxis_title=L("kd.ar"),
         yaxis_title="SHAI (Version C)",
     )
     layout["xaxis"]["dtick"] = 1
+    layout["legend"] = dict(
+        orientation="h", yanchor="bottom", y=1.04,
+        xanchor="left", x=0, font=dict(size=11),
+    )
+    layout["margin"] = dict(l=50, r=20, t=48, b=50)
     fig.update_layout(**layout)
     return fig
 
 
-# ── Forecast tabs ────────────────────────────────────────────────────
-# Prophet stays the default, deliberately, and this is NOT the inconsistency
-# resolved. The page recommends ARIMA while opening on Prophet, which is a real
-# contradiction — but resolving it by defaulting to ARIMA was tried and reverted
-# on evidence: ARIMA's first forecast year is implausible for **21 of 21
-# counties**, every one collapsing to roughly a quarter of its last observed
-# value in 2025 before rebounding (Stockholm 7,7 -> 1,9 -> 13,1). It also
-# forecasts the policy rate to -0,88 % by 2029. Prophet does this for zero
-# counties.
-#
-# So the contradiction is left standing rather than resolved in the direction
-# that would show every reader a broken forecast by default. Fixing it properly
-# means either repairing the ARIMA pipeline or withdrawing the recommendation,
-# and both are methodology decisions rather than interface ones.
-tab_prophet, tab_arima = st.tabs(["Prophet (standard)", "ARIMA (rekommenderad)"])
+# ── Conditional projection ───────────────────────────────────────────
+_observed_real = max(
+    float(_county_hist["policy_rate"].iloc[-1]) - float(_county_hist["cpi_yoy_pct"].iloc[-1]),
+    REAL_RATE_FLOOR,
+)
+_scenario_labels = {
+    "floor": L("kd.scenario_golvet"),
+    "current": L("kd.scenario_dagens", v0=f"{_observed_real:.2f}".replace(".", ",")),
+    "normalised": L("kd.scenario_normaliserad"),
+}
 
-with tab_prophet:
-    with st.container(border=True):
-        st.markdown(
-            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "Prophet-modell", "PROPHET"),
-            unsafe_allow_html=True,
-        )
-        st.caption(L("kd.prophet_ar_optimerat_for_dagliga"))
-        st.caption(L("kd.prognoserna_beraknas_pa_lansniva_v0_inte_per", v0=kommun_data['lan_code'].iloc[0]))
-        if len(forecast_prophet) > 0:
-            fig = _build_forecast_chart(kommun_data, forecast_prophet, lan_code, "Prophet", _county_hist)
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
-        else:
-            st.info("Prognosdata (Prophet) saknas.")
-
-with tab_arima:
-    with st.container(border=True):
-        st.markdown(
-            card_header(L("kd.prognos_for_v0", v0=selected_kommun), "ARIMA-modell (auto-AIC)", "ARIMA"),
-            unsafe_allow_html=True,
-        )
-        if len(forecast_arima) > 0:
-            fig = _build_forecast_chart(kommun_data, forecast_arima, lan_code, "ARIMA", _county_hist)
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
-        else:
-            st.info("Prognosdata (ARIMA) saknas.")
+with st.container(border=True):
+    st.markdown(
+        card_header(
+            L("kd.projektion_rubrik", v0=selected_kommun),
+            L("kd.projektion_underrubrik"),
+            L("kd.projektion_tagg"),
+        ),
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(
+        _build_projection_chart(
+            kommun_data, _county_hist, projection, lan_code, _scenario_labels
+        ),
+        width="stretch",
+        config={"displayModeBar": "hover"},
+    )
+    st.caption(
+        L("kd.projektion_antaganden",
+          v0=f"{INCOME_GROWTH * 100:.0f}", v1=f"{PRICE_GROWTH * 100:.0f}")
+    )
+    explanation(L("kd.projektion_forklaring"))
 
 # ── Component breakdown ──────────────────────────────────────────────
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
@@ -363,10 +321,6 @@ with st.container(border=True):
             T("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
             unsafe_allow_html=True,
         )
-
-explanation(L("kd.forklaring_prognos", v0=N_YEARS))
-with st.expander(L("kd.om_prognosen")):
-    st.markdown(L("kd.om_prognosen_text", v0=N_YEARS))
 
 with st.expander(L("kd.om_komponenterna")):
     st.markdown(L("kd.om_komponenterna_text"))
