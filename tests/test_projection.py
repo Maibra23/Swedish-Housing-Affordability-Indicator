@@ -142,3 +142,24 @@ def test_the_floor_scenario_is_the_most_affordable(county_panel: pd.DataFrame) -
     out = project_all(county_panel)
     wide = out.pivot_table(index=["lan_code", "target_year"], columns="scenario", values="version_c")
     assert (wide["floor"] > wide["normalised"]).all()
+
+
+def test_the_committed_projection_matches_the_committed_panel(
+    county_panel: pd.DataFrame,
+) -> None:
+    """The artifact the page reads must be the one this module produces.
+
+    Nothing is fitted, so this is a pure function of the panel: if the two
+    disagree, the artifact is stale and the refresh needs re-running.
+    """
+    artifact = ROOT / "data" / "processed" / "projection.parquet"
+    assert artifact.exists(), "run: python3.11 scripts/refresh_data.py --no-fetch"
+
+    stored = pd.read_parquet(artifact).sort_values(
+        ["lan_code", "scenario", "target_year"]
+    ).reset_index(drop=True)
+    fresh = project_all(county_panel).sort_values(
+        ["lan_code", "scenario", "target_year"]
+    ).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(stored, fresh, check_dtype=False, rtol=1e-9)

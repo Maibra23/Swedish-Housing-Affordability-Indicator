@@ -8,12 +8,13 @@ Steps executed:
   2. Rebuild the three panel parquets (municipal, county, national)
   3. Compute affordability indices A/B/C, save affordability parquets, and
      record the data vintage in data/processed/data_provenance.json
-  4. Run ARIMA and Prophet forecast pipelines and save forecast parquets
+  4. Compute the conditional projection (no model fitting; see
+     docs/CONDITIONAL_PROJECTION_PLAN.md) and save projection.parquet
 
 Usage:
     python scripts/refresh_data.py            # full refresh
     python scripts/refresh_data.py --no-fetch # skip API calls, rebuild from cached raw data
-    python scripts/refresh_data.py --no-forecast  # skip forecast step (fastest)
+    python scripts/refresh_data.py --no-projection  # skip the projection step
 
 Note on BO0501C (bostadsrätt prices):
     SCB BO0501C apartment price data is fetched as part of step 1 via
@@ -155,33 +156,25 @@ def step_compute_indices() -> None:
     logger.info("Step 3 done in %.1f s", time.time() - t0)
 
 
-def step_forecasts() -> None:
-    """Run ARIMA and Prophet forecast pipelines."""
+def step_projection() -> None:
+    """Compute the conditional projection and save it."""
     logger.info("=" * 60)
-    logger.info("STEP 4 — Running forecast pipelines (ARIMA + Prophet)")
+    logger.info("STEP 4 — Conditional projection")
     logger.info("=" * 60)
 
     import pandas as pd
-    from src.forecast import arima_pipeline, prophet_pipeline
+
+    from src.forecast.projection import project_all
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
-    t0 = time.time()
-
-    county_panel = pd.read_parquet(DATA_DIR / "panel_county.parquet")
-    national_panel = pd.read_parquet(DATA_DIR / "panel_national.parquet")
-
-    logger.info("Running ARIMA forecasts ...")
-    arima_result, arima_meta = arima_pipeline.run_all(county_panel, national_panel)
-    arima_result.to_parquet(DATA_DIR / "forecast_arima.parquet", index=False)
-    arima_meta.to_parquet(DATA_DIR / "arima_metadata.parquet", index=False)
-    logger.info("  Saved forecast_arima.parquet  (%d rows)", len(arima_result))
-
-    logger.info("Running Prophet forecasts (this may take a few minutes) ...")
-    prophet_result = prophet_pipeline.run_all(county_panel, national_panel)
-    prophet_result.to_parquet(DATA_DIR / "forecast_prophet.parquet", index=False)
-    logger.info("  Saved forecast_prophet.parquet  (%d rows)", len(prophet_result))
-
-    logger.info("Step 4 done in %.1f s", time.time() - t0)
+    county = pd.read_parquet(DATA_DIR / "affordability_county.parquet")
+    out = project_all(county)
+    target = DATA_DIR / "projection.parquet"
+    out.to_parquet(target, index=False)
+    logger.info(
+        "  Saved %s  (%d rows, %d counties, %d scenarios)",
+        target.name, len(out), out["lan_code"].nunique(), out["scenario"].nunique(),
+    )
 
 
 def main() -> None:
@@ -192,9 +185,9 @@ def main() -> None:
         help="Skip API calls; rebuild from existing data/raw/ files",
     )
     parser.add_argument(
-        "--no-forecast",
+        "--no-projection",
         action="store_true",
-        help="Skip forecast step (saves ~5–15 min)",
+        help="skip the conditional projection step",
     )
     parser.add_argument(
         "--force",
@@ -215,10 +208,10 @@ def main() -> None:
     step_build_panels()
     step_compute_indices()
 
-    if not args.no_forecast:
-        step_forecasts()
+    if not args.no_projection:
+        step_projection()
     else:
-        logger.info("Skipping STEP 4 (--no-forecast)")
+        logger.info("Skipping STEP 4 (--no-projection)")
 
     logger.info("=" * 60)
     logger.info("Refresh complete in %.1f s", time.time() - wall_start)

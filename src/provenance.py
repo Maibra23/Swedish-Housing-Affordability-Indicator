@@ -112,7 +112,7 @@ def load_provenance(path: Path | None = None) -> dict:
         raise FileNotFoundError(
             f"Data provenance artifact not found: {target}. It is written by "
             f"scripts/refresh_data.py; run `python scripts/refresh_data.py "
-            f"--no-fetch --no-forecast` to regenerate it."
+            f"--no-fetch --no-projection` to regenerate it."
         )
     return json.loads(target.read_text(encoding="utf-8"))
 
