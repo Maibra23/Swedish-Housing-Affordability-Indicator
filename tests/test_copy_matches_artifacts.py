@@ -20,7 +20,7 @@ comparing copy to data would be tautological, so what is guarded instead is that
 they stay derived: a re-introduced literal fails `test_*_is_not_hardcoded`. This
 is the stronger position. Drift becomes impossible rather than merely detected.
 
-*Non-derivable* values — a forecast horizon, a regulatory threshold, an editorial
+*Non-derivable* values — a projection horizon, a regulatory threshold, an editorial
 aside like "typisk 2024 bankmarknad" — cannot be read from an artifact. Those are
 compared where an artifact knows something adjacent, and otherwise classified by
 `NOT_A_VINTAGE` so a new one cannot quietly join them unexamined.
@@ -157,8 +157,8 @@ def test_index_period_spans_in_copy_match_provenance() -> None:
 def test_carried_forward_base_year_matches_the_index_end() -> None:
     """"Framskrivet från X" must name the last year the index actually covers.
 
-    This once guarded the forecast's training year. The forecast is gone, but the
-    copy is not: Sida 03 still marks which municipal years rest on forward-filled
+    This once guarded the training year of a fitted model. That model is gone (R16),
+    but the copy is not: Sida 03 still marks which municipal years rest on forward-filled
     income, and that marker names a year. `NOT_A_VINTAGE` waives the literal on
     the strength of this test, so removing it would waive it on nothing.
     """
@@ -255,7 +255,7 @@ VINTAGE_SHAPED = re.compile(r"\b(19[6-9]\d|20[0-4]\d)\b")
 NOT_A_VINTAGE = {
     "regulatory regime start": r"\b(?:sedan\s+)?(?:2010|2016|2018|2026)\b",
     "upstream series start year": r"\b(?:19[6-9]\d|198\d|199\d|200\d|2011)\s*[–—-]",
-    "forecast horizon end": r"\b202[5-9]\s*[–—-]\s*203\d\b",
+    "projection horizon end": r"\b202[5-9]\s*[–—-]\s*203\d\b",
     "historical rate-cycle reference": r"\b202[23]\b",
     "editorial market reference": r"typisk\s+\d{4}\s+bankmarknad",
     # "Prisindex (1990=100)", "KPI (2020=100)" — an index's base period, a

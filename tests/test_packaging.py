@@ -27,9 +27,9 @@ PYPROJECT = ROOT / "pyproject.toml"
 REQUIREMENTS = ROOT / "requirements.txt"
 
 # Refresh-pipeline packages: installed by the `pipeline` extra, never by the
-# runtime set. prophet, pmdarima and statsmodels were removed from the project
-# with the ARIMA and Prophet pipelines, so `requests` is all that remains; the
-# refresh toolchain now compiles nothing.
+# runtime set. The compiled statistical packages were removed with the pipelines
+# they served (R16), so `requests` is all that remains and the refresh toolchain
+# now compiles nothing.
 PIPELINE_ONLY = {"requests"}
 
 

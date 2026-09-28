@@ -1,9 +1,9 @@
 # Runtime dependencies — what Streamlit Community Cloud installs to serve the app.
 #
 # This file is deliberately NOT the project's full dependency set. The refresh
-# pipeline (prophet, pmdarima, statsmodels, requests) runs on a developer's
+# pipeline (requests) runs on a developer's
 # machine and writes parquet artifacts that are committed; the server only reads
-# them. Prophet and pmdarima compile from source, so shipping them here bought a
+# them. The extra once carried packages that compile from source, which bought a
 # slow, fragile cold start and nothing else. See docs/REVITALIZATION_PLAN.md,
 # Finding I / T2.1.
 #

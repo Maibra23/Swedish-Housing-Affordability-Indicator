@@ -5,9 +5,9 @@ committed panel that floor binds in 9 of 11 years, during which Version C is
 exactly 200 x (income / price) and the rate contributes nothing. The real rate
 carries 99 % of the variance in year-on-year changes of log C.
 
-That is why nothing here forecasts it. Income and price are carried forward at
+That is why nothing here extrapolates it. Income and price are carried forward at
 documented rates; the real rate is a stated scenario. These tests pin the
-arithmetic and, more importantly, the property that made the old forecast
+arithmetic and, more importantly, the property that made the withdrawn pipelines
 unusable: no input can produce an absurd output.
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.forecast.projection import (
+from src.projection import (
     HORIZON,
     INCOME_GROWTH,
     PRICE_GROWTH,
@@ -109,10 +109,11 @@ def test_every_county_and_scenario_is_projected(county_panel: pd.DataFrame) -> N
 
 
 def test_no_projection_is_absurd(county_panel: pd.DataFrame) -> None:
-    """The property the old forecast could not hold.
+    """The property the withdrawn pipelines could not hold.
 
-    ARIMA put 21 of 21 counties outside 0,5x..2x of their last observed value in
-    the first projected year. Nothing here is fitted, so nothing can.
+    The withdrawn pipelines put 21 of 21 counties outside 0,5x..2x of their last
+    observed value in the first projected year. Nothing here is fitted, so nothing
+    can. See R16.
     """
     out = project_all(county_panel)
     last = county_panel[county_panel["year"] == county_panel["year"].max()]

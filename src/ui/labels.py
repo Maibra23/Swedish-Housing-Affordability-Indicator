@@ -50,7 +50,7 @@ def L(key: str, **values: object) -> str:
 
 SWEDISH_LABELS: dict[str, str] = {
     "rv.kartfilen_saknas": "Kartfilen saknas (data/geo/kommuner.geojson). Kartan kan inte visas.",
-    "mt.expander_4_projektion_villkorad": "4. Projektion (villkorad, inte prognos)",
+    "mt.expander_4_projektion_villkorad": "4. Projektion (villkorad)",
     "mt.expander_5_kontantinsats_regimhistorik": "5. Kontantinsats: regimhistorik",
     "mt.expander_7_datavalidering": "7. Datavalidering",
     "mt.expander_8_referenser": "8. Referenser",
@@ -164,7 +164,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.rangskillnad": "Rangskillnad",
     "lj.antal_kommuner_per_riskklass_v0": "Antal kommuner per riskklass, {v0}",
     "lj.storst_avstand_mellan_b_och_c": "Kommunerna där B och C är mest oense",
-    "lj.c_driver_sajten": "**Version C är den som räknas.** Kartan, riskklasserna, KPI-raden, prognoserna och scenariosimulatorn läser alla C. A och B står här för att svara på en rimlig invändning: att en kommuns placering bara är en effekt av vilken formel någon råkade välja.",
+    "lj.c_driver_sajten": "**Version C är den som räknas.** Kartan, riskklasserna, KPI-raden, projektionen och scenariosimulatorn läser alla C. A och B står här för att svara på en rimlig invändning: att en kommuns placering bara är en effekt av vilken formel någon råkade välja.",
     "lj.a_och_c_ar_identiska": "Tabellen visar varför den invändningen bara delvis går att bemöta. **A och C rangordnar exakt lika, varje år, av matematiska skäl:** ränta och inflation är nationella och lika för alla kommuner ett givet år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort. De skiljer sig i nivå, inte i ordning. **B är alltså den enda formel som kan vara oense**, och den är det för {v0} av {v1} kommuner ({v2} %). Det är den siffran som säger något om robusthet.",
     "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
     "lj.topp_5_och_botten_5_lan_under_varje_formel": "Topp 5 och botten 5 län under varje formel",
@@ -191,7 +191,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "kd.projektion_hover": "<b>%{x}</b><br>SHAI %{y:,.1f}<extra>%{fullData.name}</extra>",
     "kd.lanet_hover": "<b>%{x}</b><br>SHAI %{y:,.1f}<extra>Länet</extra>",
     "kd.projektion_antaganden": "Inkomsten skrivs fram med {v0} % per år och priset med {v1} % per år. Ingenting är modellanpassat.",
-    "kd.projektion_forklaring": "Det här är inte en prognos utan en projektion. Version C är en invers av realräntan, alltså styrränta minus inflation, och den räntan står för nästan hela variationen i indexet mellan år. Den är också ett penningpolitiskt beslut snarare än en statistisk process, och den har legat på golvet 0,5 procentenheter i nio av elva observerade år. Att extrapolera den från elva årsvärden är att gissa Riksbankens politik sex år fram. Därför gissar sidan inte: den visar vad indexet blir under tre uttalade antaganden, och du väljer vilket som är rimligt.",
+    "kd.projektion_forklaring": "Det här är en projektion, inte en förutsägelse. Version C är en invers av realräntan, alltså styrränta minus inflation, och den räntan står för nästan hela variationen i indexet mellan år. Den är också ett penningpolitiskt beslut snarare än en statistisk process, och den har legat på golvet 0,5 procentenheter i nio av elva observerade år. Att extrapolera den från elva årsvärden är att gissa Riksbankens politik sex år fram. Därför gissar sidan inte: den visar vad indexet blir under tre uttalade antaganden, och du väljer vilket som är rimligt.",
     "kd.styrranta": "Styrränta",
     "kd.riksbankens_styrranta_arsgenomsnitt": "Riksbankens styrränta, årsgenomsnitt. Nationell: samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
     "kd.x_framskrivet_fran_2024": "<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
@@ -602,8 +602,8 @@ SWEDISH_LABELS: dict[str, str] = {
     permanenta småhus (Fastighetstyp 220). Se Begränsning F11 och F12 nedan.
     """,
     "mt.projektion_tre_scenarier_realranta": """
-    Sidan räknar inte fram någon prognos. Den visar en **projektion**: vad indexet
-    blir under tre uttalade antaganden om realräntan.
+    Sidan förutsäger ingenting. Den visar en **projektion**: vad indexet blir under
+    tre uttalade antaganden om realräntan.
 
     ### Varför ingen modell anpassas
     Version C är en invers av realräntan, alltså styrränta minus inflation, med ett
@@ -611,11 +611,11 @@ SWEDISH_LABELS: dict[str, str] = {
     årliga förändringar, och golvet har bundit i nio av {v0} observerade år. Under de
     åren är Version C exakt 200 × (inkomst / pris) och räntan bidrar ingenting.
 
-    Med {v0} årsvärden ({v1}) förlorade `auto_arima` mot en enkel framskrivning på
-    varje komponent. Att extrapolera realräntan är i praktiken att gissa Riksbankens
-    penningpolitik sex år fram, och formeln förstorar felet: ARIMA satte realräntan
-    till 3,20 procentenheter mot ett golv på 0,50 och delade Stockholms index med
-    fyra.
+    Med {v0} årsvärden ({v1}) förlorade statistisk modellanpassning mot en enkel
+    framskrivning på varje komponent. Att extrapolera realräntan är i praktiken att
+    gissa Riksbankens penningpolitik sex år fram, och formeln förstorar felet: en
+    anpassad modell satte realräntan till 3,20 procentenheter mot ett golv på 0,50
+    och delade Stockholms index med fyra.
 
     ### De tre scenarierna
     - **Golvet, 0,5 pp** — golvet fortsätter binda, som det gjort i nio av {v0} år
@@ -650,7 +650,7 @@ SWEDISH_LABELS: dict[str, str] = {
     | **F1** | Kommunal pristäckning: länets K/T används som proxy. 88% av panelen har kommunspecifik K/T. | Flagga `has_native_kt` i data. |
     | **F2** | Nationell styrränta appliceras på alla kommuner och län. | Dokumenterat. |
     | **F3** | Tre formler ger olika rangordning av kommuner. | Korsformelsjämförelse på Sida 02. |
-    | **F4** | Elva årsvärden räcker inte för att anpassa en prognosmodell. | Prognosen ersatt av en villkorad projektion med uttalade antaganden. |
+    | **F4** | Elva årsvärden räcker inte för att anpassa en statistisk modell. | Villkorad projektion med uttalade antaganden i stället. |
     | **F5** | Kontantinsats är en stegfunktion, inte kontinuerlig. | Diskreta regimkort. |
     | **F6** | Projektionen är villkorad: spridningen mellan scenarierna är inget konfidensintervall. | Varje linje märkt med sitt antagande om realräntan. |
     | **F7** | SCB API-gränser (30 anrop/10 s, 150k celler/fråga). | All data cachad som parquet. |
@@ -672,7 +672,7 @@ SWEDISH_LABELS: dict[str, str] = {
     3. **Stockholm i topp 5 sämst (Version C):** Verifierat med K/T-data.
     4. **Norrbotten i topp 5 bäst (Version A):** Verifierat.
     5. **K/T-intervall:** Alla K/T-värden mellan 1,0 och 4,0.
-    6. **Prognosintervall vidgas:** Konfidensband vidgas monotont med horisont.
+    6. **Projektionen är rimlig:** Inget projicerat förstaår hamnar utanför 0,25× till 4× av länets senast observerade värde.
 
     Alla kontroller implementerade i `tests/test_validation.py`.
     """,

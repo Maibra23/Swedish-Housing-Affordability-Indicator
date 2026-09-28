@@ -1,4 +1,13 @@
 # SHAI Task Execution Playbook (v2)
+
+> **Superseded in part — historical document.** This is the original specification as
+> written, kept unaltered because `docs/DEVIATIONS.md` records the build's departures
+> *against* it and rewriting it would destroy that baseline. Its forecasting sections
+> (Prophet, ARIMA, confidence bands, quarter horizons) no longer describe the project:
+> statistical model fitting was withdrawn and replaced by a conditional projection. See
+> **D19** in `docs/DEVIATIONS.md` and **R16** in `docs/OPEN_RISKS.md`. Do not read this
+> file as current guidance.
+
 ## Post Day 2 revision
 
 **Version:** 2.0

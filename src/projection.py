@@ -1,31 +1,30 @@
 """Conditional projection: what Version C becomes under a stated real rate.
 
-This replaced ARIMA and Prophet on 2026-09-25. Both forecast the components of
-Version C and recombined them, and both were unusable for the same reason.
+Nothing here is fitted, and that is the whole design.
 
 **Eleven annual observations cannot support a fitted model.** Backtested against
-a naive carry-forward control over three expanding origins, `auto_arima` lost on
-every component: income 16,2 % against 6,7 %, price 19,5 % against 5,4 %, the
-real rate 18,2 % against 17,5 %.
+a naive carry-forward control over three expanding origins, statistical fitting
+lost on every component: income 16,2 % against 6,7 %, price 19,5 % against
+5,4 %, the real rate 18,2 % against 17,5 %.
 
 **And the formula amplifies the resulting error.** Version C is a reciprocal of
 `max(R - pi, 0.5)`. That floor binds in 9 of the 11 observed years, during which
 C is exactly `200 * income / price` and the rate contributes nothing at all. The
-real rate carries 99 % of the variance in year-on-year changes of `log C`. So a
-model that lets the rate escape the floor moves C by a multiple: ARIMA put the
-2025 real rate at 3,20 pp against a floor of 0,50 and divided Stockholm's index
-by four.
+real rate carries 99 % of the variance in year-on-year changes of `log C`, so a
+model that lets the rate escape the floor moves C by a multiple.
 
 The conclusion is not that a better model is needed. It is that an unconditional
-forecast of Version C is an unconditional forecast of Riksbank policy six years
-out, dressed in a confidence interval that implies warrant it does not have.
+projection of Version C is an unconditional projection of Riksbank policy six
+years out, dressed in a confidence interval that implies warrant it does not
+have.
 
-So nothing here is fitted. Income and price are carried forward at documented
-rates, following the precedent of `IMPUTED_INCOME_GROWTH_RATE` (limitation F9),
-and the real rate is a scenario the reader chooses. No regime can make this
-produce an absurd number, because every input is observed or stated.
+So income and price are carried forward at documented rates, following the
+precedent of `IMPUTED_INCOME_GROWTH_RATE` (limitation F9), and the real rate is
+a scenario the reader chooses. No regime can make this produce an absurd number,
+because every input is observed or stated.
 
-See `docs/CONDITIONAL_PROJECTION_PLAN.md` for the full evidence.
+The full evidence, and the two pipelines this replaced, are recorded as R16 in
+`docs/OPEN_RISKS.md`.
 """
 
 from __future__ import annotations

@@ -8,8 +8,8 @@ Steps executed:
   2. Rebuild the three panel parquets (municipal, county, national)
   3. Compute affordability indices A/B/C, save affordability parquets, and
      record the data vintage in data/processed/data_provenance.json
-  4. Compute the conditional projection (no model fitting; see
-     docs/CONDITIONAL_PROJECTION_PLAN.md) and save projection.parquet
+  4. Compute the conditional projection (no model fitting; see R16 in
+     docs/OPEN_RISKS.md) and save projection.parquet
 
 Usage:
     python scripts/refresh_data.py            # full refresh
@@ -164,7 +164,7 @@ def step_projection() -> None:
 
     import pandas as pd
 
-    from src.forecast.projection import project_all
+    from src.projection import project_all
 
     DATA_DIR = PROJECT_ROOT / "data" / "processed"
     county = pd.read_parquet(DATA_DIR / "affordability_county.parquet")

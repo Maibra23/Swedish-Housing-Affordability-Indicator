@@ -1028,7 +1028,8 @@ first-year sanity check the recommendation asked for exists as
 that cannot fail it rather than a fit that did, 21 times out of 21.
 
 **This also closes the fragile half of R3 and all of R4**, and the refresh toolchain compiles
-nothing. Full evidence: `docs/CONDITIONAL_PROJECTION_PLAN.md`.
+nothing. The implementation plan is kept at
+`docs/archive/CONDITIONAL_PROJECTION_PLAN.md`.
 
 **What was traded away, stated plainly.** Confidence bands are gone; the spread between
 scenarios is not one and the widening-band check is moot. And **someone owns the three

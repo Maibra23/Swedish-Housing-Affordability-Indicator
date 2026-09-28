@@ -223,15 +223,15 @@ every `z_*`, `rank_*` and `risk_*` column.
 
 ## 5. Projection approach
 
-Until 2026-09-25 this section described two fitted models, Prophet and ARIMA. Both
-are deleted. A backtest against a naive carry-forward control showed `auto_arima`
-losing on every component of Version C, and the formula amplified the residual
-error into first-year values implausible for all 21 counties. See **R16** in
-`docs/OPEN_RISKS.md` and `docs/CONDITIONAL_PROJECTION_PLAN.md`.
+The index is projected, not predicted. Statistical model fitting was evaluated
+against a naive carry-forward control and lost on every component of Version C,
+while the formula amplified the residual error into implausible first-year values
+for all 21 counties. It was withdrawn rather than repaired; the measurements are
+recorded as **R16** in `docs/OPEN_RISKS.md`.
 
-### What replaced them
+### How it works
 
-`src/forecast/projection.py`. Nothing is fitted.
+`src/projection.py`. Nothing is fitted.
 
 ```
 income(n)  = last_observed_income × (1 + 0.03)ⁿ
@@ -322,7 +322,7 @@ Output: recalculated Version C affordability for selected county, with delta fro
 | F1 | Native K/T available for ~88% of municipality years; county K/T fallback used for remaining ~12% | `has_native_kt` flag in panel; full list of fallback municipalities on Metodologi page | Low |
 | F2 | National interest rate applied at municipal and county level | Documented explicitly; municipal variation in affordability comes entirely from income and K/T differences | Medium |
 | F3 | Three formulas rank municipalities differently | "Varför skiljer sig versionerna åt" comparison panel on Län jämförelse page | Low |
-| F4 | Eleven annual observations cannot support a fitted forecast model | Both statistical pipelines withdrawn; replaced by a conditional projection (R16) | Medium |
+| F4 | Eleven annual observations cannot support a fitted statistical model | Model fitting withdrawn; conditional projection instead (R16) | Medium |
 | F5 | Kontantinsats is step function not continuous | Discrete regime cards, not a slider | Low |
 | F6 | The projection is conditional: it states what it assumes, and the spread between scenarios is not a confidence interval | Every line labelled with its own real-rate assumption; six annual steps | Medium |
 | F7 | SCB API rate limits (30 calls/10s, 150k cells/query) | All data cached as parquet at build time; no live API calls from Streamlit | Low |
