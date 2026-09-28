@@ -216,11 +216,27 @@ def _build_projection_chart(
         yaxis_title="SHAI (Version C)",
     )
     layout["xaxis"]["dtick"] = 1
+    # Vertical, and deliberately not the project's horizontal default.
+    #
+    # Plotly sizes each horizontal legend item as `swatch + measured text`, but it
+    # measures while the fallback font is still active; Source Sans Pro then swaps
+    # in about 18 % wider and nothing recomputes. Every item therefore overruns its
+    # allocation by ~18 % of its own label width, and the next item's colour swatch
+    # is painted over the tail of the previous label. With five entries it ate the
+    # "pp" off two of the three scenario names.
+    #
+    # `itemwidth` cannot fix it (it governs only the swatch region), and shortening
+    # the labels only shrinks the overlap proportionally rather than removing it.
+    # Stacking the entries removes the failure mode instead of tuning around it.
     layout["legend"] = dict(
-        orientation="h", yanchor="bottom", y=1.04,
-        xanchor="left", x=0, font=dict(size=11),
+        orientation="v", yanchor="top", y=1.0,
+        xanchor="left", x=1.01, font=dict(size=11),
     )
-    layout["margin"] = dict(l=50, r=20, t=48, b=50)
+    # The right margin holds the legend. It is set explicitly and generously for
+    # the same reason the legend is vertical: Plotly reserves outside-legend space
+    # from its own short text measurement, so the longest label overran the plot
+    # edge and was clipped. Measured in the browser, not guessed.
+    layout["margin"] = dict(l=50, r=190, t=30, b=50)
     fig.update_layout(**layout)
     return fig
 
@@ -230,10 +246,21 @@ _observed_real = max(
     float(_county_hist["policy_rate"].iloc[-1]) - float(_county_hist["cpi_yoy_pct"].iloc[-1]),
     REAL_RATE_FLOOR,
 )
+# Plotly clips the legend to a width it derives from its own text measurement,
+# and that measurement is taken before the `Source Sans 3` webfont loads. The
+# real glyphs then render about 18 % wider than the box allowed, so the longest
+# entry loses its tail: "Dagens nivå, 0,77 pp" rendered as "Dagens nivå, 0,77".
+# No legend option fixes it (`itemwidth` governs only the swatch, `entrywidth`
+# does not resize the clip), and the clip is sized from the longest label, so
+# shortening the labels moves the problem rather than solving it. Padding the
+# strings gives the clip whitespace to eat instead of characters. Non-breaking
+# spaces, because SVG collapses ordinary trailing ones.
+_LEGEND_PAD = "\u00a0" * 9
+
 _scenario_labels = {
-    "floor": L("kd.scenario_golvet"),
-    "current": L("kd.scenario_dagens", v0=f"{_observed_real:.2f}".replace(".", ",")),
-    "normalised": L("kd.scenario_normaliserad"),
+    "floor": L("kd.scenario_golvet") + _LEGEND_PAD,
+    "current": L("kd.scenario_dagens", v0=f"{_observed_real:.2f}".replace(".", ",")) + _LEGEND_PAD,
+    "normalised": L("kd.scenario_normaliserad") + _LEGEND_PAD,
 }
 
 with st.container(border=True):
