@@ -83,9 +83,8 @@ Eight packages, no compilers, no API calls at startup.
 pip install -e ".[pipeline]"
 ```
 
-The pipeline extra is now a single package. `prophet`, `pmdarima` and `statsmodels`
-left with the forecast pipelines on 2026-09-25 (R16), so the refresh toolchain compiles
-nothing at all. The split between `requirements.txt` and
+The pipeline extra is now a single package. The compiled statistical packages left
+with the pipelines they served (R16), so the refresh toolchain compiles nothing at all. The split between `requirements.txt` and
 `[project.optional-dependencies] pipeline` is kept anyway, because the serving host has
 no business fetching from SCB; `tests/test_packaging.py` and
 `tests/test_runtime_dependencies.py` fail if the two ever drift.
@@ -115,7 +114,7 @@ This runs four steps in sequence:
 2. **Build panels** — rebuilds `data/processed/panel_{municipal,county,national}.parquet`
 3. **Compute indices** — rebuilds `data/processed/affordability_*.parquet`
 4. **Projection** — recomputes `data/processed/projection.parquet` from the county
-   affordability panel. No model fitting; see `docs/CONDITIONAL_PROJECTION_PLAN.md`
+   affordability panel. No model fitting; see R16 in `docs/OPEN_RISKS.md`
 
 Total runtime: ~10–20 minutes, essentially all of it SCB API chunked fetches. Step 4
 now takes well under a second.

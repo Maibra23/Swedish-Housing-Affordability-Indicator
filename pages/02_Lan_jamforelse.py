@@ -87,7 +87,7 @@ page_title(
 
 # ── Formula config ───────────────────────────────────────────────────
 # Realversion (C) first, because it is the one the site runs on: the map, the
-# risk classes, the KPI row, the forecasts and the simulator all read C. The
+# risk classes, the KPI row, the projection and the simulator all read C. The
 # tab order is also the default tab, and opening on Bankversion (A) led with
 # the formula this page's own copy calls a robustness check.
 FORMULA_INFO = {

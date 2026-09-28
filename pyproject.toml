@@ -34,9 +34,8 @@ dependencies = [
 [project.optional-dependencies]
 # The refresh toolchain: the SCB/Riksbanken/Kolada clients. Runs on a
 # developer's machine and commits parquet artifacts; the serving host only reads
-# them. prophet, pmdarima and statsmodels left with the ARIMA and Prophet
-# pipelines on 2026-09-25, so the refresh toolchain now compiles nothing at all.
-# See docs/CONDITIONAL_PROJECTION_PLAN.md.
+# them. The compiled statistical packages left with the pipelines they served
+# (R16), so the refresh toolchain now compiles nothing at all.
 #     pip install -e ".[pipeline]"
 pipeline = [
     "requests>=2.31.0",

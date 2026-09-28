@@ -2,7 +2,7 @@
 
 Detaljanalys per kommun: historisk SHAI över indexets hela period, följd av en
 villkorad projektion sex år framåt under tre uttalade antaganden om realräntan.
-Ingenting modellanpassas. Se docs/CONDITIONAL_PROJECTION_PLAN.md.
+Ingenting modellanpassas. Se R16 i docs/OPEN_RISKS.md.
 """
 
 import streamlit as st
@@ -38,7 +38,7 @@ from src.ui.components import (
     vintage_badge,
 )
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
-from src.forecast.projection import INCOME_GROWTH, PRICE_GROWTH, REAL_RATE_FLOOR
+from src.projection import INCOME_GROWTH, PRICE_GROWTH, REAL_RATE_FLOOR
 
 inject_css()
 selections = render_sidebar()
@@ -173,9 +173,8 @@ def _build_projection_chart(
         hovertemplate=L("kd.lanet_hover"),
     ))
 
-    # Which municipal years rest on forward-filled income. Kept from the forecast
-    # chart: it is a statement about the observed series, so replacing the
-    # forecast does not make it less true.
+    # Which municipal years rest on forward-filled income. This is a statement
+    # about the observed series, so it is independent of what the chart projects.
     if "is_imputed_income" in hist_data.columns:
         imputed = hist_data[hist_data["is_imputed_income"] == True]
         if len(imputed) > 0:

@@ -139,7 +139,6 @@ mutated afterwards), and the 290 label markers cost ~1 ms.
 | `src/indices/affordability.py` | 0 % | 65 % |
 | **`src/data/build_panel.py`** | 0 % | **0 %** (346 statements) |
 | **`src/data/scb_client.py`** | 0 % | **0 %** (241 statements) |
-| `src/forecast/*` | 0 % | 0 % (218 statements) |
 
 ---
 
@@ -1432,7 +1431,7 @@ Recorded so a reader does not assume they were missed.
 | Topology simplification of the GeoJSON | Needs `shapely` or `mapshaper`. Precision truncation gets 49 % for free; simplification might reach 70 % for a runtime dependency and a visible risk to coastlines. Revisit only if 430 KB proves too big. |
 | Vector tiles or a tile server | Enormous change for an app with 290 static polygons. |
 | Replacing folium with `pydeck` or `st.map` | Would lose the tooltip, the empirical colour domain and the zoom-gated labels — T1.6, T1.7 and T3.9 all rebuilt on folium. |
-| Tests for `scb_client.py` and the forecast pipelines | Needs network mocking or fixture capture. Real work, separate plan. `scb_client.py` keeps its size exemption until then. |
+| Tests for `scb_client.py` | Needs network mocking or fixture capture. Real work, separate plan. `scb_client.py` keeps its size exemption until then. |
 | End-to-end tests of `build_municipal_panel()` | `data/raw/` is gitignored, so it cannot run on a fresh clone or in CI. Committing fixture raw data would work and is a separate decision — it is ~1.7 MB and would need refreshing alongside the real thing. |
 | Persisting caches across restarts | `st.cache_data(persist="disk")` exists, but the app sleeps and wakes with a cold filesystem on Community Cloud. Measure before believing it helps. |
 | Anything about the deployed app | Nobody has confirmed the Streamlit Cloud deploy. That is still open from T2.5 and needs the account owner. |

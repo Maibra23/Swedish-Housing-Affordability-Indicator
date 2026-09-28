@@ -37,7 +37,7 @@ not move the index forward until SCB publishes a new income year.
 ## Install
 
 Two audiences, two installs. Serving only reads committed Parquet, so it needs
-neither the API clients nor the forecast toolchain:
+neither the API clients nor the refresh toolchain:
 
 ```bash
 pip install -r requirements.txt     # run the dashboard (what Streamlit Cloud installs)
@@ -106,7 +106,6 @@ their terms.
 | `docs/DEVIATIONS.md` | Where the build departs from the PRD, and why |
 | `docs/DESIGN_SYSTEM.md` | Design tokens, chart rules and component patterns |
 | `docs/ADR/` | Decision records: what was chosen, what was rejected, and on what evidence |
-| `docs/CONDITIONAL_PROJECTION_PLAN.md` | Why the forecast is being replaced by a conditional projection, with the evidence and the tasks |
 | `docs/CHOROPLETH_MAP_REFERENCE.md` | Map implementation reference |
 | `docs/PRD.md` | Product requirements |
 | `docs/PLAYBOOK.md` | Development playbook |

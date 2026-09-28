@@ -181,13 +181,13 @@ assumptions the reader can accept or reject.
 
 ### How it works
 
-History is municipal. **The projection is not.** `src/forecast/projection.py`
-carries the county's last observed income and price forward at 3 % and 2 % a
-year, then divides by each of three assumed real rates. SCB publishes nothing
-that would support a municipal projection.
+History is municipal. **The projection is not.** `src/projection.py` carries the
+county's last observed income and price forward at 3 % and 2 % a year, then
+divides by each of three assumed real rates. SCB publishes nothing that would
+support a municipal projection.
 
-Nothing is fitted. Until 2026-09-25 this page ran ARIMA and Prophet; both were
-withdrawn rather than repaired, for reasons recorded in R16 and summarised below.
+Nothing is fitted. Statistical model fitting was evaluated here and withdrawn
+rather than repaired; the measurements are recorded as R16 and summarised below.
 
 ### When to use it
 
@@ -199,8 +199,8 @@ withdrawn rather than repaired, for reasons recorded in R16 and summarised below
 
 ### What the numbers actually say, with real figures
 
-**The projection is the county's, and the chart used to hide that.** It drew the
-forecast beginning at the *municipality's* last value, so Stockholm's line ran at
+**The projection is the county's, and the chart used to hide that.** It once began
+at the *municipality's* last value, so Stockholm's line ran at
 6,2 and then jumped to the county's 2025 value, which reads as a predicted
 improvement and is in fact a seam between two geographies. Stockholm kommun
 closed 2024 at 6,2; Stockholms län at 7,7. The chart draws the county history as
@@ -230,21 +230,18 @@ of the variance in year-on-year changes of `log C`. A variable that is clamped
 82 % of the time and still explains nearly all the movement is what makes an
 extrapolated denominator unusable.
 
-**What the old forecast did, kept here as the reason.** ARIMA's first year was
+**Why nothing is fitted, in one line.** A fitted model's first year was
 implausible for all 21 counties, each collapsing to roughly a quarter of its last
-observed value in 2025 before rebounding: Stockholm 7,7 → 1,9 → 13,1 → 13,8 →
-14,5 → 15,0 → 15,5. Backtested against a naive carry-forward, `auto_arima` lost
-on **every** component. The page also recommended ARIMA in its own copy while
-opening on Prophet. All of that is closed by removal, not by a better model; see
-R16.
+observed value before rebounding, and it lost to a naive carry-forward on every
+component of the index. Closed by removal rather than by a better model; the full
+measurements are in R16.
 
 **What is checked now.** `tests/test_projection.py` asserts the floor identity,
 the reciprocal sensitivity, that a rate below the floor is refused, and that no
 county's first projected year falls outside 0,25× to 4× of its last observed
-value. The old `_validate_widening_bands` checked that the confidence bands
-widened, which they did, while nothing checked the central path was plausible.
-There are no bands now, and the spread between scenarios is **not** a confidence
-interval.
+value. The earlier guard checked only that confidence bands widened, which they
+did, while nothing checked the central path was plausible. There are no bands
+now, and the spread between scenarios is **not** a confidence interval.
 
 Beyond that, the honest bound is still eleven annual observations. The difference
 is that the page no longer spends them on a fitted model.
@@ -514,7 +511,7 @@ better or worse.
 Verified against the code:
 
 - `version_c` is consumed by the choropleth map, the risk classification, the
-  KPI row, the forecasts, the data tables and the scenario simulator.
+  KPI row, the projection, the data tables and the scenario simulator.
 - `version_a` appears in exactly one file: the Län jämförelse comparison tab.
 - `version_b` likewise appears only in that comparison and in the methodology
   page that documents it.

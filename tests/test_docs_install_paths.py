@@ -67,7 +67,7 @@ def test_pipeline_install_path_is_documented(name: str, path: Path) -> None:
 def test_bare_editable_install_is_no_longer_offered_as_the_way_to_run(
     name: str, path: Path
 ) -> None:
-    """`pip install -e .` alone installs no forecast toolchain and is not the deploy."""
+    """`pip install -e .` alone installs no refresh toolchain and is not the deploy."""
     bare = re.findall(r"pip install\s+-e\s+\.(?!\[)", _text(path))
     assert not bare, (
         f"{name} still offers a bare `pip install -e .`: {bare}. It is neither "

@@ -89,7 +89,7 @@ with col1:
 with col2:
     st.markdown(render_landing_nav_card(
         "Kommun djupanalys",
-        "Historisk analys och prognos per kommun med Prophet och ARIMA.",
+        "Historisk analys och projektion per kommun.",
         tag="SIDA 03",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(
