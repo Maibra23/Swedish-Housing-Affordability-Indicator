@@ -1390,7 +1390,7 @@ the guard that prevents Findings A, C and H from returning.
       not left as a manual ritual
 - [x] Failure messages state the current data value
 
-`tests/test_copy_matches_artifacts.py` (23). **It found live drift on its first run.** The T2.4
+`tests/test_copy_matches_artifacts.py` (22). **It found live drift on its first run.** The T2.4
 refresh advanced four series to 2025 and the methodology source table still said 2024 for
 `transaction_price_sek`, `kt_ratio`, `unemployment_rate` and `completions`. Nothing else in a
 345-test suite noticed, because nothing else read prose.

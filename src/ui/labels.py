@@ -194,7 +194,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "kd.projektion_forklaring": "Det här är en projektion, inte en förutsägelse. Version C är en invers av realräntan, alltså styrränta minus inflation, och den räntan står för nästan hela variationen i indexet mellan år. Den är också ett penningpolitiskt beslut snarare än en statistisk process, och den har legat på golvet 0,5 procentenheter i nio av elva observerade år. Att extrapolera den från elva årsvärden är att gissa Riksbankens politik sex år fram. Därför gissar sidan inte: den visar vad indexet blir under tre uttalade antaganden, och du väljer vilket som är rimligt.",
     "kd.styrranta": "Styrränta",
     "kd.riksbankens_styrranta_arsgenomsnitt": "Riksbankens styrränta, årsgenomsnitt. Nationell: samma värde för alla kommuner. Bolåneränta ≈ styrränta + 1,5–2,5 pp bankens marginal (Begränsning F12).",
-    "kd.x_framskrivet_fran_2024": "<b>%{x}</b><br>Framskrivet från 2024<extra></extra>",
     "kd.ar": "År",
 
     # ── Sida 04 — Kontantinsats ───────────────────────────────────

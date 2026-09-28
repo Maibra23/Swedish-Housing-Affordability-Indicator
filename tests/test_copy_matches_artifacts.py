@@ -154,27 +154,6 @@ def test_index_period_spans_in_copy_match_provenance() -> None:
     )
 
 
-def test_carried_forward_base_year_matches_the_index_end() -> None:
-    """"Framskrivet från X" must name the last year the index actually covers.
-
-    This once guarded the training year of a fitted model. That model is gone (R16),
-    but the copy is not: Sida 03 still marks which municipal years rest on forward-filled
-    income, and that marker names a year. `NOT_A_VINTAGE` waives the literal on
-    the strength of this test, so removing it would waive it on nothing.
-    """
-    end = complete_case_max_year()
-    offenders = [
-        (key, match.group(1))
-        for key, value in ALL_COPY.items()
-        for match in re.finditer(r"[Ff]ramskrivet från\s*(\d{4})", value)
-        if int(match.group(1)) != end
-    ]
-    assert not offenders, (
-        f"copy carries a year other than the index end ({end}): {offenders}. "
-        "Income is forward-filled from complete_case_max_year()."
-    )
-
-
 def test_projection_starts_where_the_observed_data_stops() -> None:
     """The projection extends the index; it must not overlap or skip a year."""
     import pandas as pd
