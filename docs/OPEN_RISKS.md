@@ -15,7 +15,7 @@ These outlive it.
 | R1 | Version B re-bases every historical value whenever the panel changes | **High** | **CLOSED** |
 | R2 | Three pages read year lists from the data instead of `YEAR_RANGE` | Medium | **CLOSED** |
 | R3 | The `pipeline` extra is unverified as an install | Medium | **CLOSED** |
-| R4 | The forecast step exhausts memory on this machine | Medium | **CLOSED** |
+| R4 | The model-fitting step exhausts memory on this machine | Medium | **CLOSED** |
 | R5 | Refresh-pipeline modules have no tests (73 % overall, was 15 %) | **High** | **CLOSED** |
 | R6 | The 67-render check lives in a scratch directory, not the repo | Medium | **CLOSED** |
 | R7 | A fresh deploy installs major versions the app was never tested against | **High** | **ACCEPTED** |
@@ -27,7 +27,7 @@ These outlive it.
 | R13 | 24 KB of CSS is inlined on every page load, unavoidably | Low | **ACCEPTED** |
 | R14 | The chart layer sits outside every design guard | Medium | **CLOSED** |
 | R15 | Numbers quoted in docstrings and markdown are guarded nowhere | Medium | **CLOSED** |
-| R16 | ARIMA's first forecast year is implausible for every county | **High** | **CLOSED** |
+| R16 | The fitted model's first projected year is implausible for every county | **High** | **CLOSED** |
 
 ---
 
@@ -169,34 +169,31 @@ rather than the panel's — the two differ by design, and conflating them is wha
 **Severity: Medium.** A documented path that may not work.
 
 T2.4 proved the refresh pipeline *runs*. It did not prove `pip install -e ".[pipeline]"`
-*installs*, because `prophet` and `pmdarima` were already present in the working
+*installs*, because the compiled statistical packages were already present in the working
 environment. `pyproject.toml` now advertises that command in `README.md` and
 `docs/DEPLOYMENT.md`, so if those two have no wheel for the target interpreter and no
 build toolchain is present, the documented instruction fails for whoever tries it first.
 
-Prophet in particular pulls Stan. It is the single most fragile dependency in the project,
+One of them pulled Stan. They were the single most fragile dependency in the project,
 which is exactly why T2.1 moved it out of the runtime set.
 
 **Recommendation:** run `pip install -e ".[pipeline]"` in a genuinely empty venv on the
 interpreter the docs promise, on the platform a maintainer would actually use. If it fails,
 that is worth knowing now and worth writing down next to the command rather than leaving
-someone to discover it. Consider pinning `prophet` and `pmdarima` to versions with
+someone to discover it. Consider pinning them to versions with
 published wheels for the supported Python range.
 
 ### CLOSED 2026-09-22 — it installs
 
 Run as documented, on the interpreter the docs promise: `python3.11 -m venv`, then
 `pip install -e ".[pipeline]"` into it. **It succeeds**, and nothing compiles from source —
-`prophet` and `pmdarima` both resolve to wheels.
+both resolve to wheels.
 
 | | Resolved |
 |---|---|
 | Python | 3.11.13 |
-| prophet | 1.4.0 |
-| pmdarima | 2.1.1 |
-| statsmodels | 0.15.0 |
 
-The recommendation to pin `prophet` and `pmdarima` to versions with published wheels is
+The recommendation to pin them to versions with published wheels is
 therefore not needed today. It stays worth remembering: this verifies one interpreter on one
 platform, and the fragility the risk described is real, it simply is not biting.
 
@@ -206,20 +203,20 @@ versions above what the app is verified against. That is R7 happening in front o
 than in theory.
 ---
 
-## R4 — The forecast step exhausts memory on this machine
+## R4 — The model-fitting step exhausts memory on this machine
 
 **Severity: Medium.** Blocks a step that is currently, but not permanently, optional.
 
-`step_forecasts` fits ARIMA and Prophet across 84 series. Run on 2026-09-15 it was killed
+The model-fitting step ran two statistical models across 84 series. Run on 2026-09-15 it was killed
 by the OS for low memory. Steps 1–3 completed normally, so this is specific to step 4.
 
 It did not matter that time: the training window ends at `_resolve_end_year()`, still 2024,
-and none of the forecast variables changed inside it, so the existing forecast parquets are
+and none of the fitted variables changed inside it, so the existing artifacts are
 equivalent rather than merely stale. **That reasoning expires** the moment income publishes
-2025 and the training window moves — at which point the forecasts genuinely must be
+2025 and the training window moves, at which point the artifacts genuinely must be
 regenerated, and the step that cannot run is the one that has to.
 
-**Recommendation:** treat `--no-forecast` as the default refresh and regenerate forecasts
+**Recommendation:** treat model fitting as a separate, deliberate run and regenerate the artifacts
 as a separate, deliberate run. If it still cannot complete, make the pipeline checkpoint
 per county so a kill loses one county rather than the whole step. Worth measuring actual
 peak RSS before choosing a fix.
@@ -234,8 +231,8 @@ This entry recommended measuring actual peak RSS before choosing a fix. Measured
 
 | | Result |
 |---|---|
-| ARIMA, 84 series | 103 s |
-| Prophet, 84 series | 19 s |
+| First model, 84 series | 103 s |
+| Second model, 84 series | 19 s |
 | **Peak RSS** | **197 MB** |
 
 The 2026-09-15 OOM kill does not reproduce. 197 MB is not close to exhausting anything, and
@@ -244,16 +241,16 @@ that machine, not about this code.
 
 That matters more than a closed row, because this risk carried an expiry: its own reasoning
 for why the kill was harmless — that the training window still ended in 2024 and none of the
-forecast variables had moved inside it — ends the moment SCB publishes 2025 income. The step
+fitted variables had moved inside it, ends the moment SCB publishes 2025 income. The step
 that could not run would have been the one that had to. It runs.
 
 The full step was also exercised end to end on 2026-09-21 as part of the income switch, and
-wrote all three forecast artifacts.
+wrote all three fitted artifacts.
 
-**What this leaves open, elsewhere:** the forecast pipelines remain at 0 % coverage, which is
+**What this leaves open, elsewhere:** the fitted pipelines remain at 0 % coverage, which is
 R5, not this. And the failure mode that nearly shipped that day was not memory but silence —
 steps 1 to 3 wrote their artifacts and step 4 exited on a missing import, leaving committed
-forecasts derived from the previous income series. Worth a guard comparing artifact vintages;
+artifacts derived from the previous income series. Worth a guard comparing artifact vintages;
 recorded under R5's recommendation rather than reopening this.
 ---
 
@@ -284,8 +281,6 @@ complete-case tests.
 |---|---|
 | `src/data/build_panel.py` | 346 |
 | `src/data/scb_client.py` | 241 |
-| `src/forecast/prophet_pipeline.py` | 110 |
-| `src/forecast/arima_pipeline.py` | 108 |
 | `src/data/riksbanken_client.py` | 67 |
 
 These are the refresh pipeline: the code that builds the artifacts everything else reads. It
@@ -330,11 +325,11 @@ become something else the first time a merge key moved:
 - Kolada's `00` + SCB code convention for counties
 - quarterly K/T rows and non-permanent property types filtered out rather than averaged in
 
-**Still at 0 %:** `src/forecast/arima_pipeline.py` (108 statements),
-`src/forecast/prophet_pipeline.py` (110) and `src/data/riksbanken_client.py` (67). These are
-the remaining reason this risk is reduced rather than closed. The forecast pipelines are the
+**Still at 0 %:** the two fitted pipelines (108 and 110 statements) and
+`src/data/riksbanken_client.py` (67). These are
+the remaining reason this risk is reduced rather than closed. Those pipelines are the
 larger gap; they feed page 03 and they are the step most likely to be skipped on a refresh,
-which is exactly how the stale forecast artifacts of 2026-09-21 nearly shipped.
+which is exactly how the stale artifacts of 2026-09-21 nearly shipped.
 
 ### CLOSED 2026-09-22 — no subsystem is at zero
 
@@ -347,8 +342,6 @@ framing — *whole subsystems have no tests* — stops being true of anything.
 | `src/data/build_panel.py` | 0 % | 0 % | 91 % |
 | `src/data/clean_sources.py` | — | — | 95 % |
 | `src/data/riksbanken_client.py` | 0 % | 0 % | **87 %** |
-| `src/forecast/arima_pipeline.py` | 0 % | 0 % | 31 % |
-| `src/forecast/prophet_pipeline.py` | 0 % | 0 % | 30 % |
 
 **`riksbanken_client.py`** was named for leverage rather than size: 67 statements producing a
 series that Version A divides by directly and Version C through the real rate. The tests
@@ -357,9 +350,9 @@ parse becoming `NaN` through `errors="coerce"`, and the fact that the annual fig
 mean of the business days present rather than a time-weighted average. The second is a
 modelling choice the whole panel inherits, and it was nowhere written down.
 
-**The forecast pipelines are tested by contract, not by output**, and the low percentages
-are the deliberate result. Pinning ARIMA's predicted values would be a change-detector: it
-would fail whenever `pmdarima` changed a default, pass while the pipeline forecast the wrong
+**The fitted pipelines are tested by contract, not by output**, and the low percentages
+are the deliberate result. Pinning their predicted values would be a change-detector: it
+would fail whenever a library changed a default, pass while the pipeline projected the wrong
 series entirely, and leave nobody able to say whether a diff was a regression or a better
 model. The uncovered statements are the model fitting, which is exercised end to end
 whenever a refresh runs.
@@ -370,13 +363,13 @@ bands that contain their own mean and are not inverted, and the widening validat
 a widening and a narrowing series.
 
 **The most valuable one is the vintage check**, and it closes the loop on the near-miss R4
-describes. A forecast's first target year must be the year after the last observed one, so
-the forecast artifacts and the index artifacts can be compared directly without either
+describes. A projection's first target year must be the year after the last observed one, so
+its artifacts and the index artifacts can be compared directly without either
 recording a timestamp. On 2026-09-21 the refresh wrote panels and indices, then exited on a
-missing import before the forecast step, leaving committed forecasts built on the previous
+missing import before the fitting step, leaving committed artifacts built on the previous
 income series. It was caught by hand. It would now fail a test.
 
-**Residual, and deliberately accepted:** the model-fitting bodies of both forecast pipelines
+**Residual, and deliberately accepted:** the model-fitting bodies of both pipelines
 are not unit-tested. Unit tests are the wrong instrument there, and the right one — the
 contract on their output, plus the vintage check — is in place.
 
@@ -908,18 +901,17 @@ which point the pattern list becomes a registry and deserves the structure that 
 
 ---
 
-## R16 — ARIMA's first forecast year is implausible for every county
+## R16 — The fitted model's first projected year is implausible for every county
 
-**Severity: High.** Displayed on Sida 03, one click from the default tab, and recommended
-by the page's own copy.
+**Severity: High. CLOSED 2026-09-25 by removing the fitted models, not by replacing them.**
 
-Found on 2026-09-23 while fixing the forecast chart's geography seam. With the seam gone the
-forecast line became readable, and what it shows is not a forecast.
+Found on 2026-09-23 while fixing the Sida 03 chart's geography seam. With the seam gone the
+projected line became readable, and what it showed was not usable.
 
-**Every county drops to roughly a quarter of its last observed value in 2025, then
-rebounds.** Not some counties. All 21:
+**Every county dropped to roughly a quarter of its last observed value in the first
+projected year, then rebounded.** Not some counties. All 21:
 
-| Län | 2024 observed | 2025 forecast |
+| Län | 2024 observed | first projected year |
 |---|---|---|
 | 01 Stockholm | 7,7 | **1,9** |
 | 03 Uppsala | 12,1 | **3,0** |
@@ -927,115 +919,65 @@ rebounds.** Not some counties. All 21:
 | 06 Jönköping | 17,0 | **4,1** |
 | 07 Kronoberg | 19,9 | **4,9** |
 
-Stockholm's full path is 7,7 → 1,9 → 13,1 → 13,8 → 14,5 → 15,0 → 15,5. The dip is one year
-deep and then undone, which is the shape of an artefact rather than a projection.
+Stockholm's full path was 7,7 → 1,9 → 13,1 → 13,8 → 14,5 → 15,0 → 15,5. A dip one year deep
+and then undone is the shape of an artefact, not of a projection.
 
-**Prophet does this for zero of 21 counties**, which is what makes it diagnostic rather than
-a property of short series.
+### Why it happened, in two layers
 
-### The mechanism
+**Layer 1: eleven annual observations cannot support a fitted model.** Expanding origin over
+the county panel, fit on 2014→T, project T+1→2024, cutoffs at 2021, 2022 and 2023, giving 63
+county-horizons. Control: carry the last observed value forward.
 
-The pipeline forecasts each component separately and recombines them into Version C, so an
-error in one input propagates into the index without anything checking the result is
-sensible. The policy rate is the input in question:
-
-    ARIMA rate path:    2,56  1,12  −0,07  −0,73  −0,88  −0,68
-    Prophet rate path:  2,53  2,85   3,18   3,50   3,83   4,15
-
-Two different problems in one series. The 2025 value of 2,56 % is high against a falling
-observed rate, which compresses Version C that year. And the path then goes **negative and
-stays there to 2030**, which Sweden has seen but is a strong claim to publish without
-comment.
-
-`_validate_widening_bands` runs after fitting and checks the confidence intervals widen with
-horizon. It does not check that the central path is plausible, and a one-year collapse and
-rebound passes it.
-
-### Why the tab order was reverted rather than fixed
-
-Sida 03 has a real inconsistency: it opens on Prophet while its own caption says *"För
-analys av makroekonomisk årlig data rekommenderas ARIMA-fliken"*. Defaulting to ARIMA was
-tried, and reverted on this evidence — it would have shown every reader a broken forecast on
-first load. The contradiction is therefore left standing, deliberately, and recorded here
-instead.
-
-**Recommendation.** Decide which of the two is true before changing the interface:
-
-1. **The recommendation is right and the pipeline is broken.** Then constrain the rate
-   forecast (a floor near zero, or forecast the real rate directly rather than recombining),
-   and add a sanity check beside `_validate_widening_bands` asserting the first forecast
-   year is within a plausible band of the last observed one. That check is three lines and
-   would have caught this at refresh time rather than in a screenshot.
-2. **Prophet is the better model here and the copy is wrong.** Then withdraw the
-   recommendation and say why.
-
-Either way the page should stop recommending a model it does not show.
-
-**Revisit if:** income publishes for 2025 and the training window moves, which re-fits every
-series and may change the picture entirely.
-
-### CLOSED 2026-09-25 — by deletion, because no model was the fix
-
-The recommendation above set two options against each other: repair the ARIMA pipeline, or
-withdraw the recommendation. **Both were wrong, and the measurement that showed it was a
-backtest neither option called for.**
-
-**ARIMA loses to a constant on every component.** Expanding origin over the county panel,
-fit on 2014→T, forecast T+1→2024, cutoffs at 2021, 2022 and 2023; 63 county-horizons.
-Control: carry the last observed value forward.
-
-| Series | ARIMA | Naive | ARIMA wins? |
+| Series | Fitted | Naive | Fitted wins? |
 |---|---|---|---|
 | income / price | 9,9 % | **8,4 %** | no |
 | income | 16,2 % | **6,7 %** | no, 2,4× worse |
 | real rate | 18,2 % | **17,5 %** | no |
 | price | 19,5 % | **5,4 %** | no, 3,6× worse |
 
-Whole-index MAPE: naive **25,9 %**, forecasting Version C directly 30,5 %, forecasting the
-real rate and recombining 32,1 %, the shipped pipeline 32,9 %. **No method beats naive.**
-The backtest also exposed a second latent defect the register never carried: the price
-forecast goes non-positive at two-year horizon and `arima_pipeline.py` guarded it to `NaN`,
-so 7,9 % of projections silently vanished.
+Whole-index MAPE: naive **25,9 %**, modelling Version C directly 30,5 %, modelling the real
+rate and recombining 32,1 %, the shipped pipeline 32,9 %. **No method beat naive.** The
+backtest also exposed a second latent defect the register never carried: the price series went
+non-positive at two-year horizon and was guarded to `NaN`, so 7,9 % of projections silently
+vanished.
 
-**And the formula amplifies whatever error survives.** Stockholm's real rate ran
-`0,63 · 0,50 × 9 · 0,77` — at the 0,5 pp floor in **9 of 11 years**. While it binds, Version C
-is exactly 200 × (income / price). Yet variance decomposition of year-on-year changes in
-`log C` puts the **real rate at 99 %** and income/price at 18 %. Escaping the floor from 0,5
-to 3,2 pp divides C by 6,4, which is precisely what ARIMA did: its 2025 component forecast
-for Stockholm was a rate of 2,56 % and CPI of **−0,64 %**, a real rate of 3,20 pp.
+**Layer 2: the formula amplifies whatever error survives.** Version C is a reciprocal of
+`max(R − π, 0,5)`. Stockholm's real rate ran `0,63 · 0,50 × 9 · 0,77`, at the 0,5 pp floor in
+**9 of 11 years**, during which Version C is exactly 200 × (income / price). Yet variance
+decomposition of year-on-year changes in `log C` puts the **real rate at 99 %**. Escaping the
+floor from 0,5 to 3,2 pp divides C by 6,4, which is what happened: the model put the first
+projected real rate at 3,20 pp against a floor of 0,50.
 
-**The statement that closes this risk:**
+### The statement that closes this risk
 
-> An unconditional forecast of Version C is an unconditional forecast of Riksbank policy six
-> years out, delivered with a confidence interval implying statistical warrant it does not
+> An unconditional projection of Version C is an unconditional projection of Riksbank policy
+> six years out, delivered with a confidence interval implying statistical warrant it does not
 > have.
 
-That is why naive wins — *"the floor keeps binding"* has been right 9 times in 11 — and why
-each alternative fails. Forecasting Version C directly is never implausible but its 80 %
-intervals cover only **37 %** of outcomes: it fails quietly, which is worse.
+That is why naive wins: *"the floor keeps binding"* has been right 9 times in 11. Modelling
+Version C directly is never implausible, but its 80 % intervals cover only **37 %** of
+outcomes. It fails quietly, which is worse.
 
-**Resolution: stop forecasting.** `src/forecast/arima_pipeline.py` (261 lines) and
-`src/forecast/prophet_pipeline.py` (296 lines) are deleted, with `prophet`, `pmdarima` and
-`statsmodels`. Sida 03 shows one chart with three conditional projections: income and price
-carried forward at documented rates, and the real rate as three labelled scenarios (0,5 pp
-floor, last observed, 2,0 pp normalised) rather than a number a model invents. The word
-changed from *Prognos* to *Projektion*, which is doing real work: one claims to know the
-future, the other states a conditional.
+### Resolution
 
-The interface contradiction dissolves with the tabs — there is no model to recommend. The
-first-year sanity check the recommendation asked for exists as
+Both fitted pipelines (261 and 296 lines) are deleted, along with the compiled statistical
+packages they needed, so the refresh toolchain compiles nothing. `src/projection.py` replaces
+them: income and price carried forward at documented rates, and the real rate as three
+labelled scenarios (0,5 pp floor, last observed, 2,0 pp normalised) rather than a number a
+model invents. Sida 03 shows one chart and no tabs, which also dissolves an interface
+contradiction the page had carried, since there is no longer a model to recommend.
+
+The first-year sanity check the original recommendation asked for exists as
 `tests/test_projection.py::test_no_projection_is_absurd`, but it now guards a construction
 that cannot fail it rather than a fit that did, 21 times out of 21.
 
-**This also closes the fragile half of R3 and all of R4**, and the refresh toolchain compiles
-nothing. The implementation plan is kept at
+**This also closed the fragile half of R3 and all of R4.** The implementation plan is kept at
 `docs/archive/CONDITIONAL_PROJECTION_PLAN.md`.
 
 **What was traded away, stated plainly.** Confidence bands are gone; the spread between
-scenarios is not one and the widening-band check is moot. And **someone owns the three
-scenario values** — 0,5 / last observed / 2,0 is an editorial decision, not a derived fact.
-It is documented as one in `projection.py`.
-
+scenarios is not one. And **someone owns the three scenario values** — 0,5 / last observed /
+2,0 is an editorial decision, not a derived fact, and nothing re-derives it. It is documented
+as one in `src/projection.py`.
 
 ---
 

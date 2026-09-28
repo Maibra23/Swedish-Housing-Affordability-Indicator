@@ -1,5 +1,10 @@
 # SHAI Optimization Plan
 
+> **Historical work record.** This plan is complete. It records what was done and what was
+> measured at the time, including work on subsystems that have since been removed, and it is
+> kept unaltered for that reason. It is not current guidance: read `docs/APP_GUIDE.md` and
+> `docs/OPEN_RISKS.md` for the project as it stands.
+
 > (`- [ ]`) syntax for tracking.
 
 **Goal:** Cut what the app sends to the browser and how often it rebuilds it, close the
