@@ -3,7 +3,7 @@
 Documents where the implementation diverges from PLAYBOOK.md / prompts.md.
 Use this file to identify which future task prompts need adjusting before you run them.
 
-**Last updated:** 2026-09-25 after withdrawing the forecast pipelines (D19).
+**Last updated:** 2026-09-25 after withdrawing the fitted pipelines (D19).
 
 ---
 
@@ -41,7 +41,7 @@ Use this file to identify which future task prompts need adjusting before you ru
 | **2.1** | Change "quarterly real rate series" → "annual real rate series" |
 | **2.2** | Change "every (municipality, quarter) row" → "every (municipality, year) row" |
 | **2.3** | Rankings are annual, not quarterly |
-| **3.1 / 3.2** | Forecasting operates on annual data. "8 quarter horizon" → "8 annual forecast steps" or "2 annual steps interpolated to 8 quarters". See D8 below for decision. |
+| **3.1 / 3.2** | Projection operates on annual data. "8 quarter horizon" → "8 annual steps" or "2 annual steps interpolated to 8 quarters". See D8 below for decision. Superseded by D19. |
 
 ---
 
@@ -107,10 +107,10 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **A — Stay annual** | Clean, no synthetic data. Simplest path. | "8 quarters" = 2 annual steps for forecasting. Less granular UI. |
+| **A — Stay annual** | Clean, no synthetic data. Simplest path. | "8 quarters" = 2 annual steps. Less granular UI. |
 | **B — Interpolate to quarterly** | Richer UI (quarterly trend charts). | Quarterly price/income variation is synthetic (linear interpolation). Extra step needed. |
 
-**Recommendation:** Option A (stay annual). Display years on x-axis in the UI. For forecasting, produce 4–8 annual predictions. This is methodologically cleaner.
+**Recommendation:** Option A (stay annual). Display years on x-axis in the UI, and project 4–8 annual steps. This is methodologically cleaner.
 
 ---
 
@@ -199,15 +199,15 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 ---
 
 
-## D19 — Statistical forecasting withdrawn; replaced by a conditional projection ⚠️
+## D19 — Statistical model fitting withdrawn; replaced by a conditional projection ⚠️
 
 | | |
 |--|--|
-| **Planned** | PRD §7: two model tabs on Sida 03, Prophet (default) and ARIMA (recommended), both with widening confidence bands. PRD §3 lists "21 county level forecasts using both Prophet and ARIMA" as a success criterion. |
+| **Planned** | PRD §7: two fitted model tabs on Sida 03, both with widening confidence bands. PRD §3 lists 21 county level model outputs from both as a success criterion. |
 | **Actual** | Both pipelines deleted 2026-09-25. One chart, three conditional projection lines, no model fitting and no confidence bands. |
-| **Why** | The forecasts were measurably wrong, not merely imprecise: ARIMA's first year was implausible for **21 of 21 counties**. Backtested against a naive carry-forward over 63 county-horizons, `auto_arima` lost on every component, and no whole-index method beat naive. Version C is a reciprocal of a real rate that sits at its 0,5 pp floor in 9 of 11 years yet carries 99 % of the index's year-on-year variance, so forecasting it is forecasting Riksbank policy six years out. Full evidence: R16 in `docs/OPEN_RISKS.md`. |
-| **Cost, stated plainly** | PRD §2 names a persona — the macroeconomic analyst hiring manager — who "evaluates forecasting competence". This change removes the most legible signal of that competence. The judgement made was that a defensible conditional beats a visibly broken forecast for that same reader, but **it is a product decision, not a technical one**, and it is reversible. |
-| **Tasks to adjust** | Any task prompt citing PRD §7, the two model tabs, confidence bands, or "both forecasting models". D2/D8 had already renegotiated this section's horizon from quarters to annual steps; this supersedes it entirely. |
+| **Why** | The outputs were measurably wrong, not merely imprecise: the first projected year was implausible for **21 of 21 counties**. Backtested against a naive carry-forward over 63 county-horizons, the fitted models lost on every component, and no whole-index method beat naive. Version C is a reciprocal of a real rate that sits at its 0,5 pp floor in 9 of 11 years yet carries 99 % of the index's year-on-year variance, so projecting it is projecting Riksbank policy six years out. Full evidence: R16 in `docs/OPEN_RISKS.md`. |
+| **Cost, stated plainly** | PRD §2 names a persona, the macroeconomic analyst hiring manager, who evaluates time-series modelling competence. This change removes the most legible signal of that competence. The judgement made was that a defensible conditional beats a visibly broken model output for that same reader, but **it is a product decision, not a technical one**, and it is reversible. |
+| **Tasks to adjust** | Any task prompt citing PRD §7, the two model tabs, confidence bands, or both fitted models. D2/D8 had already renegotiated this section's horizon from quarters to annual steps; this supersedes it entirely. |
 
 ---
 
@@ -221,7 +221,7 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 | **2.2** | "(municipality, quarter)" → "(municipality, year)"; all 3 formulas valid 2014–2024 | D2/D8, D3 resolved |
 | **2.3** | Rankings are annual | D2/D8 |
 | **2.4** | Check 3 updated: Stockholm worst under V.C (transaction_price_sek fix); thresholds relaxed | D9, D10, D14 |
-| **3.1** | "8 quarter horizon" → annual forecast steps | D2/D8 |
+| **3.1** | "8 quarter horizon" → annual steps; see D19 | D2/D8 |
 | **3.2** | Same as 3.1 | D2/D8 |
 | **3.3** | No change | — |
 | **3.4** | No change | — |

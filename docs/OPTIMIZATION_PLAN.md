@@ -1,5 +1,10 @@
 # SHAI Optimization Plan
 
+> **Historical work record.** This plan is complete. It records what was done and what was
+> measured at the time, including work on subsystems that have since been removed, and it is
+> kept unaltered for that reason. It is not current guidance: read `docs/APP_GUIDE.md` and
+> `docs/OPEN_RISKS.md` for the project as it stands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development`
 > or `superpowers:executing-plans` to implement this task-by-task. Steps use checkbox
 > (`- [ ]`) syntax for tracking.

@@ -1,5 +1,10 @@
 # SHAI Revitalization Plan
 
+> **Historical work record.** This plan is complete. It records what was done and what was
+> measured at the time, including work on subsystems that have since been removed, and it is
+> kept unaltered for that reason. It is not current guidance: read `docs/APP_GUIDE.md` and
+> `docs/OPEN_RISKS.md` for the project as it stands.
+
 Resumable work plan for bringing the Swedish Housing Affordability Indicator back to a
 correct, deployable, and visually consistent state after five months of drift.
 
