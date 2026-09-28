@@ -173,18 +173,6 @@ def _build_projection_chart(
         hovertemplate=L("kd.lanet_hover"),
     ))
 
-    # Which municipal years rest on forward-filled income. This is a statement
-    # about the observed series, so it is independent of what the chart projects.
-    if "is_imputed_income" in hist_data.columns:
-        imputed = hist_data[hist_data["is_imputed_income"] == True]
-        if len(imputed) > 0:
-            fig.add_trace(go.Scatter(
-                x=imputed["year"], y=imputed["version_c"],
-                mode="markers", name="Framskriven inkomst",
-                marker=dict(size=10, color=COLORS["accent"], symbol="diamond"),
-                hovertemplate=L("kd.x_framskrivet_fran_2024"),
-            ))
-
     # Most affordable to least, so the legend reads in the same order as the
     # lines sit on the chart.
     scenario_colours = {
@@ -254,8 +242,9 @@ _observed_real = max(
 # does not resize the clip), and the clip is sized from the longest label, so
 # shortening the labels moves the problem rather than solving it. Padding the
 # strings gives the clip whitespace to eat instead of characters. Non-breaking
-# spaces, because SVG collapses ordinary trailing ones.
-_LEGEND_PAD = "\u00a0" * 9
+# spaces, because SVG collapses ordinary trailing ones. The width is measured in
+# a browser, not reasoned about: at 20 the clip clears the longest label by ~15 px.
+_LEGEND_PAD = "\u00a0" * 20
 
 _scenario_labels = {
     "floor": L("kd.scenario_golvet") + _LEGEND_PAD,
