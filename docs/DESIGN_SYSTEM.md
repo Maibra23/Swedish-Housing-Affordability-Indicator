@@ -204,6 +204,7 @@ assembles traces and reference lines; it does not restate layout.
 | Where | Builds |
 |-------|--------|
 | `src/kontantinsats/charts.py` | Regime comparison bars, reachability bars |
+| `src/lan/charts.py` | The county trend chart, one colour per county |
 | `src/scenario/charts.py` | The rate and inflation surface |
 | Page scripts | Scenario bars, time series and the distribution histogram, inline |
 
@@ -213,8 +214,12 @@ so a colour keeps its meaning across the site. The map spends it on a z-score
 where low is good; the rate and inflation surface plots a change where high is
 good and therefore reads the same ramp from the other end.
 
-**Colours come from tokens.** `COLORS`, `CHART_PALETTE` and `DIVERGING_SCALE`,
-never a literal. `chart_theme.py` and `tokens.py` are where the hex values live;
+**Colours come from tokens.** `COLORS`, `CHART_PALETTE`, `DIVERGING_SCALE` and
+`COUNTY_PALETTE`, never a literal. `COUNTY_PALETTE` holds one colour per county
+for the Län jämförelse trend chart: 21 generated hues, each darkened until it
+clears 3:1 against the white card, which is where a 2px line stays legible.
+`tests/test_chart_theme_guard.py` asserts that bound, so lightening one for
+aesthetic reasons fails a test rather than a reader. `chart_theme.py` and `tokens.py` are where the hex values live;
 everywhere else imports them. A literal paints the right pixel today and the
 wrong one the day the palette moves.
 

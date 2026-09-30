@@ -44,7 +44,7 @@ from src.scenario.charts import (
     rate_inflation_surface,
 )
 from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
-from src.ui.tokens import COLORS, DIVERGING_SCALE
+from src.ui.tokens import COLORS, COUNTY_PALETTE, DIVERGING_SCALE
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,7 +69,8 @@ DISPLAY_MODE_BAR = re.compile(r"\"displayModeBar\":\s*([^,}\s]+)")
 
 #: White is the hover label's text colour and comes from the shared layout.
 ALLOWED_COLOURS = (
-    set(COLORS.values()) | set(DIVERGING_SCALE) | set(CHART_PALETTE) | {"#FFFFFF"}
+    set(COLORS.values()) | set(DIVERGING_SCALE) | set(CHART_PALETTE)
+    | set(COUNTY_PALETTE) | {"#FFFFFF"}
 )
 
 
@@ -227,6 +228,30 @@ def test_no_builtin_plotly_colorscale_names() -> None:
         + ", ".join(offenders)
         + ". Use DIVERGING_SCALE, reversed if the quantity runs the other way."
     )
+
+
+def test_the_county_palette_covers_every_county_and_stays_legible() -> None:
+    """21 counties need 21 distinguishable colours, each readable as a thin line.
+
+    3:1 against the white card is the point a 2px stroke stays visible. The
+    palette is generated and then darkened per colour to clear it, so a future
+    edit that lightens one for aesthetic reasons fails here rather than in a
+    reader's eyes.
+    """
+    assert len(COUNTY_PALETTE) == 21, "Sweden has 21 counties"
+    assert len(set(COUNTY_PALETTE)) == 21, "two counties would share a colour"
+
+    def relative_luminance(hex_colour: str) -> float:
+        channels = [int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        linear = [
+            c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+            for c in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    for colour in COUNTY_PALETTE:
+        contrast = 1.05 / (relative_luminance(colour) + 0.05)
+        assert contrast >= 3.0, f"{colour} is {contrast:.2f}:1 against white"
 
 
 def test_the_token_modules_are_where_the_colours_live() -> None:

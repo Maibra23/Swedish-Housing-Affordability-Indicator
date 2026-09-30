@@ -115,7 +115,7 @@ User selects a regime and sees how today's prices translate to required cash and
 | # | Slug | Swedish title | Purpose |
 |---|------|---------------|---------|
 | 1 | riksoversikt | Riksöversikt | National overview with KPIs and choropleth |
-| 2 | lan-jamforelse | Län jämförelse | County comparison, 3 formula tabs |
+| 2 | lan-jamforelse | Län jämförelse | County comparison, 2 formula tabs (C and B; A ranks identically to C and is explained rather than tabbed) |
 | 3 | kommun-djupanalys | Kommun djupanalys | Single municipality deep dive with forecasts |
 | 4 | kontantinsats | Kontantinsats analys | 4 regulatory regime comparison |
 | 5 | scenario | Scenariosimulator | Interactive sliders for stress testing |
