@@ -94,8 +94,8 @@ which asserted a trend it cannot have.
 
 ### What it is
 
-21 counties under all three formulas, as a trend chart with a ranking table
-beside it, one tab per formula.
+21 counties as a trend chart with a ranking table beneath it, one tab per
+formula that can rank differently — which is two of the three, not three.
 
 ### Why it exists
 
@@ -111,6 +111,20 @@ logarithmic axis, which is the same treatment decision D6 applies to them for
 z-scoring and for the same reason: they are ratios with the policy rate in the
 denominator, so when the rate approached zero they ran to 400+ and squashed
 recent years flat against a linear axis.
+
+Each county carries its own colour from `COUNTY_PALETTE` and its own legend
+entry, and a selector cuts the 21 lines down to a chosen few; the rest stay on
+as faint context so the spread is never lost. Before 2026-09-30 every county was
+drawn in one muted tone with the legend off, which showed the shape of the
+spread while making each line anonymous.
+
+**Version A has no tab, deliberately.** Measured on this page's own county
+figures, A and C produce the identical ordering in every year — rank correlation
+1,0000 — and C reads exactly 4,71x A in 2024 for all 21 counties. A third tab
+would show the same ranking with different numbers, which is the appearance of
+corroboration rather than corroboration. A's formula and description moved into
+the comparison expander, where that reason is stated, and it keeps its row in
+the Robusthet section, where the identity is the point rather than a trap.
 
 ### When to use it
 

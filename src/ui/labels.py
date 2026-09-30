@@ -139,18 +139,55 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",
     "lj.sida_02_regional_jamforelse": "Sida 02 · Regional jämförelse",
     "lj.lan_jamforelse": "Län jämförelse",
-    "lj.21_lan_jamforda_under_tre_bostadsekonomiska": "21 län jämförda under tre bostadsekonomiska formler",
+    "lj.21_lan_jamforda_under_tre_bostadsekonomiska": "21 län under de två formler som kan rangordna olika",
     "lj.den_enklaste_versionen_mater_hushallets": "Den enklaste versionen mäter hushållets betalningsförmåga relativt bostadens transaktionspris och aktuell ränta. Speglar en traditionell bankbedömning. Högre värde = bättre överkomlighet.",
     "lj.en_sammansatt_riskindikator_som_viktar_fyra": "En sammansatt riskindikator som viktar fyra makrovariabler: pris/inkomst, ränta, arbetslöshet och inflation. Speglar centralbankens makrotillsynsperspektiv. Högre värde = högre risk.",
     "lj.arbetsloshet_avser_oppet_arbetslosa_enligt": "Arbetslöshet avser öppet arbetslösa enligt Arbetsförmedlingen (18–65 år), inte AKU. Obs: R och π är nationella variabler. De bidrar ej till kommunal rangordning inom ett enskilt år (se Begränsning F13).",
     "lj.den_rekommenderade_versionen_justerar_for": "Den rekommenderade versionen justerar för inflation genom att använda realräntan istället för nominalräntan. Akademiskt förankrad. Högre värde = bättre överkomlighet.",
     "lj.att_olika_formler_rangordnar_lanen_olika_ar": "Att olika formler rangordnar länen olika är förväntat och inte ett fel. De mäter olika ekonomiska perspektiv.",
-    "lj.stockholm_visas_som_referenslan_markerat_med": "Stockholm visas som referenslän (markerat med starkare linje).",
     "lj.v0_ar_x_varde_y_2f": "<b>{v0}</b><br>År: %{{x}}<br>Värde: %{{y:,.2f}}<extra></extra>",
     "lj.v0_lansutveckling_v1": "{v0} · Länsutveckling {v1}",
     "lj.ar": "År",
     "lj.indexvarde": "Indexvärde",
-        "lj.vilken_version_styr": "Vilken version styr sajten?",
+        "lj.valj_lan": "Välj län att visa",
+    "lj.inga_lan_valda": "Inga län valda. Välj minst ett län ovan för att visa diagrammet.",
+    "lj.v0_av_v1_lan_visas": "{v0} av {v1} län visas. Övriga ritas som ljusgrå bakgrund så att spridningen fortfarande syns.",
+    "lj.formel_och_definition": "Formel och definition",
+    "lj.darfor_ingen_a_flik": """
+    **Därför har Bankversion (A) ingen egen flik.** Den kan inte rangordna
+    annorlunda än C, så en tredje flik hade visat samma ordning med andra tal.
+    Rangkorrelationen mellan A och C är 1,0000 varje år, och C ligger exakt
+    4,71 gånger högre än A 2024 för samtliga 21 län. Det A faktiskt visar är
+    storleken på inflationsjusteringen, inte en andra åsikt om vilka län som är
+    ansträngda. Formeln står här för den som vill se den:
+    """,
+    "lj.mater": "Mäter",
+    "lj.riktning": "Riktning",
+    "lj.riktning_hogre_battre": "Högre = bättre överkomlighet",
+    "lj.riktning_hogre_samre": "Högre = högre risk",
+    "lj.vad_a_mater": "Inkomst mot pris och nominell ränta. En traditionell bankbedömning.",
+    "lj.vad_b_mater": "Sammanvägt makrotryck: pris/inkomst, ränta, arbetslöshet och inflation.",
+    "lj.vad_c_mater": "Som A, men med realränta i stället för nominell ränta.",
+    "lj.versionsskillnader_text": """
+    Tre formler mäter tre olika saker, och skillnaderna är inte godtyckliga.
+
+    **A och C rangordnar länen exakt lika.** Det är inte en tillfällighet utan
+    matematik: ränta och inflation är nationella och lika för alla län ett givet
+    år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort.
+    Det de skiljer sig i är **nivå**, inte ordning. C ligger ungefär fem gånger
+    högre än A vid 2024 års realränta, och det är just inflationsjusteringen.
+
+    **B är den enda som kan rangordna annorlunda.** Den väger in arbetslöshet,
+    som A och C inte gör alls, och dess z-poäng poolas över hela panelen i
+    stället för inom år. Därför kan B bära en tidstrend som de andra två inte
+    kan.
+
+    **B pekar åt andra hållet.** A och C är överkomlighetsmått där högre är
+    bättre. B är ett riskmått där högre är sämre. Det är den vanligaste
+    feltolkningen på den här sidan, och anledningen till att rangordningen alltid
+    sorteras så att plats 1 är bäst oavsett vilken flik du står i.
+    """,
+    "lj.vilken_version_styr": "Vilken version styr sajten?",
     "lj.vilken_version_styr_underrubrik": "Version C driver kartan och sidorna. A och B finns för att pröva om rangordningen håller.",
     "lj.robusthet": "ROBUSTHET",
     "lj.version": "Version",
@@ -168,7 +205,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.a_och_c_ar_identiska": "Tabellen visar varför den invändningen bara delvis går att bemöta. **A och C rangordnar exakt lika, varje år, av matematiska skäl:** ränta och inflation är nationella och lika för alla kommuner ett givet år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort. De skiljer sig i nivå, inte i ordning. **B är alltså den enda formel som kan vara oense**, och den är det för {v0} av {v1} kommuner ({v2} %). Det är den siffran som säger något om robusthet.",
     "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
     "lj.topp_5_och_botten_5_lan_under_varje_formel": "Topp 5 och botten 5 län under varje formel",
-    "lj.jamforelse": "JÄMFÖRELSE",
     "lj.samst_overkomlighet": "*Sämst överkomlighet:*",
     "lj.bast_overkomlighet": "*Bäst överkomlighet:*",
 
