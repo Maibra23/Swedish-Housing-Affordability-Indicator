@@ -188,23 +188,23 @@ SWEDISH_LABELS: dict[str, str] = {
     sorteras så att plats 1 är bäst oavsett vilken flik du står i.
     """,
     "lj.vilken_version_styr": "Vilken version styr sajten?",
-    "lj.vilken_version_styr_underrubrik": "Version C driver kartan och sidorna. A och B finns för att pröva om rangordningen håller.",
+    "lj.vilken_version_styr_underrubrik": "Version C driver kartan och sidorna. B är den enda formeln som kan rangordna annorlunda; A visar inflationsjusteringens storlek.",
     "lj.robusthet": "ROBUSTHET",
     "lj.version": "Version",
     "lj.kommun": "Kommun",
     "lj.hog_risk": "Hög risk",
     "lj.medel_risk": "Medel",
     "lj.lag_risk": "Låg risk",
-    "lj.version_a_kort": "A, bank",
-    "lj.version_b_kort": "B, makro",
-    "lj.version_c_kort": "C, real",
+    "lj.version_a_kort": "Bankversion (A)",
+    "lj.version_b_kort": "Makroversion (B)",
+    "lj.version_c_kort": "Realversion (C)",
     "lj.rangskillnad": "Rangskillnad",
     "lj.antal_kommuner_per_riskklass_v0": "Antal kommuner per riskklass, {v0}",
     "lj.storst_avstand_mellan_b_och_c": "Kommunerna där B och C är mest oense",
     "lj.c_driver_sajten": "**Version C är den som räknas.** Kartan, riskklasserna, KPI-raden, projektionen och scenariosimulatorn läser alla C. A och B står här för att svara på en rimlig invändning: att en kommuns placering bara är en effekt av vilken formel någon råkade välja.",
     "lj.a_och_c_ar_identiska": "Tabellen visar varför den invändningen bara delvis går att bemöta. **A och C rangordnar exakt lika, varje år, av matematiska skäl:** ränta och inflation är nationella och lika för alla kommuner ett givet år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort. De skiljer sig i nivå, inte i ordning. **B är alltså den enda formel som kan vara oense**, och den är det för {v0} av {v1} kommuner ({v2} %). Det är den siffran som säger något om robusthet.",
     "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
-    "lj.topp_5_och_botten_5_lan_under_varje_formel": "Topp 5 och botten 5 län under varje formel",
+    "lj.topp_5_och_botten_5_lan_per_flik": "Topp 5 och botten 5 län under Realversion (C) och Makroversion (B). Bankversion (A) saknas med flit: den rangordnar exakt som C, så en tredje kolumn hade upprepat samma ordning med andra tal.",
     "lj.samst_overkomlighet": "*Sämst överkomlighet:*",
     "lj.bast_overkomlighet": "*Bäst överkomlighet:*",
 
@@ -550,7 +550,7 @@ SWEDISH_LABELS: dict[str, str] = {
     - **P_SEK(i,t)** = medeltransaktionspris för permanenta småhus, SCB BO0501C2 (SEK)
     - **R(t)** = Riksbankens styrränta, årsgenomsnitt (som decimaltal)
     """,
-    "mt.version_b_makrokomposit_tryckmatt": "### Version B: Makrokomposit (tryckmått)",
+    "mt.version_b_makrokomposit_tryckmatt": "### Version B: Makroversion (tryckmått)",
     "mt.sammansatt_riskindikator_som_viktar_pris": """
     Sammansatt riskindikator som viktar pris/inkomst, ränta, arbetslöshet och inflation.
     z-poängen beräknas över hela panelen, mot en fast referens som ligger still mellan

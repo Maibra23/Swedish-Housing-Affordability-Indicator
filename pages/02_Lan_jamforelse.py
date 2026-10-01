@@ -1,6 +1,9 @@
 """Sida 02 — Län jämförelse.
 
-Jämför 21 län under tre formelversioner (A, B, C) med trendlinjer och rankingtabeller.
+En flik per formel som kan rangordna annorlunda: Realversion (C) och
+Makroversion (B), var och en med trendlinje och rankingtabell. Bankversion (A)
+rangordnar identiskt med C och förklaras i jämförelseavsnittet i stället för att
+få en egen flik.
 """
 
 import streamlit as st
@@ -15,9 +18,7 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
-import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 
 from src.provenance import (
     complete_case_max_year,
@@ -37,7 +38,7 @@ from src.ui.components import (
     page_title,
     vintage_badge,
 )
-from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
+from src.ui.chart_theme import CHART_PALETTE
 from src.ui.data_table import Column, render_table
 from src.lan.charts import county_colours, county_trend_chart
 from src.indices.agreement import measure_agreement, where_b_and_c_disagree
@@ -100,7 +101,7 @@ page_title(
 # the identity is the point, and its formula moved into the comparison expander,
 # where the reason it is not a tab is stated.
 FORMULA_INFO = {
-    "Realversion (C)": {
+    "Realversion": {
         "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
         "desc": (
             L("lj.den_rekommenderade_versionen_justerar_for")
@@ -112,7 +113,7 @@ FORMULA_INFO = {
             L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
     },
-    "Makroversion (B)": {
+    "Makroversion": {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
         "desc": (
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
@@ -254,13 +255,13 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
     st.markdown(L("lj.darfor_ingen_a_flik"))
     st.latex(VERSION_A_FORMULA)
     st.caption(L("lj.den_enklaste_versionen_mater_hushallets"))
-    st.caption(L("lj.topp_5_och_botten_5_lan_under_varje_formel"))
+    st.caption(L("lj.topp_5_och_botten_5_lan_per_flik"))
 
     year_data = county_versions[county_versions["year"] == selected_year].copy()
 
     if len(year_data) > 0:
         cols = st.columns(len(FORMULA_INFO))
-        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4], CHART_PALETTE[6]]
+        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4]]
         for col_idx, (name, info) in enumerate(FORMULA_INFO.items()):
             with cols[col_idx]:
                 st.markdown(
