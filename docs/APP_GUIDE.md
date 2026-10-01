@@ -23,6 +23,12 @@ the three pages a visitor meets first.
 | Sida 05 | Scenariosimulator | 5 |
 | Sida 06 | Metodologi och källor | documented by `docs/METHODOLOGY.md`, which is its source |
 
+
+**Where the numbers come from.** Pages 01 to 03 display what the refresh pipeline
+already computed and committed; pages 04 and 05 take raw panel inputs and compute
+something new on every click. `docs/ENGINE.md` walks the whole chain, from the three
+source APIs through the formulas and the normalisation to the screen, with the
+arithmetic worked out on one kommun so it can be checked by hand.
 Sections 6 to 11 are not about a single page: the three formula versions, what
 can and cannot be refreshed, the interpretation system both tool pages share, the
 two charts, and the record of recommended work.
@@ -45,6 +51,10 @@ This one opens with the answer already on screen, which is why it is the front
 door and why the things it gets wrong cost the most.
 
 ### How it works
+
+**Reads** `affordability_ranked.parquet`, filtered to the selected year. That is
+stage 4 of the pipeline, so the colours and the ranks are read from the file and
+never recalculated in the browser. The full chain is in `docs/ENGINE.md`.
 
 The map does not colour the raw index. Version C is log-transformed, z-scored
 **within the selected year**, and cut at ±0.67σ into three classes (decisions D5
@@ -104,6 +114,10 @@ ranking just an artefact of the formula you happened to choose?* Sida 01 shows
 one ranking with great confidence. This page exists to test it.
 
 ### How it works
+
+**Reads** `affordability_municipal.parquet`, averaged into län with
+`groupby("lan_code").mean()`, plus `affordability_ranked.parquet` for the
+agreement panel. Stages 3 and 4, aggregated. See `docs/ENGINE.md`.
 
 Municipal scores are averaged into counties — `municipal.groupby("lan_code")`
 — and ranked within the selected year. Versions A and C are plotted on a
@@ -194,6 +208,10 @@ stands now; this says how it got there, and what the index becomes under
 assumptions the reader can accept or reject.
 
 ### How it works
+
+**Reads** `affordability_municipal.parquet` for the kommun,
+`affordability_county.parquet` for its county, and `projection.parquet`. Stages 3
+and 5. See `docs/ENGINE.md`.
 
 History is municipal. **The projection is not.** `src/projection.py` carries the
 county's last observed income and price forward at 3 % and 2 % a year, then
@@ -286,6 +304,11 @@ the rules as fixed background. Here the rules are the variable, which is what
 makes the cost of each policy change legible.
 
 ### How it works
+
+**Reads** `affordability_municipal.parquet` and `panel_county.parquet`, for price,
+income and the policy rate only. Stage 2 inputs, then `src/kontantinsats/engine.py`
+live on every interaction. Nothing on this page touches the A, B, C index. See
+`docs/ENGINE.md`.
 
 For each regime, given price `P`, household income `I`, policy rate `R` and bank
 margin `m`:
@@ -415,6 +438,9 @@ real interest rate becomes visible, and that behaviour is genuinely
 counterintuitive.
 
 ### How it works
+
+**Reads** `panel_county.parquet` for the baseline row, then `src/scenario/simulator.py`
+live on every slider move. Version C only. See `docs/ENGINE.md`.
 
 ```
 real_rate  = max(R - pi, 0.5)          # percentage points, floored

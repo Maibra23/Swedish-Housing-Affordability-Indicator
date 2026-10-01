@@ -125,6 +125,33 @@ Affordability_C(i, t) = Income(i, t) / (P_sek(i, t) × max(R(t) − π(t), 0.005
 
 The max() floor prevents division explosion when real rates are near zero or negative. **0.005 is the decimal form of the floor; it is 0,5 percentage points.** Code that works in percentage points writes it that way — `REAL_RATE_FLOOR` in `src/projection.py`, and the `max(R − π, 0,5)` form quoted in `docs/APP_GUIDE.md` — and the two are the same number.
 
+**The floor is not an edge case. It binds in 9 of the 11 observed years.**
+
+| Year | Policy rate | Inflation | Real rate | Used after floor | National mean index |
+|---|---|---|---|---|---|
+| 2014 | 0,46 | −0,17 | 0,63 | 0,63 | 36,3 |
+| 2015 | −0,25 | −0,03 | −0,23 | **0,50** | 43,1 |
+| 2016 | −0,48 | 0,98 | −1,47 | **0,50** | 41,9 |
+| 2017 | −0,50 | 1,81 | −2,31 | **0,50** | 39,1 |
+| 2018 | −0,50 | 1,95 | −2,45 | **0,50** | 38,1 |
+| 2019 | −0,26 | 1,80 | −2,06 | **0,50** | 37,6 |
+| 2020 | 0,00 | 0,49 | −0,50 | **0,50** | 36,5 |
+| 2021 | 0,00 | 2,17 | −2,17 | **0,50** | 32,4 |
+| 2022 | 0,77 | 8,35 | −7,58 | **0,50** | 32,0 |
+| 2023 | 3,46 | 8,65 | −5,19 | **0,50** | 36,3 |
+| 2024 | 3,63 | 2,86 | 0,77 | 0,77 | **23,0** |
+
+In every bolded year the interest rate contributed **nothing** to Version C, which
+reduced to `200 × income / price`. 2024 is the first year since 2014 in which the real
+rate cleared the floor, and the national mean index fell 36 % as a direct result.
+Affordability did not deteriorate by a third; the floor stopped binding.
+
+Two consequences follow, and both are load-bearing elsewhere in this document.
+Cross-year comparisons of the raw index level are comparisons of whether the floor was
+active, which is why §4 normalises within year. And the real rate carries 99 % of the
+variance in year-on-year changes of `log C`, which is why §5 makes it a stated scenario
+rather than something estimated.
+
 **Use case:** Academically defensible, captures real cost of capital.
 **Strength:** Inflation adjusted, standard in economics literature.
 **Weakness:** Real rate can be near zero or negative, requires floor handling.
