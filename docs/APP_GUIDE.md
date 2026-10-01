@@ -498,9 +498,9 @@ scoping separately. Recorded here as a direction, not a quick win.
 
 | Version | Formula | Reads as |
 |---|---|---|
-| **A, Bankversion** | `I / (P * R)` | Can a household carry this at today's nominal rate? A traditional bank view. |
-| **B, Makroversion** | `0.35*z(P/I) + 0.25*z(R) + 0.20*z(U) + 0.20*z(pi)` | How much macro pressure is this market under, relative to the panel's history? A supervisor's view. |
-| **C, Realversion** | `I / (P * max(R - pi, 0.5))` | Version A corrected for inflation, using the real rate. |
+| **Bankversion (A)** | `I / (P * R)` | Can a household carry this at today's nominal rate? A traditional bank view. |
+| **Makroversion (B)** | `0.35*z(P/I) + 0.25*z(R) + 0.20*z(U) + 0.20*z(pi)` | How much macro pressure is this market under, relative to the panel's history? A supervisor's view. |
+| **Realversion (C)** | `I / (P * max(R - pi, 0.5))` | Bankversion corrected for inflation, using the real rate. The floor is 0,5 **percentage points**, which `docs/METHODOLOGY.md` writes in decimal as 0.005. |
 
 A and C are ratios where **higher is better**. B is a weighted sum of z-scores
 where **higher is worse**. That sign difference is the single most error-prone
@@ -526,7 +526,10 @@ Verified against the code:
 
 - `version_c` is consumed by the choropleth map, the risk classification, the
   KPI row, the projection, the data tables and the scenario simulator.
-- `version_a` appears in exactly one file: the Län jämförelse comparison tab.
+- `version_a` is read in one page, `pages/02_Lan_jamforelse.py`: the county means feeding
+  the comparison expander, and the Robusthet class counts. It is also named in
+  `src/lan/charts.py`'s `LOG_SCALED`, which is a property of the formula rather than of the
+  current tabs. **It has no tab of its own** — see section 2.
 - `version_b` likewise appears only in that comparison and in the methodology
   page that documents it.
 - The ranked artifact computes and stores `z_a, rank_a, risk_a, z_b, rank_b,

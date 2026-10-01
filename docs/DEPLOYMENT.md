@@ -2,7 +2,7 @@
 
 **Version:** 1.3.0
 **Target:** Streamlit Community Cloud
-**Last updated:** 2026-09-15
+**Last updated:** 2026-10-01
 
 ---
 
@@ -75,7 +75,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Eight packages, no compilers, no API calls at startup.
+Seven packages, no compilers, no API calls at startup.
 
 **Refreshing the data** — adds the SCB/Riksbanken/Kolada API clients:
 
