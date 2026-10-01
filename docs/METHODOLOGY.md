@@ -5,7 +5,7 @@
 **App version:** 1.3.0
 **Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
 **Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
-**Last updated:** 2026-09-15
+**Last updated:** 2026-10-01
 
 ### Changelog v2.2 → v2.3 (2026-09-15)
 - **Normalization convention settled on both axes (§4 rewritten).** Versions A and C are
@@ -94,7 +94,7 @@ SHAI implements all three through the formula triplet (A, B, C), the kontantinsa
 
 ## 3. Formulas
 
-### Version A: Bank style affordability ratio
+### Version A — Bankversion (bank style affordability ratio)
 
 ```
 Affordability_A(i, t) = Income(i, t) / (P_sek(i, t) × Rate(t))
@@ -104,7 +104,7 @@ Affordability_A(i, t) = Income(i, t) / (P_sek(i, t) × Rate(t))
 **Strength:** Intuitive, easy to explain to non technical stakeholders.
 **Weakness:** Ignores inflation (nominal rate distortion), ignores down payment.
 
-### Version B: Macro composite pressure index
+### Version B — Makroversion (macro composite pressure index)
 
 ```
 Risk_B(i, t) = 0.35 × z(P_sek/I) + 0.25 × z(R) + 0.20 × z(U) + 0.20 × z(π)
@@ -117,13 +117,13 @@ Where z() denotes z score normalization across the panel.
 **Weakness:** Weights are subjective, z scores require stable reference period.
 **Data note:** With Kolada N03937, unemployment is available from 2010. Version B is computed for 2014 to 2024 (policy rate availability is the binding constraint).
 
-### Version C: Real affordability (primary, recommended)
+### Version C — Realversion (real affordability; primary, recommended)
 
 ```
 Affordability_C(i, t) = Income(i, t) / (P_sek(i, t) × max(R(t) − π(t), 0.005))
 ```
 
-The max() floor prevents division explosion when real rates are near zero or negative.
+The max() floor prevents division explosion when real rates are near zero or negative. **0.005 is the decimal form of the floor; it is 0,5 percentage points.** Code that works in percentage points writes it that way — `REAL_RATE_FLOOR` in `src/projection.py`, and the `max(R − π, 0,5)` form quoted in `docs/APP_GUIDE.md` — and the two are the same number.
 
 **Use case:** Academically defensible, captures real cost of capital.
 **Strength:** Inflation adjusted, standard in economics literature.
@@ -321,13 +321,13 @@ Output: recalculated Version C affordability for selected county, with delta fro
 |----|------------|------------|----------|
 | F1 | Native K/T available for ~88% of municipality years; county K/T fallback used for remaining ~12% | `has_native_kt` flag in panel; full list of fallback municipalities on Metodologi page | Low |
 | F2 | National interest rate applied at municipal and county level | Documented explicitly; municipal variation in affordability comes entirely from income and K/T differences | Medium |
-| F3 | Three formulas rank municipalities differently | "Varför skiljer sig versionerna åt" comparison panel on Län jämförelse page | Low |
+| F3 | Only Makroversion (B) can rank municipalities differently. Bankversion (A) and Realversion (C) rank identically in every year by construction: R and π are national, so within a year A and C differ by a single constant factor, which a within-year z-score on logs removes exactly | Stated in the "Varför skiljer sig versionerna åt" comparison panel on the Län jämförelse page, which tabs only C and B; `tests/test_formula_agreement.py` pins the identity so the copy is revisited if it ever breaks | Low |
 | F4 | Eleven annual observations cannot support a fitted statistical model | Model fitting withdrawn; conditional projection instead (R16) | Medium |
 | F5 | Kontantinsats is step function not continuous | Discrete regime cards, not a slider | Low |
 | F6 | The projection is conditional: it states what it assumes, and the spread between scenarios is not a confidence interval | Every line labelled with its own real-rate assumption; six annual steps | Medium |
 | F7 | SCB API rate limits (30 calls/10s, 150k cells/query) | All data cached as parquet at build time; no live API calls from Streamlit | Low |
 | F8 | Translation loses banking terminology nuance | Glossary file in swedish-translation skill; banking terms curated | Low |
-| F9 | Income beyond the last published year is forward filled with **3% nominal growth per year** (`IMPUTED_INCOME_GROWTH_RATE`, build_panel.py). Zero growth was the earlier, pessimistic assumption that F9 replaced. | `is_imputed_income` flag. Imputed rows are held back from the index entirely — `step_compute_indices` filters through `complete_case()` before scoring — and the year selector stops at `complete_case_max_year()`. Both matter: the selector stops an imputed year being *displayed*, the filter stops it being *pooled into Version B*, which would re-base published values for every real year. | Low |
+| F9 | Income beyond the last published year is forward filled with **3% nominal growth per year** (`IMPUTED_INCOME_GROWTH_RATE`, `src/data/panel_income.py`). Zero growth was the earlier, pessimistic assumption that F9 replaced. | `is_imputed_income` flag. Imputed rows are held back from the index entirely — `step_compute_indices` filters through `complete_case()` before scoring — and the year selector stops at `complete_case_max_year()`. Both matter: the selector stops an imputed year being *displayed*, the filter stops it being *pooled into Version B*, which would re-base published values for every real year. | Low |
 | F10 | Unemployment is Arbetsförmedlingen registered rate, not AKU/ILO survey rate | Documented on every page where U enters a computation; definition footnote in Swedish | Low |
 | F11 | SHAI formulas (A, B, C) still use only small-house prices (SCB BO0501C2, Fastighetstyp 220) for methodological continuity and a systemic-risk perspective. Bostadsrätt prices (SCB BO0501C, `FastprisBRFRegionAr`, content code BO0501R7) are now part of the panel (`bostadsratt_price_sek`) and are exposed as a user-selectable `Pristyp` toggle on Sida 04 (Kontantinsats), together with a side-by-side villa vs. bostadsrätt comparison card. **Important:** SCB publishes bostadsrätt prices at county level only — no municipal granularity exists. All 290 municipalities inherit their county's mean bostadsrätt price. The UI displays the county name (e.g. "Bostadsrätt — Stockholms län") to make this clear. The `has_native_bostadsratt_price` flag has been removed from the panel schema as it was always False. | Pristyp selector + county-name display + comparison card on Sida 04; F11 retained to document the index-scope and county-granularity limitation. | Medium |
 | F12 | Policy rate used directly as mortgage rate. Actual mortgage rate ≈ policy rate + bank margin (~1.5–2.5 pp, typically ~1.7 pp for 3-month fixed). Monthly housing cost and affordability formula values are optimistic by ~30%. Municipal rankings are unaffected (all use the same national rate). | Documented in Detaljer on Sida 04; noted in formula descriptions. | Medium |
