@@ -101,7 +101,7 @@ with st.container(border=True):
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Version A: Bankmodell (affordability ratio)")
+    st.markdown("### Version A: Bankversion")
     st.latex(r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}")
     st.markdown(L("mt.mater_flodesoverkomlighet_hushallets_inkomst"))
 
