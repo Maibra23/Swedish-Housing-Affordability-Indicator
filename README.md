@@ -22,13 +22,22 @@ The answer is an index, not a price. In 2024 Åsele scored 75 and Lidingö 4,6.
 
 A year and an optional risk filter sit in the sidebar and follow you between pages.
 
-## Example
+## What you will see
 
-Stockholm kommun, 2024: mean transaction price 8 597 000 SEK, median income 413 600 SEK.
-Buying a house under the 2026 easing while saving 10 % of income costs **859 700 SEK of
-cash, 20,8 years to save it, and 47 252 SEK a month**. Under the older Amorteringskrav
-2.0 the same purchase needed 1 289 550 SEK and 31,2 years. Switch to Bostadsrätt and the
-figures roughly halve: 421 400 SEK, 10,5 years, 23 162 SEK a month.
+Set the sidebar year to **2024**, the latest complete year and the app's default, and
+every page should show exactly this. Use it to check your install.
+
+| Page | In 2024 |
+|---|---|
+| **Riksöversikt** | Mean index **23,0** points, **84 of 290** kommuner at hög risk, mean K/T **1,40**. Least affordable: Lidingö, Danderyd, Solna. Most affordable: Åsele, Sorsele, Ragunda |
+| **Län jämförelse** | Two tabs. The Robusthet panel at the foot shows C and A both classing **84** kommuner hög, B classing **57**. B disagrees with C for **73 of 290** |
+| **Kommun djupanalys** | Select Stockholm: index **6,2**, income **413 600 SEK**, K/T **1,23**. Its county projects to **12,0 / 7,8 / 3,0** in 2025 under the floor, current and normalised rate scenarios |
+| **Kontantinsats** | Stockholm, one income, 10 % sparkvot, 1,7 pp margin: **859 700 SEK** down, **20,8 years** to save, **47 252 SEK** a month. Switch to Bostadsrätt and it moves to län level: **421 400 SEK** and **10,5 years** |
+| **Scenariosimulator** | Stockholms län baseline **7,71**. Push the rate slider **+2 pp** and it falls to **2,14**, down 72 % |
+| **Metodologi** | The three formulas, the F1 to F16 limitation register, no interactive data |
+
+Those figures are re-derived from the shipped artifacts by
+`tests/test_readme_figures.py`, so they cannot quietly go stale.
 
 ## The index
 
@@ -108,6 +117,7 @@ To use or change the app:
 
 | File | Contents |
 |---|---|
+| `docs/ENGINE.md` | How a number reaches the screen: the pipeline, the formulas, and what each page computes |
 | `docs/METHODOLOGY.md` | Formulas, variables, sources, limitations |
 | `docs/APP_GUIDE.md` | What each page is for and how to read its results |
 | `docs/DEPLOYMENT.md` | Deployment, data refresh, file inventory |

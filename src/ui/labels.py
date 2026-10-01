@@ -99,10 +99,10 @@ SWEDISH_LABELS: dict[str, str] = {
     "landing.riksoversikt": "Riksöversikt",
     "landing.nationell_overblick_med_karta_histogram_och": "Nationell överblick med karta, histogram och rankingtabeller för {v0} kommuner.",
     "landing.lan_jamforelse": "Län jämförelse",
-    "landing.21_lan_jamforda_under_tre_ekonometriska": "21 län jämförda under tre ekonometriska formler (A, B, C).",
+    "landing.21_lan_jamforda_under_tre_ekonometriska": "21 län jämförda formel för formel, med den version som kan rangordna annorlunda i egen flik.",
     "landing.jamfor_insatskrav_under_fem_regulatoriska": "Jämför insatskrav under fem regulatoriska regimer sedan 2010.",
     "landing.stresstesta_med_ranta_inkomst_och": "Stresstesta med ränta-, inkomst- och prisförändringar per län.",
-    "landing.formler_datakallor_begransningar_f1f10_och": "Formler, datakällor, begränsningar (F1–F10) och validering.",
+    "landing.formler_datakallor_begransningar_f1f10_och": "Formler, datakällor, begränsningar (F1–F16) och validering.",
 
     # ── Sida 01 — Riksöversikt ────────────────────────────────────
     "rv.shai_riksoversikt": "SHAI · Riksöversikt",
