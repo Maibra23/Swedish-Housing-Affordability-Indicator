@@ -70,6 +70,13 @@ So a cross-year comparison of the index level is partly a comparison of whether 
 was active. Rankings within a year are unaffected, because the rate is national and
 identical for every kommun.
 
+**The rate can be divided back out, and then the comparison works.** Because the rate is
+national it factors out of the national mean exactly — `mean C = (100/r) × mean(income/price)`
+— so the mean ratio of income to price is the index with the interest rate removed. That
+series carries no floor and compares across all eleven years: a median income bought
+**22,9 %** of a house in 2014 and **17,7 %** in 2024. The 2023-to-2024 fall in the index
+splits into **−35,1 %** from the rate and **−2,2 %** from income against price.
+
 The app says this where it matters rather than only here: sidorna 01, 02 and 06 carry a
 collapsed **Räntegolvet** panel showing which rate each formula actually divided by in
 each year, derived from the artifacts by `agreement.floor_history()`. The same table is

@@ -171,6 +171,45 @@ formulas divide by a constant. Sida 02 states what the inflation adjustment is w
 sentence per year, `src/indices/agreement.py` derives the factor, and
 `tests/test_inflation_adjustment_copy.py` pins the choice to the rates.
 
+**The floor can be divided out, which answers the question it otherwise blocks.**
+Because `r` is national, it leaves the national mean entirely:
+
+```
+mean C_t = (1/N) · Σ I_it / (P_it · r_t/100)
+         = (100 / r_t) · (1/N) · Σ I_it / P_it
+         = (100 / r_t) · m_t
+```
+
+`m_t` — the mean of income over price — is the index with the interest rate taken out.
+It carries no rate and therefore no floor, and it is comparable across every year in the
+panel. The identity holds to 2·10⁻¹⁶ relative error on the shipped artifact, for Version A
+against its own floored rate as well.
+
+| Year | Rate C used | m (income/price) | Mean index |
+|---|---|---|---|
+| 2014 | 0,63 | 22,9 % | 36,3 |
+| 2015 to 2021 | **0,50** | 21,5 % → 16,2 % | 43,1 → 32,4 |
+| 2022 | **0,50** | 16,0 % | 32,0 |
+| 2023 | **0,50** | 18,1 % | 36,3 |
+| 2024 | 0,77 | 17,7 % | 23,0 |
+
+So any pair of years splits exactly into a rate part and an affordability part, and the
+parts multiply:
+
+- **2023 to 2024:** mean index −36,5 % = rate −35,1 % × income/price −2,2 %. The level
+  collapse is the floor releasing; affordability itself barely moved.
+- **2014 to 2024:** mean index −36,6 % = rate −18,3 % × income/price −22,4 %. Over the
+  full period a median income went from buying 22,9 % of a house to 17,7 %.
+
+`src/indices/decompose.py` computes the split and `src/ui/floor_panel.py` renders it,
+collapsed, on sidorna 01, 02 and 06. `tests/test_level_decomposition.py` holds the
+identity to the artifact rather than to the algebra: the algebra is only true while the
+rate is one number per year.
+
+**What `m_t` does not remove.** It is free of the formula's rate term, not of the rate's
+effect on the economy — house prices respond to interest rates, so a rate cycle reaches
+`m_t` through `P`. It removes the mechanical artefact of the floor, not monetary policy.
+
 **Use case:** Academically defensible, captures real cost of capital.
 **Strength:** Inflation adjusted, standard in economics literature.
 **Weakness:** Real rate can be near zero or negative, requires floor handling.

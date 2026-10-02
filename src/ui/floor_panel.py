@@ -31,13 +31,23 @@ from src.indices.agreement import (
     REAL_RATE_FLOOR_PP,
     floor_history,
 )
+from src.indices.decompose import decompose_change
 from src.ui.data_table import Column, render_table
 from src.ui.labels import L
 
 
 def _sv(value: float, decimals: int = 2) -> str:
     """Swedish decimal comma, with a typographic minus."""
-    return f"{value:.{decimals}f}".replace("-", "−").replace(".", ",")
+    text = f"{value:.{decimals}f}"
+    if float(text) == 0:  # "-0,00" is rounding, not a negative value
+        text = text.lstrip("-")
+    return text.replace("-", "−").replace(".", ",")
+
+
+def _pct(value: float, decimals: int = 1) -> str:
+    """A signed percentage, so a reader sees the direction without parsing it."""
+    sign = "+" if value > 0 else ""
+    return sign + _sv(value, decimals) + " %"
 
 
 def _which_floor(row: pd.Series) -> str:
@@ -49,6 +59,19 @@ def _which_floor(row: pd.Series) -> str:
     if row["nominal_floored"]:
         return L("fl.golv_a")
     return L("fl.golv_inget")
+
+
+def _change_for(history: pd.DataFrame, year: int | None):
+    """The year-on-year split for the year on screen, when there is one.
+
+    Returns None when the page shows no single year, when the preceding year is
+    outside the panel, or when the split does not reconcile — a figure that does
+    not add up is not shown with a caveat, it is not shown.
+    """
+    if year is None:
+        return None
+    change = decompose_change(history, int(year) - 1, int(year))
+    return change if change is not None and change.is_exact else None
 
 
 def render_floor_history(scored: pd.DataFrame, *, highlight_year: int | None = None) -> None:
@@ -86,10 +109,48 @@ def render_floor_history(scored: pd.DataFrame, *, highlight_year: int | None = N
                     Column(L("fl.golv_binder"), _which_floor),
                     Column(L("fl.faktor"), lambda row: _sv(row["factor"]) + "×", numeric=True),
                     Column(L("fl.snittindex"), lambda row: _sv(row["mean_index"], 1), numeric=True),
+                    Column(
+                        L("fl.inkomst_pris"),
+                        lambda row: _sv(row["income_to_price"], 1) + " %",
+                        numeric=True,
+                    ),
                 ],
             ),
             unsafe_allow_html=True,
         )
         if highlight_year is not None:
             st.caption(L("fl.vald_rad", v0=str(highlight_year)))
+
+        # The question the withdrawn claim left unanswered, answered: the rate
+        # divides out of the mean exactly, and what remains compares across
+        # every year in the panel.
+        first, last = history.iloc[0], history.iloc[-1]
+        over_period = decompose_change(history, int(first["year"]), int(last["year"]))
+        st.markdown(
+            L(
+                "fl.svaret",
+                v0=_sv(float(first["income_to_price"]), 1),
+                v1=_sv(float(last["income_to_price"]), 1),
+                v2=str(int(first["year"])),
+                v3=str(int(last["year"])),
+                v4=_pct(over_period.income_to_price_pct) if over_period else "",
+            )
+        )
+
+        # And the split for the year on screen against the one before it, which
+        # is the comparison a reader is most likely to be making.
+        change = _change_for(history, highlight_year)
+        if change is not None and change.is_exact:
+            st.markdown(
+                L(
+                    "fl.uppdelning",
+                    v0=str(change.from_year),
+                    v1=str(change.to_year),
+                    v2=_pct(change.total_pct),
+                    v3=_pct(change.rate_pct),
+                    v4=_pct(change.income_to_price_pct),
+                )
+            )
+
         st.markdown(L("fl.slutsats"))
+        st.caption(L("fl.forbehall"))

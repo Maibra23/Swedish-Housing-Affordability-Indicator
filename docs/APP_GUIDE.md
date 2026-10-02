@@ -104,23 +104,32 @@ dividing by a rate. The page now says so, and carries the table.
 Rendered on Sida 01, 02 and 06 by `src/ui/floor_panel.py`, collapsed, from
 `agreement.floor_history()`. Rates in percentage points.
 
-| Year | Styrränta | Inflation | Realränta | Golv binder för | C/A | Snitt-SHAI |
-|---|---|---|---|---|---|---|
-| 2014 | 0,46 | −0,17 | 0,63 | inget | 0,74× | 36,3 |
-| 2015 | −0,25 | −0,03 | −0,23 | A och C | 0,20× | 43,1 |
-| 2016 | −0,48 | 0,98 | −1,46 | A och C | 0,20× | 41,9 |
-| 2017 | −0,50 | 1,81 | −2,31 | A och C | 0,20× | 39,1 |
-| 2018 | −0,50 | 1,95 | −2,45 | A och C | 0,20× | 38,1 |
-| 2019 | −0,26 | 1,80 | −2,06 | A och C | 0,20× | 37,6 |
-| 2020 | 0,00 | 0,49 | −0,49 | A och C | 0,20× | 36,5 |
-| 2021 | 0,00 | 2,17 | −2,17 | A och C | 0,20× | 32,4 |
-| 2022 | 0,77 | 8,35 | −7,58 | C | 1,54× | 32,0 |
-| 2023 | 3,46 | 8,65 | −5,19 | C | 6,93× | 36,3 |
-| 2024 | 3,63 | 2,86 | 0,77 | inget | 4,71× | 23,0 |
+| Year | Styrränta | Inflation | Realränta | Golv binder för | C/A | Snitt-SHAI | Inkomst/pris |
+|---|---|---|---|---|---|---|---|
+| 2014 | 0,46 | −0,17 | 0,63 | inget | 0,74× | 36,3 | 22,9 % |
+| 2015 | −0,25 | −0,03 | −0,23 | A och C | 0,20× | 43,1 | 21,5 % |
+| 2016 | −0,48 | 0,98 | −1,46 | A och C | 0,20× | 41,9 | 20,9 % |
+| 2017 | −0,50 | 1,81 | −2,31 | A och C | 0,20× | 39,1 | 19,6 % |
+| 2018 | −0,50 | 1,95 | −2,45 | A och C | 0,20× | 38,1 | 19,1 % |
+| 2019 | −0,26 | 1,80 | −2,06 | A och C | 0,20× | 37,6 | 18,8 % |
+| 2020 | 0,00 | 0,49 | −0,49 | A och C | 0,20× | 36,5 | 18,2 % |
+| 2021 | 0,00 | 2,17 | −2,17 | A och C | 0,20× | 32,4 | 16,2 % |
+| 2022 | 0,77 | 8,35 | −7,58 | C | 1,54× | 32,0 | 16,0 % |
+| 2023 | 3,46 | 8,65 | −5,19 | C | 6,93× | 36,3 | 18,1 % |
+| 2024 | 3,63 | 2,86 | 0,77 | inget | 4,71× | 23,0 | 17,7 % |
 
 Read the Snitt-SHAI column against the Golv column, not on its own. The three
 years where the floor state changes — 2014→2015, 2021→2022, 2023→2024 — are the
 three places the level moves for a reason that is not affordability.
+
+**Inkomst/pris is the column that answers the question.** It is the mean index
+with the rate divided out, which works exactly because the rate is national:
+`mean C = (100/r) · mean(I/P)`. It contains no floor and compares across every
+year — 22,9 % in 2014 to 17,7 % in 2024, so a median income went from buying
+22,9 % of a house to 17,7 %. The panel also shows the split for the year on
+screen against the one before it: 2023 to 2024 is −36,5 % in total, of which the
+rate is −35,1 % and income against price −2,2 %, multiplied rather than added.
+See `src/indices/decompose.py` and METHODOLOGY §3.
 
 </details>
 
