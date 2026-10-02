@@ -30,7 +30,7 @@ every page should show exactly this. Use it to check your install.
 | Page | In 2024 |
 |---|---|
 | **Riksöversikt** | Mean index **23,0** points, **84 of 290** kommuner at hög risk, mean K/T **1,40**. Least affordable: Lidingö, Danderyd, Solna. Most affordable: Åsele, Sorsele, Ragunda |
-| **Län jämförelse** | Two tabs. The Robusthet panel at the foot shows C and A both classing **84** kommuner hög, B classing **57**. B disagrees with C for **73 of 290** |
+| **Län jämförelse** | Two tabs. The Robusthet panel at the foot shows C classing **84** kommuner hög and B classing **57**; B disagrees with C for **73 of 290**. The comparison expander puts the inflation adjustment at **4,71×** |
 | **Kommun djupanalys** | Select Stockholm: index **6,2**, income **413 600 SEK**, K/T **1,23**. Its county projects to **12,0 / 7,8 / 3,0** in 2025 under the floor, current and normalised rate scenarios |
 | **Kontantinsats** | Stockholm, one income, 10 % sparkvot, 1,7 pp margin: **859 700 SEK** down, **20,8 years** to save, **47 252 SEK** a month. Switch to Bostadsrätt and it moves to län level: **421 400 SEK** and **10,5 years** |
 | **Scenariosimulator** | Stockholms län baseline **7,71**. Push the rate slider **+2 pp** and it falls to **2,14**, down 72 % |
@@ -50,7 +50,14 @@ Those figures are re-derived from the shipped artifacts by
 **Realversion (C) runs the site.** The map, the risk classes, the KPI row, the projection
 and the simulator all read C. Makroversion (B) is the only formula that can rank the
 country differently. Bankversion (A) ranks identically to C by construction, so it shows
-the size of the inflation adjustment rather than a second opinion.
+the size of the inflation adjustment rather than a second opinion — C divided by A is
+**4,71×** in 2024, and that is the whole difference between them.
+
+That reading does not hold in every year. Both formulas floor their rate, and in 2015 to
+2023 at least one floor binds, which makes the same quotient an artefact rather than a
+correction — 0,20× for seven straight years, being 0,1 divided by 0,5. Sida 02 derives
+the factor from the year you select and says which of the two it is looking at. The
+per-year table is in `docs/METHODOLOGY.md` section 3.
 
 ## What it does not do
 

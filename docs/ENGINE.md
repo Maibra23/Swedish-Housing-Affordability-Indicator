@@ -238,12 +238,29 @@ country in a given year. **C is A multiplied by a constant.** Multiplying every
 value in a list by the same number cannot reorder the list.
 
 So A and C give the identical ranking in every year, and only the **level** differs.
-The 4.71 factor *is* the inflation adjustment. A does not offer a second opinion
-about which kommuner are strained; it tells you how large the correction is.
+In 2024 the 4.71 factor *is* the inflation adjustment. A does not offer a second
+opinion about which kommuner are strained; it tells you how large the correction is.
 
-`tests/test_formula_agreement.py` pins this, so if the transform or the
-normalisation window ever changes, the test fails and the copy explaining it gets
-revisited.
+**In 2024. Not in nine of the other ten years.** Both formulas floor their rate — A
+at 0.1 pp, C at 0.5 pp — and `C / A` is only `R / (R - pi)` when neither floor
+binds, which is true for 2014 and 2024 alone:
+
+| Year | A's rate | C's rate | C / A | The factor is |
+|---|---|---|---|---|
+| 2014 | 0.46 | 0.63 | 0.74 | the inflation adjustment |
+| 2015-2021 | 0.10 floored | 0.50 floored | 0.20 | 0.1/0.5, two constants |
+| 2022-2023 | 0.77, 3.46 | 0.50 floored | 1.54, 6.93 | nominal rate over a floor |
+| 2024 | 3.63 | 0.77 | 4.71 | the inflation adjustment |
+
+That is why Sida 02 derives the figure from the selected year rather than quoting
+2024's: `inflation_adjustment` in `src/indices/agreement.py` returns the factor
+*and* the two rates, and `explain_inflation_adjustment` in `src/ui/interpret.py`
+picks a sentence that is true for the year on screen. See METHODOLOGY section 3.
+
+`tests/test_formula_agreement.py` pins the identity and the floors, and
+`tests/test_inflation_adjustment_copy.py` pins the sentence, so if the transform,
+the normalisation window or either floor ever changes, a test fails and the copy
+explaining it gets revisited.
 
 ---
 
@@ -497,9 +514,14 @@ kommuner drag an unweighted mean upward.
 
 ```
 Realversion (C)    hög 84   medel 136   låg 70
-Bankversion (A)    hög 84   medel 136   låg 70     identical, by construction
 Makroversion (B)   hög 57   medel 159   låg 74     genuinely different
 ```
+
+Two rows, not three. Bankversion (A) had one until 2026-10-02 and it read `hög 84
+medel 136 låg 70` — C's own counts, since `risk_a` equals `risk_c` on every row.
+A table whose purpose is to show that the ranking survives a change of formula
+cannot carry a row that agrees by construction. What A does say is stated above
+instead, as one derived figure in the comparison expander.
 
 B disagrees with C for **73 of 290 kommuner**. The sharpest case is Perstorp: medel
 under C, hög under B, a gap of 150 rank places. B weighs in unemployment, which C

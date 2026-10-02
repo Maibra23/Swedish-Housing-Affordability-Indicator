@@ -137,8 +137,18 @@ figures, A and C produce the identical ordering in every year — rank correlati
 1,0000 — and C reads exactly 4,71x A in 2024 for all 21 counties. A third tab
 would show the same ranking with different numbers, which is the appearance of
 corroboration rather than corroboration. A's formula and description moved into
-the comparison expander, where that reason is stated, and it keeps its row in
-the Robusthet section, where the identity is the point rather than a trap.
+the comparison expander, where that reason is stated.
+
+**It no longer has a row in the Robusthet class table either, as of
+2026-10-02.** That row was `risk_c`'s counts under another name, in the one table
+on the site whose job is to show that the ranking survives a change of formula.
+What replaced it is the thing only A can say: the size of the inflation
+adjustment, derived from the selected year rather than quoted. The factor is
+4,71 in 2024 and 0,20 in every year from 2015 to 2021, where both formulas are
+dividing by their rate floors and it means nothing about inflation at all — so
+the sentence around the figure changes with the year. See
+`explain_inflation_adjustment` in `src/ui/interpret.py`, and METHODOLOGY
+section 3 for the per-year table.
 
 ### When to use it
 
@@ -158,11 +168,13 @@ of 290 municipalities in 2024.
 So the honest form of this page's argument is not "three methods agree". It is
 "the one method that *could* rank differently does so for a quarter of the
 country, and here is where". The Robusthet section at the foot of the page states
-that and shows the class counts for all three.
+that and shows the class counts for C and B.
 
-Where A and C genuinely differ is in **level**: C reads about 4,7 times A at
-2024's real rate. That is the inflation correction, and it is why C is the one
-the site reports.
+Where A and C genuinely differ is in **level**: C reads 4,71 times A at 2024's
+real rate. That is the inflation correction, and it is why C is the one the site
+reports. In 2015 to 2023 the same quotient is an artefact of the two rate
+floors rather than a correction for anything, which is why the page derives it
+per year and labels what it is.
 
 **A divergence this page does not announce.** The county figures here are means
 of municipalities. The county figures on Sida 05 come from
@@ -553,9 +565,10 @@ Verified against the code:
 - `version_c` is consumed by the choropleth map, the risk classification, the
   KPI row, the projection, the data tables and the scenario simulator.
 - `version_a` is read in one page, `pages/02_Lan_jamforelse.py`: the county means feeding
-  the comparison expander, and the Robusthet class counts. It is also named in
+  the comparison expander, and the A-to-C factor that expander states. It is also named in
   `src/lan/charts.py`'s `LOG_SCALED`, which is a property of the formula rather than of the
-  current tabs. **It has no tab of its own** — see section 2.
+  current tabs. **It has no tab of its own, and since 2026-10-02 no Robusthet row**
+  — see section 2.
 - `version_b` likewise appears only in that comparison and in the methodology
   page that documents it.
 - The ranked artifact computes and stores `z_a, rank_a, risk_a, z_b, rank_b,
@@ -607,15 +620,21 @@ corroboration, and displaying A beside C would have presented it as evidence.
 **Version B is the only formula that can disagree**, and it does: on 73 of 290
 municipalities in 2024, and on 133 in 2015.
 
-Where A and C genuinely differ is in *level*. At 2024's real rate C reads about
-five times A, which is what makes C the one the site reports; a reader asking how
-bad things are needs the level, while a map only needs the order.
+Where A and C genuinely differ is in *level*. At 2024's real rate C reads 4,71
+times A, which is what makes C the one the site reports; a reader asking how bad
+things are needs the level, while a map only needs the order. That multiple is
+not a constant of the site, though: it is the quotient of the two rate floors
+(0,20) in 2015 to 2021 and the nominal rate over C's floor in 2022 to 2023, so
+Sida 02 derives it per year and names what it is. METHODOLOGY section 3 has the
+table.
 
 So the answer to recommendation 2 is neither of the two offered. The A columns
 are kept and **asserted** rather than displayed: `tests/test_formula_agreement.py`
-pins the identity, so if the transform or the normalisation window ever changes,
-the test fails and the copy explaining it gets revisited. Sida 02 shows the class
-counts for all three and says plainly why two of them must match.
+pins the identity and both floors, so if the transform, the normalisation window
+or either floor ever changes, a test fails and the copy explaining it gets
+revisited. Sida 02 shows the class counts for C and B, states that level
+difference as one derived figure, and says plainly why A has neither a tab nor a
+row.
 
 ---
 
@@ -1160,7 +1179,7 @@ document keeps recommending and which keeps paying.
 
 Covered in the correction to section 6. Sida 02 now carries a **Robusthet**
 section that states which version drives the site, shows the risk class counts
-under all three, and explains why A and C must agree. The six previously unread
+under C and B, and explains why A cannot disagree and therefore has no row. The six previously unread
 columns are the subject of `tests/test_formula_agreement.py` rather than of a
 table nobody can interpret.
 

@@ -23,6 +23,11 @@ from dataclasses import dataclass
 
 import streamlit as st
 
+from src.indices.agreement import (
+    NOMINAL_RATE_FLOOR_PP,
+    REAL_RATE_FLOOR_PP,
+    InflationAdjustment,
+)
 from src.ui.labels import L
 
 # Typical Swedish bank practice, not a legal limit. Lending above roughly this
@@ -59,6 +64,15 @@ class Finding:
 def _sv(value: float, decimals: int = 1) -> str:
     """Format a number Swedish style, with a comma for the decimal mark."""
     return f"{value:.{decimals}f}".replace(".", ",")
+
+
+def _signed(value: float, decimals: int = 1) -> str:
+    """As `_sv`, with a typographic minus rather than a hyphen.
+
+    A negative real rate is read as prose, not as code, and the rest of the
+    site's copy writes it as "−5,19".
+    """
+    return _sv(value, decimals).replace("-", "\u2212")
 
 
 # ── Kontantinsats ─────────────────────────────────────────────────────
@@ -214,6 +228,71 @@ def interpret_scenario(
 
 
 # ── Rendering ─────────────────────────────────────────────────────────
+
+# ── Sida 02 ───────────────────────────────────────────────────────────
+
+
+def explain_inflation_adjustment(adjustment: InflationAdjustment) -> str:
+    """Say what the gap between Versions A and C is worth in one year.
+
+    Version A earns its place on the site by being the inflation adjustment made
+    visible: C divided by A is what correcting for inflation costs or pays in
+    that year. That reading holds only while both formulas are dividing by a
+    rate rather than by a floor, and on this panel the floors bind in nine of
+    eleven years. Where they do, the same quotient means something else — the
+    nominal rate over a constant in 2022–2023, one constant over another in
+    2015–2021, where it is 0,1/0,5 for seven years running.
+
+    A fixed sentence quoting 2024's 4,71x would therefore be wrong in nine
+    years out of eleven, which is the defect that removing A's Robusthet row
+    was meant to fix, moved one paragraph down the page. So the figure is
+    derived from the selected year and the sentence states which of the four
+    situations that year is in.
+
+    Args:
+        adjustment: `inflation_adjustment` for the year on display.
+
+    Returns:
+        A finished Swedish markdown paragraph.
+    """
+    factor = _sv(adjustment.factor, 2)
+    year = str(adjustment.year)
+
+    if not adjustment.is_national_constant:
+        # Defensive: the quotient is national arithmetic, so this is a data
+        # defect rather than a reading. Stating the median anyway would be
+        # asserting a constant that the rows contradict.
+        return L(
+            "lj.skillnaden_mellan_a_och_c_varierar",
+            v0=factor,
+            v1=year,
+            v2=f"{adjustment.spread:.0e}",
+        )
+    if adjustment.is_an_inflation_adjustment:
+        return L("lj.inflationsjusteringen_ar_vard_v0", v0=factor, v1=year)
+    if adjustment.nominal_floor_binds and adjustment.real_floor_binds:
+        return L(
+            "lj.bada_formlerna_raknar_med_sina_golv",
+            v0=factor,
+            v1=year,
+            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
+            v3=_sv(REAL_RATE_FLOOR_PP, 1),
+        )
+    if adjustment.nominal_floor_binds:
+        return L(
+            "lj.bankversionen_raknar_med_sitt_golv",
+            v0=factor,
+            v1=year,
+            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
+        )
+    return L(
+        "lj.skillnaden_mellan_a_och_c_ar_inte_inflationsjusteringen",
+        v0=factor,
+        v1=year,
+        v2=_signed(adjustment.real_rate, 2),
+        v3=_sv(REAL_RATE_FLOOR_PP, 1),
+    )
+
 
 #: Severity levels, most serious first. Presentation is a coloured dot defined in
 #: the stylesheet, reusing the site's three risk tokens rather than introducing a

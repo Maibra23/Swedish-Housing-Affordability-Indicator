@@ -156,8 +156,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.darfor_ingen_a_flik": """
     **Därför har Bankversion (A) ingen egen flik.** Den kan inte rangordna
     annorlunda än C, så en tredje flik hade visat samma ordning med andra tal.
-    Rangkorrelationen mellan A och C är 1,0000 varje år, och C ligger exakt
-    4,71 gånger högre än A 2024 för samtliga 21 län. Det A faktiskt visar är
+    Rangkorrelationen mellan A och C är 1,0000 varje år. Det A faktiskt visar är
     storleken på inflationsjusteringen, inte en andra åsikt om vilka län som är
     ansträngda. Formeln står här för den som vill se den:
     """,
@@ -174,8 +173,9 @@ SWEDISH_LABELS: dict[str, str] = {
     **A och C rangordnar länen exakt lika.** Det är inte en tillfällighet utan
     matematik: ränta och inflation är nationella och lika för alla län ett givet
     år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort.
-    Det de skiljer sig i är **nivå**, inte ordning. C ligger ungefär fem gånger
-    högre än A vid 2024 års realränta, och det är just inflationsjusteringen.
+    Det de skiljer sig i är **nivå**, inte ordning. Hur stor den nivåskillnaden
+    är för det valda året, och vad den faktiskt mäter, står längst ned i det här
+    avsnittet.
 
     **B är den enda som kan rangordna annorlunda.** Den väger in arbetslöshet,
     som A och C inte gör alls, och dess z-poäng poolas över hela panelen i
@@ -188,7 +188,7 @@ SWEDISH_LABELS: dict[str, str] = {
     sorteras så att plats 1 är bäst oavsett vilken flik du står i.
     """,
     "lj.vilken_version_styr": "Vilken version styr sajten?",
-    "lj.vilken_version_styr_underrubrik": "Version C driver kartan och sidorna. B är den enda formeln som kan rangordna annorlunda; A visar inflationsjusteringens storlek.",
+    "lj.vilken_version_styr_underrubrik": "Version C driver kartan och sidorna. B är den enda formeln som kan rangordna annorlunda; A står för nivåskillnaden och förklaras i jämförelseavsnittet ovan.",
     "lj.robusthet": "ROBUSTHET",
     "lj.version": "Version",
     "lj.kommun": "Kommun",
@@ -201,8 +201,46 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.rangskillnad": "Rangskillnad",
     "lj.antal_kommuner_per_riskklass_v0": "Antal kommuner per riskklass, {v0}",
     "lj.storst_avstand_mellan_b_och_c": "Kommunerna där B och C är mest oense",
-    "lj.c_driver_sajten": "**Version C är den som räknas.** Kartan, riskklasserna, KPI-raden, projektionen och scenariosimulatorn läser alla C. A och B står här för att svara på en rimlig invändning: att en kommuns placering bara är en effekt av vilken formel någon råkade välja.",
-    "lj.a_och_c_ar_identiska": "Tabellen visar varför den invändningen bara delvis går att bemöta. **A och C rangordnar exakt lika, varje år, av matematiska skäl:** ränta och inflation är nationella och lika för alla kommuner ett givet år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort. De skiljer sig i nivå, inte i ordning. **B är alltså den enda formel som kan vara oense**, och den är det för {v0} av {v1} kommuner ({v2} %). Det är den siffran som säger något om robusthet.",
+    "lj.c_driver_sajten": "**Version C är den som räknas.** Kartan, riskklasserna, KPI-raden, projektionen och scenariosimulatorn läser alla C. B står här för att svara på en rimlig invändning: att en kommuns placering bara är en effekt av vilken formel någon råkade välja.",
+    "lj.b_ar_den_enda_som_kan_vara_oense": "**B är den enda formeln som kan vara oense med C**, och den är det för {v0} av {v1} kommuner ({v2} %). Det är den siffran som säger något om robusthet. **Bankversion (A) har ingen rad i tabellen:** den rangordnar exakt som C varje år, av matematiska skäl — ränta och inflation är nationella och lika för alla kommuner ett givet år, så A och C skiljer sig med en konstant faktor som z-poängen räknar bort. En rad för A hade upprepat C:s rad och sett ut som ett medhåll. Vad den konstanta faktorn är värd står under *Varför skiljer sig versionerna åt?* ovan.",
+    # The A-to-C factor, derived from the selected year by
+    # `interpret.explain_inflation_adjustment`. Five sentences because the same
+    # quotient means four different things depending on which rate floor binds,
+    # plus one for the case where it is not a national constant at all. Stating
+    # the 2024 reading in every year would be the same defect as giving A a
+    # column of its own: a number that looks like evidence and is not.
+    "lj.inflationsjusteringen_ar_vard_v0": """
+    **Inflationsjusteringen är värd {v0}× år {v1}.** Det är hela skillnaden mellan
+    Bankversion (A) och Realversion (C): byt nominell ränta mot realränta och
+    varje kommuns indexvärde multipliceras med {v0}. Ordningen mellan kommunerna
+    ändras inte, bara nivån.
+    """,
+    "lj.skillnaden_mellan_a_och_c_ar_inte_inflationsjusteringen": """
+    **Skillnaden mellan A och C är {v0}× år {v1}, men den är ingen
+    inflationsjustering.** Realräntan var {v2} procentenheter, under golvet på
+    {v3}, så C räknar med golvet i stället för med realräntan. Faktorn är den
+    nominella räntan delad med golvet. Inflationen syns bara i att den tryckte
+    realräntan dit.
+    """,
+    "lj.bada_formlerna_raknar_med_sina_golv": """
+    **År {v1} säger skillnaden mellan A och C ingenting om inflationen.**
+    Styrräntan var noll eller negativ, så båda formlerna räknar med sina golv: A
+    med {v2} procentenheter, C med {v3}. Faktorn {v0}× är kvoten mellan två
+    konstanter. Välj ett år med positiv realränta i sidopanelen för att se vad
+    inflationsjusteringen är värd.
+    """,
+    "lj.bankversionen_raknar_med_sitt_golv": """
+    **Skillnaden mellan A och C är {v0}× år {v1}, och den kommer från ett golv.**
+    Styrräntan låg under {v2} procentenheter, så A räknar med sitt golv i stället
+    för med räntan. Faktorn är golvet delat med realräntan och inte vad
+    inflationsjusteringen är värd.
+    """,
+    "lj.skillnaden_mellan_a_och_c_varierar": """
+    **Skillnaden mellan A och C varierar mellan kommunerna år {v1}.** Den ska vara
+    en nationell konstant: ränta och inflation är lika för alla kommuner ett givet
+    år. Medianen är {v0}×, men spridningen är {v2}, så ingen enskild siffra
+    beskriver året. Det är ett datafel och inte ett ekonomiskt resultat.
+    """,
     "lj.varfor_skiljer_sig_versionerna_at": "Varför skiljer sig versionerna åt?",
     "lj.topp_5_och_botten_5_lan_per_flik": "Topp 5 och botten 5 län under Realversion (C) och Makroversion (B). Bankversion (A) saknas med flit: den rangordnar exakt som C, så en tredje kolumn hade upprepat samma ordning med andra tal.",
     "lj.samst_overkomlighet": "*Sämst överkomlighet:*",

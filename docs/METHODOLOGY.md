@@ -152,6 +152,25 @@ active, which is why §4 normalises within year. And the real rate carries 99 % 
 variance in year-on-year changes of `log C`, which is why §5 makes it a stated scenario
 rather than something estimated.
 
+**Version A has a floor too, and it changes what the A-to-C factor means.**
+`compute_version_a` clips the nominal rate at 0,001 as a decimal — 0,1 percentage
+points — so in the seven years when the policy rate was zero or negative, *both*
+formulas divide by a constant. Sida 02 states what the inflation adjustment is worth as
+`C / A` for the selected year, and that reading holds only where neither floor binds:
+
+| Year | Rate A uses | Rate C uses | C / A | What the factor actually is |
+|---|---|---|---|---|
+| 2014 | 0,46 | 0,63 | 0,74 | the inflation adjustment |
+| 2015 to 2021 | **0,10** | **0,50** | 0,20 | two floors divided, nothing else |
+| 2022 | 0,77 | **0,50** | 1,54 | the nominal rate over C's floor |
+| 2023 | 3,46 | **0,50** | 6,93 | the nominal rate over C's floor |
+| 2024 | 3,63 | 0,77 | 4,71 | the inflation adjustment |
+
+2014 and 2024 are therefore the only years in which `C / A` equals `R / (R − π)`, and
+2014's is below 1 because inflation was negative. `src/ui/interpret.py` selects the
+sentence per year, `src/indices/agreement.py` derives the factor, and
+`tests/test_inflation_adjustment_copy.py` pins the choice to the rates.
+
 **Use case:** Academically defensible, captures real cost of capital.
 **Strength:** Inflation adjusted, standard in economics literature.
 **Weakness:** Real rate can be near zero or negative, requires floor handling.
