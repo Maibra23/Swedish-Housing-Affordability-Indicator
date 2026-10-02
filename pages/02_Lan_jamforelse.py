@@ -47,6 +47,7 @@ from src.indices.agreement import (
     where_b_and_c_disagree,
 )
 from src.ui.interpret import explain_inflation_adjustment
+from src.ui.floor_panel import render_floor_history
 
 inject_css()
 selections = render_sidebar()
@@ -293,6 +294,13 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
                 st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
+
+st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+
+# The comparison expander states the factor for one year. This is the other ten,
+# and the reason the trend chart above cannot be read straight across years.
+# Streamlit does not nest expanders, so it sits beside that one rather than in it.
+render_floor_history(municipal, highlight_year=selected_year)
 
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 

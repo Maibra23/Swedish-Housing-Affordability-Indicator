@@ -91,8 +91,38 @@ deterioration is reading noise in a definition. That is limitation F16, and the
 KPI card labels itself "relativ position" for this reason.
 
 The *average SHAI* can trend, because it is a mean of raw Version C rather than
-of z-scores. Its fall from 36,3 to 23,0 between 2023 and 2024 is a real
-level change, driven by the real rate.
+of z-scores — but it cannot be read straight across years either, and the
+2023-to-2024 fall is the case in point. 36,3 to 23,0 is a 36 % drop in which no
+municipality's income or price did anything unusual. What changed is the
+denominator: 2024 is the first year since 2014 in which the real rate cleared
+the 0,5 pp floor, so Version C stopped dividing by a constant and started
+dividing by a rate. The page now says so, and carries the table.
+
+<details>
+<summary><b>Which rate each formula actually divided by, year by year</b></summary>
+
+Rendered on Sida 01, 02 and 06 by `src/ui/floor_panel.py`, collapsed, from
+`agreement.floor_history()`. Rates in percentage points.
+
+| Year | Styrränta | Inflation | Realränta | Golv binder för | C/A | Snitt-SHAI |
+|---|---|---|---|---|---|---|
+| 2014 | 0,46 | −0,17 | 0,63 | inget | 0,74× | 36,3 |
+| 2015 | −0,25 | −0,03 | −0,23 | A och C | 0,20× | 43,1 |
+| 2016 | −0,48 | 0,98 | −1,46 | A och C | 0,20× | 41,9 |
+| 2017 | −0,50 | 1,81 | −2,31 | A och C | 0,20× | 39,1 |
+| 2018 | −0,50 | 1,95 | −2,45 | A och C | 0,20× | 38,1 |
+| 2019 | −0,26 | 1,80 | −2,06 | A och C | 0,20× | 37,6 |
+| 2020 | 0,00 | 0,49 | −0,49 | A och C | 0,20× | 36,5 |
+| 2021 | 0,00 | 2,17 | −2,17 | A och C | 0,20× | 32,4 |
+| 2022 | 0,77 | 8,35 | −7,58 | C | 1,54× | 32,0 |
+| 2023 | 3,46 | 8,65 | −5,19 | C | 6,93× | 36,3 |
+| 2024 | 3,63 | 2,86 | 0,77 | inget | 4,71× | 23,0 |
+
+Read the Snitt-SHAI column against the Golv column, not on its own. The three
+years where the floor state changes — 2014→2015, 2021→2022, 2023→2024 — are the
+three places the level moves for a reason that is not affordability.
+
+</details>
 
 Both numbers sit in the same KPI strip. The card labels and the explanation line
 beneath now distinguish them; before T1.9 the count carried a year-on-year delta,
@@ -138,6 +168,13 @@ figures, A and C produce the identical ordering in every year — rank correlati
 would show the same ranking with different numbers, which is the appearance of
 corroboration rather than corroboration. A's formula and description moved into
 the comparison expander, where that reason is stated.
+
+The page also carries the rate-floor panel between the comparison expander and
+Robusthet, collapsed, for the same reason Sida 01 does: the county trend chart
+plots levels across years, and those levels move when the floor releases. The
+"Om länsjämförelsen" text used to say the curves could be compared between years
+because they are level values. They can, between years where the floor bound the
+same way, which is what the copy now says.
 
 **It no longer has a row in the Robusthet class table either, as of
 2026-10-02.** That row was `risk_c`'s counts under another name, in the one table

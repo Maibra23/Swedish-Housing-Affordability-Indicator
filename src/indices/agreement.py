@@ -297,3 +297,52 @@ def where_b_and_c_disagree(ranked: pd.DataFrame, year: int, limit: int = 8) -> p
     rows["rank_gap"] = (rows["rank_b"].astype(int) - rows["rank_c"].astype(int)).abs()
     columns = ["region_name", "risk_c", "risk_b", "rank_c", "rank_b", "rank_gap"]
     return rows.nlargest(limit, "rank_gap")[columns].reset_index(drop=True)
+
+
+def floor_history(frame: pd.DataFrame) -> pd.DataFrame:
+    """One row per year: which rate each formula used, and what that produced.
+
+    The single figure Sida 02 states is true for the year on screen and tells a
+    reader nothing about the other ten. This is the table that does: the rate A
+    divided by, the rate C divided by, whether either was a floor rather than the
+    market, the resulting A-to-C factor, and the national mean index that came
+    out of it.
+
+    It is the same table METHODOLOGY section 3 carries, derived rather than
+    typed, so a refresh moves the page and the document together.
+
+    Args:
+        frame: A scored frame carrying `year`, both version columns and the rates.
+
+    Returns:
+        A frame ordered by year with columns `year`, `policy_rate`, `inflation`,
+        `real_rate`, `rate_used_a`, `rate_used_c`, `nominal_floored`,
+        `real_floored`, `factor` and `mean_index`.
+
+    Raises:
+        KeyError: Via :func:`inflation_adjustment`, if a required column is gone.
+    """
+    rows = []
+    for year in sorted(frame["year"].unique()):
+        adjustment = inflation_adjustment(frame, int(year))
+        if adjustment.n_rows == 0:
+            continue
+        scored = frame[frame["year"] == year]
+        rows.append(
+            {
+                "year": int(year),
+                "policy_rate": adjustment.nominal_rate,
+                # Read, not reconstructed: `nominal - real` reintroduces the
+                # rounding it was built from and shows 2015 as -0,02 against
+                # the panel's -0,03.
+                "inflation": float(scored["cpi_yoy_pct"].astype(float).median()),
+                "real_rate": adjustment.real_rate,
+                "rate_used_a": max(adjustment.nominal_rate, NOMINAL_RATE_FLOOR_PP),
+                "rate_used_c": max(adjustment.real_rate, REAL_RATE_FLOOR_PP),
+                "nominal_floored": adjustment.nominal_floor_binds,
+                "real_floored": adjustment.real_floor_binds,
+                "factor": adjustment.factor,
+                "mean_index": float(scored["version_c"].astype(float).mean()),
+            }
+        )
+    return pd.DataFrame(rows)

@@ -22,6 +22,7 @@ import plotly.graph_objects as go
 
 from src.provenance import n_kommuner
 from src.ui.data import load as load_artifact
+from src.ui.floor_panel import render_floor_history
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -156,6 +157,12 @@ render_kpi_row([
 ])
 
 explanation(L("rv.forklaring_kpi", v0=N_KOMMUNER, v1=selected_year))
+
+# The evidence for the qualification that explanation now carries. Collapsed:
+# a reader who trusts the mean index never has to open it, and a reader who
+# wants to compare 2023 with 2024 finds out why that comparison needs care.
+render_floor_history(ranked, highlight_year=selected_year)
+
 vintage_badge()
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
