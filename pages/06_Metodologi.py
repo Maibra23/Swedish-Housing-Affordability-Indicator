@@ -26,6 +26,8 @@ from src.provenance import (
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import card_header, footer_note, page_title, vintage_badge
+from src.ui.data import load as load_artifact
+from src.ui.floor_panel import render_floor_history
 
 inject_css()
 selections = render_sidebar()
@@ -112,6 +114,14 @@ with st.container(border=True):
     st.markdown("### Version C: Realversion (rekommenderad)")
     st.latex(r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}")
     st.markdown(L("mt.justerar_for_inflation_genom_realrantan"))
+
+    # F17, with the data rather than a description of it. A documentation page
+    # must not die for a missing artifact, so the panel is skipped with a reason
+    # rather than allowed to raise through the rest of the methodology.
+    try:
+        render_floor_history(load_artifact("affordability_ranked.parquet"))
+    except Exception as exc:  # noqa: BLE001 — reported, not swallowed
+        st.caption(L("mt.rantegolvspanelen_kunde_inte_laddas", v0=str(exc)))
 
     st.markdown("### Normalisering, rangordning och riskklass")
     st.markdown(L("mt.formlerna_ger_ett_nivavarde_per_kommun_och", v0=N_KOMMUNER))

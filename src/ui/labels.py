@@ -72,7 +72,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "glossary.rang.def": "Placering inom året, där rang 1 är bäst överkomlighet. Rangen är densamma oavsett logaritmering, eftersom transformen är monoton.",
     "glossary.kt_kvot.term": "K/T-kvot",
     "glossary.kt_kvot.def": "Köpeskilling delat med taxeringsvärde. Deskriptiv. Den ingår inte i någon av formlerna; transaktionspriset i SEK används.",
-    "rv.forklaring_kpi": "Talen ovan beskriver {v0} kommuner för {v1}. Genomsnittligt SHAI är en nivåserie och kan jämföras mellan år; antalet högriskkommuner är en relativ position inom året och kan inte det.",
+    "rv.forklaring_kpi": "Talen ovan beskriver {v0} kommuner för {v1}. Genomsnittligt SHAI är en nivåserie, men den kan bara jämföras mellan år där räntegolvet band likadant — se panelen om räntegolvet nedan. Antalet högriskkommuner är en relativ position inom året och kan inte jämföras mellan år alls.",
     "rv.forklaring_karta": "Färgskalan går från årets lägsta till årets högsta z-poäng, med brytpunkter vid kvartilerna. Skalan sätts om varje år, så en färg betyder ”bland årets mest ansträngda”, inte ett fast pris.",
     "rv.forklaring_histogram": "Fördelningen visar hur {v0} kommuner ligger i förhållande till varandra detta år. Eftersom z-poängen är centrerad inom året ligger tyngdpunkten alltid nära noll. Formen säger något, läget gör det inte.",
     "rv.forklaring_tabell": "Topplistorna är sorterade på Version C inom {v0}. De visar ytterkanterna av årets fördelning, inte kommuner som förändrats mest över tid.",
@@ -81,7 +81,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.om_kartan": "Om kartan",
     "rv.om_rankningstabellerna": "Om rankningstabellerna",
     "lj.om_lansjamforelsen": "Om länsjämförelsen",
-    "lj.om_lansjamforelsen_text": "Varje län visas som ett ovägt medelvärde av sina kommuner, så Gotland (en kommun) väger lika tungt som Västra Götaland (49). Jämförelsen säger något om länens *typiska* kommun, inte om var flest människor bor. Kurvorna kan jämföras mellan år eftersom de bygger på nivåvärden, men rangordningen inom ett år bygger på z-poäng och kan inte det.",
+    "lj.om_lansjamforelsen_text": "Varje län visas som ett ovägt medelvärde av sina kommuner, så Gotland (en kommun) väger lika tungt som Västra Götaland (49). Jämförelsen säger något om länens *typiska* kommun, inte om var flest människor bor. Kurvorna bygger på nivåvärden, men de kan bara jämföras mellan år där räntegolvet band likadant — se panelen om räntegolvet. Rangordningen inom ett år bygger på z-poäng och kan inte jämföras mellan år alls.",
     "kd.om_komponenterna": "Om komponentuppdelningen",
     "kd.om_komponenterna_text": "Staplarna visar hur mycket varje ingående variabel varierat över perioden för just denna kommun, mätt som variationskoefficient. En hög stapel betyder att variabeln rört sig mycket, inte att den bidrar mest till kommunens nivå.",
     "rv.kommun": "Kommun",
@@ -114,7 +114,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "rv.poang": "poäng",
     "rv.genomsnittlig_version_c_poang_rakvot_inkomst": "Genomsnittlig Version C-poäng (råkvot Inkomst / (Pris × Realränta)) för alla {v0} kommuner. Högre = bättre överkomlighet. Inte ett 0–100 index.",
     "rv.hogrisk_kommuner": "Högrisk kommuner",
-    "rv.antal_kommuner_med_z_poang_0_67": "Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög). Riskklassen är en relativ position inom året: kommunerna jämförs med varandra i just detta år, inte med ett fast gränsvärde. Ungefär lika många hamnar i varje klass varje år, så antalet kan inte visa om Sverige som helhet blivit mer eller mindre överkomligt. Läs det ur Genomsnittligt SHAI, som är en nivåserie.",
+    "rv.antal_kommuner_med_z_poang_0_67": "Antal kommuner med z-poäng > 0,67 standardavvikelser (riskklass Hög). Riskklassen är en relativ position inom året: kommunerna jämförs med varandra i just detta år, inte med ett fast gränsvärde. Ungefär lika många hamnar i varje klass varje år, så antalet kan inte visa om Sverige som helhet blivit mer eller mindre överkomligt. Läs det ur Genomsnittligt SHAI, men kontrollera först räntegolvet i panelen nedan: nivån faller när golvet släpper, utan att överkomligheten har ändrats.",
     "rv.genomsnittlig_kopeskillingskoefficient_k_t": "Genomsnittlig köpeskillingskoefficient (K/T): köpeskilling / taxeringsvärde. Dimensionslös kvot, typiskt 1,0–4,0. Högre = dyrare relativt taxeringsvärde. Obs: K/T ingår ej i formeln. Transaktionspriset i SEK används i stället.",
     "rv.befolkningsforandring": "Befolkningsförändring",
     "rv.procentuell_befolkningsforandring_jamfort": "Procentuell befolkningsförändring jämfört med föregående år.",
@@ -245,6 +245,43 @@ SWEDISH_LABELS: dict[str, str] = {
     "lj.topp_5_och_botten_5_lan_per_flik": "Topp 5 och botten 5 län under Realversion (C) och Makroversion (B). Bankversion (A) saknas med flit: den rangordnar exakt som C, så en tredje kolumn hade upprepat samma ordning med andra tal.",
     "lj.samst_overkomlighet": "*Sämst överkomlighet:*",
     "lj.bast_overkomlighet": "*Bäst överkomlighet:*",
+
+    # ── The rate-floor panel (src/ui/floor_panel.py, sidorna 01, 02, 06) ──
+    # Collapsed on every page that opens it. It exists because two pages tell a
+    # reader to compare index levels between years, and Version C's denominator
+    # changes character when the floor releases — the national mean fell by over
+    # a third in the year the floor let go, with no change in affordability. The
+    # figures are interpolated from the data, including how many years the floor
+    # bound, so the panel cannot drift from the panel it describes.
+    "mt.rantegolvspanelen_kunde_inte_laddas": "Räntegolvspanelen kunde inte läsas från dataartefakten: {v0}",
+    "fl.rubrik": "Räntegolvet, och varför indexnivåer inte kan jämföras rakt av mellan år",
+    "fl.inledning": """
+    Realversion (C) delar med realräntan, men aldrig med mindre än golvet på
+    {v0} procentenheter. I {v2} av {v3} observerade år låg realräntan under
+    golvet, och då räknar formeln med golvet i stället för med marknaden.
+    Bankversion (A) har ett eget golv på {v1} procentenheter. Tabellen visar
+    vilken ränta varje formel faktiskt delade med.
+    """,
+    "fl.ar": "År",
+    "fl.styrranta": "Styrränta",
+    "fl.inflation": "Inflation",
+    "fl.realranta": "Realränta",
+    "fl.golv_binder": "Golv binder för",
+    "fl.faktor": "C/A",
+    "fl.snittindex": "Snitt-SHAI",
+    "fl.golv_a_och_c": "A och C",
+    "fl.golv_c": "C",
+    "fl.golv_a": "A",
+    "fl.golv_inget": "inget",
+    "fl.vald_rad": "Sidan visar {v0}. Räntor i procentenheter, årsgenomsnitt.",
+    "fl.slutsats": """
+    **Ett fall i snittindex är därför inte automatiskt försämrad
+    överkomlighet.** När golvet släpper byter nämnaren karaktär: samma kommun
+    med samma inkomst och samma pris får ett lägre indexvärde. Jämför nivåer
+    mellan år bara när golvkolumnen ser likadan ut för båda åren. Rangordningen
+    inom ett år påverkas inte alls, eftersom räntan är nationell och lika för
+    alla kommuner. Se Begränsning F17.
+    """,
 
     # ── Sida 03 — Kommun djupanalys ───────────────────────────────
     "kd.kunde_inte_hamta_data_forsok_igen_senare": "Kunde inte hämta data. Försök igen senare.",

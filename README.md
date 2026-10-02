@@ -56,8 +56,26 @@ the size of the inflation adjustment rather than a second opinion — C divided 
 That reading does not hold in every year. Both formulas floor their rate, and in 2015 to
 2023 at least one floor binds, which makes the same quotient an artefact rather than a
 correction — 0,20× for seven straight years, being 0,1 divided by 0,5. Sida 02 derives
-the factor from the year you select and says which of the two it is looking at. The
-per-year table is in `docs/METHODOLOGY.md` section 3.
+the factor from the year you select and says which of the two it is looking at.
+
+<details>
+<summary><b>Why this also means index levels do not compare straight across years</b></summary>
+
+Version C divides by the real rate, floored at 0,5 pp. That floor bound in nine of the
+eleven observed years. When it releases, the denominator changes character and the level
+moves without anybody's income or price moving: the national mean index fell **36 %**
+between 2023 and 2024 for that reason alone.
+
+So a cross-year comparison of the index level is partly a comparison of whether the floor
+was active. Rankings within a year are unaffected, because the rate is national and
+identical for every kommun.
+
+The app says this where it matters rather than only here: sidorna 01, 02 and 06 carry a
+collapsed **Räntegolvet** panel showing which rate each formula actually divided by in
+each year, derived from the artifacts by `agreement.floor_history()`. The same table is
+in `docs/METHODOLOGY.md` §3, and the limitation is registered as **F17**.
+
+</details>
 
 ## What it does not do
 
