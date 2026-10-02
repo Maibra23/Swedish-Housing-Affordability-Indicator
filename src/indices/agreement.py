@@ -317,7 +317,10 @@ def floor_history(frame: pd.DataFrame) -> pd.DataFrame:
     Returns:
         A frame ordered by year with columns `year`, `policy_rate`, `inflation`,
         `real_rate`, `rate_used_a`, `rate_used_c`, `nominal_floored`,
-        `real_floored`, `factor` and `mean_index`.
+        `real_floored`, `factor`, `mean_index` and `income_to_price` — the last
+        being the mean of income over price in percent, which is the mean index
+        with the rate divided out and the only column here that can be read
+        straight across years.
 
     Raises:
         KeyError: Via :func:`inflation_adjustment`, if a required column is gone.
@@ -343,6 +346,17 @@ def floor_history(frame: pd.DataFrame) -> pd.DataFrame:
                 "real_floored": adjustment.real_floor_binds,
                 "factor": adjustment.factor,
                 "mean_index": float(scored["version_c"].astype(float).mean()),
+                # The index with the rate taken out. `r` is national, so it
+                # leaves the mean entirely and what remains is the mean ratio
+                # of income to price — the one column here that compares
+                # straight across years. See src/indices/decompose.py.
+                "income_to_price": float(
+                    (
+                        scored["median_income"].astype(float)
+                        / scored["transaction_price_sek"].astype(float)
+                    ).mean()
+                    * 100.0
+                ),
             }
         )
     return pd.DataFrame(rows)

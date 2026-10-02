@@ -207,3 +207,6 @@ def test_the_app_guide_table_matches_the_derived_one(history: pd.DataFrame) -> N
         tail = table.split(expected, 1)[1].split("\n", 1)[0]
         assert f"{sv(row.factor, 2)}×" in tail, f"{row.year}: factor drifted in APP_GUIDE"
         assert sv(row.mean_index, 1) in tail, f"{row.year}: mean index drifted in APP_GUIDE"
+        assert f"{sv(row.income_to_price, 1)} %" in tail, (
+            f"{row.year}: the rate-free column drifted in APP_GUIDE"
+        )
