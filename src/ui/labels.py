@@ -102,7 +102,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "landing.21_lan_jamforda_under_tre_ekonometriska": "21 län jämförda formel för formel, med den version som kan rangordna annorlunda i egen flik.",
     "landing.jamfor_insatskrav_under_fem_regulatoriska": "Jämför insatskrav under fem regulatoriska regimer sedan 2010.",
     "landing.stresstesta_med_ranta_inkomst_och": "Stresstesta med ränta-, inkomst- och prisförändringar per län.",
-    "landing.formler_datakallor_begransningar_f1f10_och": "Formler, datakällor, begränsningar (F1–F16) och validering.",
+    "landing.formler_datakallor_begransningar_f1f10_och": "Formler, datakällor, begränsningar (F1–F17) och validering.",
 
     # ── Sida 01 — Riksöversikt ────────────────────────────────────
     "rv.shai_riksoversikt": "SHAI · Riksöversikt",
@@ -716,13 +716,13 @@ SWEDISH_LABELS: dict[str, str] = {
 
     **Källa:** Finansinspektionen
     """,
-    "mt.6_begransningar_f1f15": "6. Begränsningar (F1–F16)",
+    "mt.6_begransningar_f1f15": "6. Begränsningar (F1–F17)",
     "mt.id_begransning_atgard_f1_kommunal": """
     | ID | Begränsning | Åtgärd |
     |----|-------------|--------|
     | **F1** | Kommunal pristäckning: länets K/T används som proxy. 88% av panelen har kommunspecifik K/T. | Flagga `has_native_kt` i data. |
     | **F2** | Nationell styrränta appliceras på alla kommuner och län. | Dokumenterat. |
-    | **F3** | Tre formler ger olika rangordning av kommuner. | Korsformelsjämförelse på Sida 02. |
+    | **F3** | Endast Makroversion (B) kan rangordna kommuner annorlunda. Bankversion (A) och Realversion (C) rangordnar identiskt varje år per konstruktion: R och π är nationella, så A och C skiljer sig med en konstant faktor som z-poängen inom år räknar bort. | Flikar för C och B på Sida 02; identiteten fastställs i `tests/test_formula_agreement.py`. |
     | **F4** | Elva årsvärden räcker inte för att anpassa en statistisk modell. | Villkorad projektion med uttalade antaganden i stället. |
     | **F5** | Kontantinsats är en stegfunktion, inte kontinuerlig. | Diskreta regimkort. |
     | **F6** | Projektionen är villkorad: spridningen mellan scenarierna är inget konfidensintervall. | Varje linje märkt med sitt antagande om realräntan. |
@@ -736,6 +736,7 @@ SWEDISH_LABELS: dict[str, str] = {
     | **F14** | Inkomst är sammanräknad förvärvsinkomst per person före skatt, så Par modellerar två medianinkomsttagare och inte medianparet. Skillnaden är liten i kommuner där de flesta hushåll har två inkomster och stor där många bor ensamma eller är pensionärer. | Hushållstypsväljaren på Sida 04 visar båda fallen; tolkningsrutan påpekar singelantagandet när det är det som gör resultatet strängt. |
     | **F16** | Riskklassens gränser (±0,67 σ) är fasta kvantiler, så andelen kommuner per klass är nära konstant varje år per konstruktion. Antalet högriskkommuner kan inte bära en nationell trend. | Dokumenterat under "Normalisering" ovan; ingen förändringspil visas på antalet. |
     | **F15** | Scenariosimulatorn håller KPI-inflationen (π) konstant när räntan chockas. Realränteförändringen är därmed identisk med den nominella räntechochen. | Notering i Förklaring på Sida 05. |
+    | **F17** | Båda formlerna golvar sin ränta: A vid 0,1 procentenheter, C vid 0,5. Minst ett golv band i nio av elva observerade år, så kvoten C/A är inflationsjusteringen bara 2014 och 2024. Åren 2015–2021 är den 0,1/0,5 = 0,20, kvoten mellan två konstanter, och säger ingenting om inflationen. | Faktorn härleds per valt år på Sida 02 och meningen runt den namnger vilket av fallen året är; `tests/test_inflation_adjustment_copy.py` låser valet till räntorna. |
     """,
     "mt.foljande_valideringskontroller_kors_innan": """
     Följande valideringskontroller körs innan publicering:
