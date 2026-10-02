@@ -41,7 +41,12 @@ from src.ui.components import (
 from src.ui.chart_theme import CHART_PALETTE
 from src.ui.data_table import Column, render_table
 from src.lan.charts import county_colours, county_trend_chart
-from src.indices.agreement import measure_agreement, where_b_and_c_disagree
+from src.indices.agreement import (
+    inflation_adjustment,
+    measure_agreement,
+    where_b_and_c_disagree,
+)
+from src.ui.interpret import explain_inflation_adjustment
 
 inject_css()
 selections = render_sidebar()
@@ -91,15 +96,16 @@ page_title(
 # Two tabs, not three. Bankversion (A) used to sit here as a peer, which implied
 # it corroborated C. It cannot: within a year the rate and inflation are national
 # constants, so A and C differ by a single constant factor and rank *identically*
-# — rank correlation 1,0000 on this page's own county figures in every year, with
-# C reading exactly 4,71x A in 2024 for all 21 counties. A third tab showing the
-# same ordering with different numbers is not evidence, it is the appearance of
-# evidence. Version B is the only formula that can rank differently, and it does:
-# rank correlation -0,96 against C.
+# — rank correlation 1,0000 on this page's own county figures in every year. A
+# third tab showing the same ordering with different numbers is not evidence, it
+# is the appearance of evidence. Version B is the only formula that can rank
+# differently, and it does: rank correlation -0,96 against C.
 #
-# A is not dropped from the site. It keeps its row in the Robusthet section, where
-# the identity is the point, and its formula moved into the comparison expander,
-# where the reason it is not a tab is stated.
+# A is not dropped from the site, but it is no longer presented as a third
+# formula. It had a row in the Robusthet class table, identical to C's by
+# construction, which is the same misreading in a smaller font. What it has
+# instead is the one thing it alone states: the size of the inflation
+# adjustment, derived from the selected year in the comparison expander below.
 FORMULA_INFO = {
     "Realversion": {
         "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
@@ -255,6 +261,12 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
     st.markdown(L("lj.darfor_ingen_a_flik"))
     st.latex(VERSION_A_FORMULA)
     st.caption(L("lj.den_enklaste_versionen_mater_hushallets"))
+
+    # What A is for, as one figure rather than as a column. Derived from the
+    # selected year: the factor is 4,71 in 2024 and 0,20 in every year from 2015
+    # to 2021, where it is two rate floors divided and means nothing about
+    # inflation. `explain_inflation_adjustment` picks the sentence that is true.
+    st.markdown(explain_inflation_adjustment(inflation_adjustment(municipal, selected_year)))
     st.caption(L("lj.topp_5_och_botten_5_lan_per_flik"))
 
     year_data = county_versions[county_versions["year"] == selected_year].copy()
@@ -306,9 +318,11 @@ with st.container(border=True):
                 "version": label,
                 **{cls: agreement.counts[key][cls] for cls in ("hog", "medel", "lag")},
             }
+            # A is absent on purpose: `risk_a` equals `risk_c` on every row, so
+            # the row would have been C's own counts under another name. The
+            # level difference it does carry is stated in the expander above.
             for key, label in (
                 ("c", L("lj.version_c_kort")),
-                ("a", L("lj.version_a_kort")),
                 ("b", L("lj.version_b_kort")),
             )
         ]
@@ -329,7 +343,7 @@ with st.container(border=True):
 
     st.markdown(
         L(
-            "lj.a_och_c_ar_identiska",
+            "lj.b_ar_den_enda_som_kan_vara_oense",
             v0=str(agreement.b_differs_from_c),
             v1=str(agreement.n_kommuner),
             v2=f"{agreement.b_differs_pct:.0f}",
