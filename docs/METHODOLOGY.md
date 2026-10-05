@@ -5,7 +5,22 @@
 **App version:** 1.3.0
 **Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
 **Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-05
+
+### Changelog 2026-10-05: calculator correctness (no formula or artifact change)
+- **Kontantinsats: the mortgage rate is floored at zero (§6).** Policy rate plus bank
+  margin went negative in 2015 to 2020 when the margin slider sat below the size of the
+  negative rate, and the engine credited interest to the borrower. Commit `4859813`.
+- **Both calculators refuse impossible inputs (§6, §7).** Zero, negative or missing
+  income or price, and a rate passed as a percent instead of a decimal, now raise an
+  error instead of returning 0 years to save or a NaN index. Commit `4859813`.
+- **Scenario interpretation corrected (§7).** Floor absorption is named instead of
+  reported as "oförändrad", the Riksbanken 2022 preset is explained, a baseline just
+  above the floor is flagged as fragile, and the national median shift is shown beside
+  the saturating class counts. Commit `9e806a3`.
+- **§7 corrected:** it listed three sliders; the page has had four since the CPI shock
+  was added. Full record, with evidence and the tests that guard each item:
+  `docs/APP_GUIDE.md` section 12.
 
 ### Changelog v2.2 → v2.3 (2026-09-15)
 - **Normalization convention settled on both axes (§4 rewritten).** Versions A and C are
@@ -386,17 +401,33 @@ For each regime applied to today's median price and median income per municipali
 - Effective monthly cost (interest plus amortization)
 - Residual income after housing cost
 
+**Effective rate.** Policy rate plus bank margin, **floored at zero**. The policy rate
+was negative from 2015 to 2020 and the margin is user-adjustable down to 0; Swedish
+mortgage rates did not go negative, so the engine does not credit interest. Sida 04
+displays the rate the engine used, not its own sum. (2026-10-05)
+
+**Inputs are validated.** Price and income must be positive and finite, the savings
+rate in (0, 1], the margin non-negative, and the rate a decimal no larger than 0,25 in
+absolute value. Anything else raises `ValueError` rather than returning a plausible
+number, and the page shows a message. (2026-10-05)
+
 ## 7. Scenario simulator
 
-Three sliders:
+Four sliders:
 
 | Slider | Range | Step | Default |
 |--------|-------|------|---------|
-| Interest rate shock | -2% to +5% | 0.25% | 0% |
+| Interest rate shock | -2 to +5 pp | 0.25 pp | 0 |
 | Income growth shock | -10% to +10% | 1% | 0% |
 | Price shock | -25% to +25% | 5% | 0% |
+| CPI shock | -5 to +10 pp | 0.5 pp | 0 |
 
 Output: recalculated Version C affordability for selected county, with delta from baseline highlighted.
+
+The rate and CPI shocks reach the formula only through the real rate, floored at
+0,5 pp as everywhere else, so on a floored baseline a shock that stays under the floor
+changes nothing and the page says so. Inputs are validated as in §6: income and price
+positive, every value finite, relative shocks above −100 %. (2026-10-05)
 
 **Scope note:** the simulator recomputes Version C only. Versions A and B depend on additional inputs (unemployment for B) that are not exposed as sliders to keep the interface manageable. Users seeking to stress test B should adjust assumptions in the Metodologi section and rerun.
 

@@ -416,6 +416,16 @@ Switch the regime to Amorteringskrav 2.0 and nothing changes except the rules:
 1 289 550 SEK of cash, 31.2 years, 3 % amortisation because LTI exceeds 4.5x, and
 50 717 SEK a month. **Ten and a half extra years of saving, from one rule change.**
 
+Two guards sit in front of that arithmetic (2026-10-05, APP_GUIDE section 12):
+
+- **The effective rate never goes below zero.** In 2015 to 2020 the policy rate was
+  negative, and with the margin slider near 0 the sum used to credit interest to the
+  borrower. Stockholm 2017 at 0 pp margin read 8 641 SEK a month; it is 11 522.
+  The page shows `effective_rate` as the engine returns it.
+- **Impossible inputs raise `ValueError`.** A zero income used to report 0 years to
+  save. Price and income must be positive and finite, the rate a decimal (a value
+  over 0,25 is a percent passed by mistake), the savings rate in (0, 1].
+
 ### The scenario simulator
 
 `src/scenario/simulator.py`. A pure function, no stored data, Version C only. B
@@ -446,6 +456,14 @@ A 5 % pay rise recovers 1.4 points of a 72 point fall. **The real rate dominates
 everything else in this index**, because C is a reciprocal of it while income is
 only a numerator. That is the simulator's lesson in one move, and the reason nobody
 tries to project C without stating a rate.
+
+The simulator validates its inputs the same way (positive income and price, finite
+values, relative shocks above −100 %), and its baseline is tested equal to
+`compute_version_c` on every county-year, so Sida 05 starts from the number the
+other pages show. What the page *says* about a result lives in
+`src/ui/interpret.py`: since 2026-10-05 it names a shock the floor absorbed, explains
+the Riksbanken 2022 preset and warns when the baseline real rate sits within 0,5 pp
+above the floor.
 
 ---
 
@@ -611,6 +629,9 @@ These are the invariants. Break one and a test fails rather than a reader.
 | Runtime and pipeline dependency sets never merge | `tests/test_packaging.py` |
 | The withdrawn vocabulary never returns to the live surface | `tests/test_withdrawn_vocabulary.py` |
 | Projected first year within 0.25x to 4x of the last observed | `tests/test_projection.py` |
+| Each Kontantinsats regime matches its rules; no cost is negative; every selectable row at every control extreme is finite | `tests/test_kontantinsats_engine.py` |
+| The simulator's baseline equals `compute_version_c`; equal rate and CPI shocks cancel; the floor makes rate moves under it inert | `tests/test_scenario_engine.py` |
+| Sida 05 names floor absorption, explains the 2022 preset, flags a fragile baseline | `tests/test_scenario_interpretation.py` |
 
 `python scripts/audit.py` checks the committed artifacts separately from the suite,
 currently 27 checks.

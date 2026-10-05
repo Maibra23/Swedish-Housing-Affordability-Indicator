@@ -1281,3 +1281,130 @@ slider extreme, because it is the premise the design rests on: if a shock ever
 stops being uniform, fixed boundaries become the wrong choice and the explanation
 shown to readers becomes false.
 
+
+---
+
+## 12. Calculator audit and page copy, 2026-10-05
+
+Two commits from two parallel sessions on `feature/conditional-projection`, made
+in the same evening. Recorded here because neither changes a formula or an
+artifact, so neither shows up in METHODOLOGY's register or in a refreshed figure,
+and both change what a reader sees.
+
+| Commit | Area | Kind |
+|---|---|---|
+| `4859813` | Kontantinsats engine, scenario simulator inputs, copy on Sida 03, 04 and 05 | Two engine defects fixed, copy shortened |
+| `9e806a3` | Scenariosimulator result interpretation | Four misleading or missing explanations fixed |
+
+### 12.1 The Kontantinsats engine paid borrowers in negative-rate years (`4859813`)
+
+**Defect.** `apply_regime` used policy rate plus bank margin as the mortgage rate
+with no lower bound. The policy rate was negative from 2015 to 2019 (−0,50 % in
+2017 and 2018) and the margin slider reaches 0, so for a margin under about
+0,5 pp the interest cost came out negative: the bank paying the borrower, which no
+Swedish bank did.
+
+**Fix.** The effective rate is floored at zero. Sida 04 used to compute the rate
+it displays on its own (`policy_rate + margin`); it now reads `effective_rate`
+back from the engine, so the page cannot show −0,50 % while the engine prices at
+0 %.
+
+**Effect.** Stockholm 2017, Lättnad 2026, monthly cost:
+
+| Bank margin | Before | After | Rate used |
+|---|---|---|---|
+| 0,0 pp | 8 641 kr | 11 522 kr | 0,00 % |
+| 1,7 pp (default) | 18 434 kr | 18 434 kr | 1,20 % |
+
+Only years with a negative policy rate (2015 to 2020) change, and only when the
+margin is smaller than the size of that negative rate. The default margin, and
+every year from 2021, are unchanged, so no README or ENGINE demo figure moved. `tests/test_kontantinsats_engine.py` re-derives this table.
+
+### 12.2 Impossible inputs returned reassuring answers (`4859813`)
+
+**Defect.** A zero income returned 0 years to save and a debt ratio of 0, which
+reads as the easiest purchase in the country rather than an impossible one. A
+missing or negative price returned NaN or a negative cost without complaint.
+
+**Fix.** Both engines validate at the boundary and raise `ValueError` naming the
+argument: price and income must be positive and finite, savings rate in (0, 1],
+bank margin non-negative, every rate and shock finite, relative shocks above
+−100 %. `apply_regime` also refuses a rate above 0,25, which is a percentage
+passed where a decimal belongs (3,46 for 0,0346). Sida 04 catches the error and
+shows `ki.berakningsfel`; Sida 05 already caught simulator errors.
+
+**Effect.** None on any selectable year, because no such row exists. A future
+refresh that brings one in will show a message instead of a wrong number, and
+before this Sida 04 would have crashed rather than either.
+
+### 12.3 What the engine tests check (`4859813`)
+
+66 tests in two files, written before the fixes and failing against the old code.
+
+- `tests/test_kontantinsats_engine.py`: each regime by hand on round numbers
+  against the rules in METHODOLOGY section 6; the LTI rule applying strictly above
+  4,5; reconciliation of every derived field and no negative cost on a grid of
+  price, income, rate (including negative) and margin; cost monotone in price and
+  rate; same-deposit regimes ordered by strictness; the Par case halving years and
+  debt ratio; every kommun and bostadsrätt county in every selectable year at every
+  control extreme.
+- `tests/test_scenario_engine.py`: the simulator's baseline equals
+  `compute_version_c` on every county-year, so Sida 05 starts from the number the
+  other pages show; equal rate and CPI shocks cancel; C halves when the real rate
+  doubles above the floor; income and price act proportionally; the floor makes
+  rate moves under it inert and caps the gain from cuts; every slider corner on
+  every county-year is finite and positive.
+
+The sweep also found county rows for 2011 to 2013 with no policy rate. They are
+not selectable, so the test is limited to `selectable_years()` and nothing was
+changed.
+
+### 12.4 Scenario interpretation (`9e806a3`)
+
+A statistical validation of the simulator (2022 and 2024, Monte Carlo, historical
+replay, Sobol sensitivity) found the arithmetic exact and four explanations wrong
+or missing. All four are in `src/ui/interpret.py` and `src/scenario/sections.py`,
+guarded by `tests/test_scenario_interpretation.py`.
+
+1. **Floor absorption was reported backwards.** On a floored baseline (2015 to
+   2023) a rate or CPI shock that stays under the floor returned "oförändrad"
+   plus the warning that the whole change counts as real, the opposite of what
+   happened. A new finding, `sc.tolk_golv_absorberar`, names the absorption and
+   the warning is suppressed in that case. This is the gap the 2023 reading guide
+   recorded as "found, not fixed".
+2. **The Riksbanken 2022 preset improves affordability with no explanation.** Its
+   inputs stay as they are (section 5 item 2); a caption, `sc.tolk_preset_2022`,
+   says why, and the help text says the values are peak-to-trough rather than
+   annual means. The values moved to `src/scenario/presets.py` so the page and the
+   caption cannot drift apart.
+3. **Fragile baselines are flagged.** When the baseline real rate is within
+   0,5 pp above the floor, `sc.tolk_nara_golvet` warns how much a 0,1 pp CPI
+   revision moves the result. In 2024 the real rate is 0,77 pp, so about 13 %.
+4. **The national class count saturates or freezes.** All 290 kommuner are hög
+   risk by +4 pp in 2024, and on a floored year such as 2022 a rate or CPI shock
+   leaves the counts frozen. The median Version C shift is now shown beside them.
+
+### 12.5 Page copy (`4859813`)
+
+Shortened on request: long text under a chart is read by nobody, and the detail
+that has value moves into an expander instead of being lost.
+
+| Page | Change |
+|---|---|
+| Sida 03 | Projection caption and explanation cut to two lines; the reasoning moved to the expander "Varför tre antaganden i stället för en förutsägelse?" |
+| Sida 04 | "Vad sidan svarar på" and the Pristyp note cut to a few lines each |
+| Sida 05 | Purpose panel, scope note, surface caption and four result notes cut; the surface explanation moved to the expander "Hur läser jag diagrammet?" |
+
+Every rewritten sentence was checked against the code and data, which caught
+errors, three of them inherited from the old copy:
+
+- the scope note said Version A uses unemployment, when only B does;
+- Sida 05 called itself the only forward-looking page, while Sida 03 projects;
+- "Stockholm får 6,2 poäng" was a stale typed figure;
+- the first rewrite of the projection line said every line is an assumption, when
+  two of the five are history;
+- Sida 04 said its rules "kan ändras", when they are compared rather than edited.
+
+The first shortened projection line used a word from the withdrawn modelling
+vocabulary, and `tests/test_withdrawn_vocabulary.py` rejected it; the copy says
+"förutsägelse", as before.
