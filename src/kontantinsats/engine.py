@@ -14,6 +14,8 @@ Regimes:
 
 from __future__ import annotations
 
+import math
+
 #: The regime the pages present as today's rules. Every headline number on Sida
 #: 04 is this regime's, and the reachability chart's deposit share must be the
 #: same one, so the choice is stated once here rather than spelled out at each
@@ -65,6 +67,44 @@ REGIMES = {
 }
 
 
+#: A policy rate above this, as a decimal, is almost certainly a percentage
+#: passed by mistake (3,46 instead of 0,0346). The Riksbank's highest rate since
+#: 1995 is well under it.
+_MAX_PLAUSIBLE_RATE = 0.25
+
+
+def _validate_inputs(
+    price_sek: float,
+    income_sek: float,
+    rate: float,
+    savings_rate: float,
+    bank_margin: float,
+) -> None:
+    """Refuse inputs that would otherwise return a confident wrong number.
+
+    Zero income used to report zero years to save and a debt ratio of zero,
+    which reads as the easiest purchase in the country rather than an
+    impossible one.
+
+    Raises:
+        ValueError: Naming the argument and the value it received.
+    """
+    if not (math.isfinite(price_sek) and price_sek > 0):
+        raise ValueError(f"price_sek must be a positive number, got {price_sek!r}")
+    if not (math.isfinite(income_sek) and income_sek > 0):
+        raise ValueError(f"income_sek must be a positive number, got {income_sek!r}")
+    if not math.isfinite(rate):
+        raise ValueError(f"rate must be a finite number, got {rate!r}")
+    if abs(rate) > _MAX_PLAUSIBLE_RATE:
+        raise ValueError(
+            f"rate must be a decimal (0.0346 for 3,46 %), got {rate!r}"
+        )
+    if not (math.isfinite(savings_rate) and 0 < savings_rate <= 1):
+        raise ValueError(f"savings_rate must be in (0, 1], got {savings_rate!r}")
+    if not (math.isfinite(bank_margin) and bank_margin >= 0):
+        raise ValueError(f"bank_margin must be zero or positive, got {bank_margin!r}")
+
+
 def apply_regime(
     price_sek: float,
     income_sek: float,
@@ -101,6 +141,7 @@ def apply_regime(
     """
     if regime_key not in REGIMES:
         raise ValueError(f"Unknown regime: {regime_key}. Valid: {list(REGIMES.keys())}")
+    _validate_inputs(price_sek, income_sek, rate, savings_rate, bank_margin)
 
     regime = REGIMES[regime_key]
 
@@ -108,16 +149,19 @@ def apply_regime(
     required_cash = price_sek * regime["min_down_pct"]
     loan_amount = price_sek - required_cash
 
-    # Ratios — based on household income (may be individual or combined)
-    ltv = loan_amount / price_sek if price_sek > 0 else 0.0
-    lti = loan_amount / income_sek if income_sek > 0 else 0.0
+    # Ratios — based on household income (may be individual or combined).
+    # Both denominators are positive: _validate_inputs refuses anything else.
+    ltv = loan_amount / price_sek
+    lti = loan_amount / income_sek
 
     # Years to save — based on household savings capacity
     annual_savings = income_sek * savings_rate
-    years_to_save = required_cash / annual_savings if annual_savings > 0 else 0.0
+    years_to_save = required_cash / annual_savings
 
-    # Interest cost — effective rate = policy rate + bank margin
-    effective_rate = rate + bank_margin
+    # Interest cost — effective rate = policy rate + bank margin, never below
+    # zero. The policy rate was negative from 2015 to 2019 and the margin slider
+    # reaches 0, but no Swedish bank paid borrowers to hold a mortgage.
+    effective_rate = max(rate + bank_margin, 0.0)
     annual_interest = loan_amount * effective_rate
 
     # Amortization — rules are cumulative thresholds

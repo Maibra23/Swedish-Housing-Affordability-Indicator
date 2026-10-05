@@ -273,6 +273,8 @@ with st.container(border=True):
           v0=f"{INCOME_GROWTH * 100:.0f}", v1=f"{PRICE_GROWTH * 100:.0f}")
     )
     explanation(L("kd.projektion_forklaring"))
+    with st.expander(L("kd.projektion_mer_rubrik")):
+        st.markdown(L("kd.projektion_mer_text"))
 
 # ── Component breakdown ──────────────────────────────────────────────
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)

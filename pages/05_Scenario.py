@@ -294,6 +294,8 @@ with st.container(border=True):
         config={"displayModeBar": "hover"},
     )
     st.caption(L("sc.yta_forklaring"))
+    with st.expander(L("sc.yta_mer_rubrik")):
+        st.markdown(L("sc.yta_mer_text"))
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
