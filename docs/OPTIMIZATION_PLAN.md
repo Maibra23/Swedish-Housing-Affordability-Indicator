@@ -5,8 +5,6 @@
 > kept unaltered for that reason. It is not current guidance: read `docs/APP_GUIDE.md` and
 > `docs/OPEN_RISKS.md` for the project as it stands.
 
-> (`- [ ]`) syntax for tracking.
-
 **Goal:** Cut what the app sends to the browser and how often it rebuilds it, close the
 last two High risks in `docs/OPEN_RISKS.md`, and fix one visual defect found while
 measuring — without adding a runtime dependency.

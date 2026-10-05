@@ -1,7 +1,7 @@
 # SHAI Build Deviations Log
 
-Documents where the implementation diverges from PLAYBOOK.md / prompts.md.
-Use this file to identify which future task prompts need adjusting before you run them.
+Documents where the implementation diverges from PLAYBOOK.md and the task specs.
+Use this file to identify which future task specs need adjusting before you run them.
 
 **Last updated:** 2026-09-25 after withdrawing the fitted pipelines (D19).
 
@@ -12,7 +12,7 @@ Use this file to identify which future task prompts need adjusting before you ru
 | Symbol | Meaning |
 |--------|---------|
 | ✅ Resolved | Fixed during build. No downstream action needed. |
-| ⚠️ Adjust prompt | You must edit the task prompt before running that task. |
+| ⚠️ Adjust spec | You must edit the task spec before running that task. |
 
 ---
 
@@ -34,9 +34,9 @@ Use this file to identify which future task prompts need adjusting before you ru
 | **Planned** | County-level quarterly price index |
 | **Actual** | County-level is **annual only** (`FastpiPSLanAr`, 21 counties × 36 years). Quarterly only exists for 12 riksområden. |
 
-**Tasks that need prompt adjustment:**
+**Tasks that need spec adjustment:**
 
-| Task | What to change in prompt |
+| Task | What to change in spec |
 |------|--------------------------|
 | **2.1** | Change "quarterly real rate series" → "annual real rate series" |
 | **2.2** | Change "every (municipality, quarter) row" → "every (municipality, year) row" |
@@ -182,7 +182,7 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 | **Actual** | New Swedish mortgage law effective 1 April 2026 required adding a 5th regime: `latt_2026` ("Lättnad 2026"). Key changes: bolånetak raised from 85%→90% (down payment 10%), skärpt amorteringskrav (LTI>4.5×) removed. `amort_2` period closed at "Mar 2018 – mar 2026". |
 | **Sources** | Regeringen.se 2025-12, Riksdag vote 2026-03, Finansinspektionen 2026, Handelsbanken/SEB/Nordea April 2026 customer communications. |
 | **Resolution** | `engine.py` updated; `compare_regimes()` auto-includes new regime. Page 04 baseline switched from `amort_2` → `latt_2026`. Timeline updated to 5 segments. `REGIME_WHAT_CHANGED` and colors updated. All "nuvarande regler (Amorteringskrav 2.0)" UI text updated to "Lättnad 2026". |
-| **Tasks to adjust** | Any task prompt that references "four regimes" or "Amorteringskrav 2.0 as current" must be updated to "five regimes" / "Lättnad 2026 as current". |
+| **Tasks to adjust** | Any task spec that references "four regimes" or "Amorteringskrav 2.0 as current" must be updated to "five regimes" / "Lättnad 2026 as current". |
 
 ---
 
@@ -207,13 +207,13 @@ This is the main structural consequence of D2. The entire downstream pipeline wa
 | **Actual** | Both pipelines deleted 2026-09-25. One chart, three conditional projection lines, no model fitting and no confidence bands. |
 | **Why** | The outputs were measurably wrong, not merely imprecise: the first projected year was implausible for **21 of 21 counties**. Backtested against a naive carry-forward over 63 county-horizons, the fitted models lost on every component, and no whole-index method beat naive. Version C is a reciprocal of a real rate that sits at its 0,5 pp floor in 9 of 11 years yet carries 99 % of the index's year-on-year variance, so projecting it is projecting Riksbank policy six years out. Full evidence: R16 in `docs/OPEN_RISKS.md`. |
 | **Cost, stated plainly** | PRD §2 names a persona, the macroeconomic analyst hiring manager, who evaluates time-series modelling competence. This change removes the most legible signal of that competence. The judgement made was that a defensible conditional beats a visibly broken model output for that same reader, but **it is a product decision, not a technical one**, and it is reversible. |
-| **Tasks to adjust** | Any task prompt citing PRD §7, the two model tabs, confidence bands, or both fitted models. D2/D8 had already renegotiated this section's horizon from quarters to annual steps; this supersedes it entirely. |
+| **Tasks to adjust** | Any task spec citing PRD §7, the two model tabs, confidence bands, or both fitted models. D2/D8 had already renegotiated this section's horizon from quarters to annual steps; this supersedes it entirely. |
 
 ---
 
-## Summary — Tasks requiring prompt changes
+## Summary — Tasks requiring spec changes
 
-**D2/D8** (annual vs quarterly) is the only original deviation still requiring prompt awareness. D15–D18 are all resolved with no downstream prompt changes needed, except D17 if any future task prompt references the Kontantinsats regime count or names.
+**D2/D8** (annual vs quarterly) is the only original deviation still requiring spec awareness. D15–D18 are all resolved with no downstream spec changes needed, except D17 if any future task spec references the Kontantinsats regime count or names.
 
 | Task | Change needed | Reason |
 |------|--------------|--------|

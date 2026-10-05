@@ -1,6 +1,5 @@
 # Conditional Projection Implementation Plan
 
-
 **Goal:** Replace Sida 03's six-year ARIMA/Prophet forecast, which is provably
 broken for every county, with a conditional projection that states its
 assumptions instead of predicting monetary policy.
