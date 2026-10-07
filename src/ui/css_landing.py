@@ -292,23 +292,6 @@ CSS = """/* ==== LANDING PAGE COMPONENTS ==== */
     margin: 32px 0;
     background: #FFFFFF;
 }
-.shai-cred-pills {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-}
-.shai-cred-pill {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    background: #F7F8FA;
-    border: 1px solid #EEF0F3;
-    border-radius: 3px;
-    padding: 4px 12px;
-    color: #6B7280;
-    letter-spacing: 0.3px;
-}
 .shai-cred-meta {
     font-size: 12px;
     color: #9CA3AF;

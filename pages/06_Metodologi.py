@@ -172,4 +172,7 @@ with st.expander(L("mt.expander_8_referenser")):
     st.markdown(L("mt.scb_bo0501_fastighetspriser_och_lagfarter"))
 
 vintage_badge()
-footer_note(version=L("mt.shai_v_v0_metodologi_baserad_pa_methodology", v0=APP_VERSION))
+footer_note(
+    source=L("mt.kalla_sidfot"),
+    version=L("mt.shai_v_v0_metodologi_baserad_pa_methodology", v0=APP_VERSION),
+)

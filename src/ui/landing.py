@@ -38,7 +38,7 @@ def render_landing_hero(kommun_count: int | None = None) -> None:
             <h1 class="shai-headline">Swedish Housing<br>Affordability Indicator</h1>
             <p class="shai-hero-lead">
                 Strukturell bostadsekonomisk hållbarhet i Sveriges {kommuner} kommuner
-                och 21 län, med tre ekonometriska formler, projektion och scenariosimulering.
+                och 21 län, med tre indexformler, projektion och scenariosimulering.
             </p>
         </div>
     </div>
@@ -78,14 +78,14 @@ def render_landing_what_is_block(kommun_count: int | None = None) -> None:
         <div class="shai-card-light">
             <div class="shai-body">
                 SHAI (Swedish Housing Affordability Indicator) mäter strukturell
-                bostadsekonomisk hållbarhet genom tre ekonometriska formler som
+                bostadsekonomisk hållbarhet genom tre indexformler som
                 kombinerar inkomst, bostadspriser, räntor och inflation.
             </div>
             <div class="shai-body-secondary">
-                Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med data
-                från SCB, Riksbanken och Kolada. Utöver indexet erbjuds en villkorad
-                projektion, kontantinsatsanalys under fyra regelverk, och en
-                scenariosimulator för stresstester.
+                Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med
+                officiell statistik. Utöver indexet finns en villkorad projektion,
+                kontantinsatsanalys under fem regelverk och en scenariosimulator för
+                stresstester.
             </div>
         </div>
     </div>
@@ -96,11 +96,10 @@ def render_landing_what_is_block(kommun_count: int | None = None) -> None:
 def render_index_visual_block() -> None:
     """Render the index overview block with weight bars and flow diagram."""
     weights = [
-        ("K/T-kvot (prisnivå)", 35, COLORS["secondary"]),
-        ("Medianinkomst", 25, "#3D8B6E"),
-        ("Styrränta (nominal)", 20, COLORS["accent"]),
-        ("Inflation (KPI)", 10, "#D4785A"),
-        ("Arbetslöshet", 10, "#7B68A8"),
+        ("Pris i förhållande till inkomst", 35, COLORS["secondary"]),
+        ("Styrränta", 25, COLORS["accent"]),
+        ("Arbetslöshet", 20, "#7B68A8"),
+        ("Inflation (KPI)", 20, "#D4785A"),
     ]
 
     bars_html = ""
@@ -138,7 +137,7 @@ def render_index_visual_block() -> None:
             <text x="55" y="25" text-anchor="middle" fill="#4A6FA5" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Inkomst</text>
 
             <rect x="0" y="42" width="110" height="26" rx="4" fill="rgba(61,139,110,0.1)" stroke="#3D8B6E" stroke-width="1"/>
-            <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">K/T-kvot</text>
+            <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Bostadspris</text>
 
             <rect x="0" y="76" width="110" height="26" rx="4" fill="rgba(196,163,90,0.1)" stroke="#C4A35A" stroke-width="1"/>
             <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Ränta &amp; Inflation</text>
@@ -175,6 +174,7 @@ def render_index_visual_block() -> None:
     <div class="shai-section">
         <div class="shai-section-title">Indexet i överblick</div>
         <div class="shai-card-light">
+            <div class="shai-body-secondary" style="margin-bottom:12px;">{L("landing.vikter_version_b")}</div>
             {bars_html}
             <div style="height:24px;"></div>
             {flow_svg}
@@ -201,14 +201,14 @@ def render_landing_steps(
         (
             "01",
             "Datainsamling",
-            "SCB, Riksbanken och Kolada levererar kommunal inkomst, "
-            "K/T-kvot, styrränta, inflation och arbetslöshet.",
+            "Officiell statistik om kommunal inkomst, bostadspriser, "
+            "styrränta, inflation och arbetslöshet.",
         ),
         (
             "02",
             "Normalisering",
-            f"Värden z-standardiseras inom varje år "
-            f"({start}–{end}, {kommuner} kommuner) för jämförbar ranking.",
+            f"Värdena omvandlas till z-poäng så att {kommuner} kommuner "
+            f"kan jämföras och rangordnas ({start}–{end}).",
         ),
         (
             "03",
@@ -285,12 +285,6 @@ def render_landing_credibility(
     version_str = f"SHAI v{version} &middot; " if version else ""
     html = f"""
     <div class="shai-cred">
-        <div class="shai-cred-pills">
-            <span class="shai-cred-pill">SCB</span>
-            <span class="shai-cred-pill">Riksbanken</span>
-            <span class="shai-cred-pill">Kolada</span>
-            <span class="shai-cred-pill">Finansinspektionen</span>
-        </div>
         <div class="shai-cred-meta">
             {version_str}Öppen data &middot; {kommuner} kommuner &middot; {start}&ndash;{end}
         </div>

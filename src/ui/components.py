@@ -263,22 +263,25 @@ def risk_pill(level: str) -> str:
 
 
 def footer_note(
-    source: str = "SCB, Riksbanken, Kolada",
+    source: str | None = None,
     version: str = "SHAI v1.3",
     updated: str | None = None,
 ) -> None:
     """Render the standard page footer.
 
     Args:
-        source: Attribution line.
+        source: Attribution line. Only Sida 06 passes one: sources are cited
+            on the methodology page and nowhere else, so the other pages do not
+            repeat them.
         version: App version.
         updated: ISO timestamp of the data build. Defaults to the provenance
             artifact; pass a value only to override it in a test.
     """
     stamp = (updated or generated_at())[:10]
+    source_span = f"<span><strong>KÄLLA:</strong> {source}</span>" if source else ""
     html = f"""
     <div class="shai-footer-note">
-        <span><strong>KÄLLA:</strong> {source}</span>
+        {source_span}
         <span>{L("ui.data_uppdaterad_v0", v0=stamp)}</span>
         <span><code>{version}</code></span>
     </div>

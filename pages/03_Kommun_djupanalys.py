@@ -38,6 +38,7 @@ from src.ui.components import (
     vintage_badge,
 )
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
+from src.indices.kommun_components import attribute_change, floored_real_rate
 from src.projection import INCOME_GROWTH, PRICE_GROWTH, REAL_RATE_FLOOR
 
 inject_css()
@@ -68,7 +69,7 @@ selected_year = selections["selected_year"]
 page_title(
     eyebrow="Sida 03 · Kommunanalys",
     title="Kommun djupanalys",
-    subtitle="Historisk analys och projektion per kommun",
+    subtitle=L("kd.undertitel"),
     year=selected_year,
 )
 
@@ -281,38 +282,32 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
-        card_header("Komponentuppdelning", f"{selected_kommun} · {PERIOD}", "KOMPONENTER"),
+        card_header(L("kd.komp_rubrik"), f"{selected_kommun} · {PERIOD}", "KOMPONENTER"),
         unsafe_allow_html=True,
     )
 
     col1, col2, col3 = st.columns(3)
 
+    # The three inputs Version C actually divides, not K/T or the nominal rate.
+    # The split below is exact; see src/indices/kommun_components.py.
+    component_data = kommun_data.assign(real_rate=floored_real_rate(kommun_data))
     component_configs = [
-        ("Medianinkomst", "median_income", "SEK", col1, CHART_PALETTE[6]),
-        ("K/T-kvot", "kt_ratio", "kvot", col2, CHART_PALETTE[0]),
-        (L("kd.styrranta"), "policy_rate", "%", col3, CHART_PALETTE[5]),
+        ("income", L("kd.komp_inkomst"), "median_income", "SEK", col1, CHART_PALETTE[6]),
+        ("price", L("kd.komp_pris"), "transaction_price_sek", "SEK", col2, CHART_PALETTE[0]),
+        ("real_rate", L("kd.komp_realranta"), "real_rate", "pp", col3, CHART_PALETTE[5]),
     ]
+    change = attribute_change(kommun_data)
+    driver = change.driver if change else ""
 
-    # Compute driver
-    cv_scores = {}
-    for label, col_name, unit, _, _ in component_configs:
-        vals = kommun_data[col_name].dropna()
-        if len(vals) > 1 and vals.mean() != 0:
-            cv_scores[label] = vals.std() / abs(vals.mean())
-        else:
-            cv_scores[label] = 0
-
-    driver = max(cv_scores, key=cv_scores.get) if cv_scores else ""
-
-    for label, col_name, unit, col_container, base_color in component_configs:
+    for key, label, col_name, unit, col_container, base_color in component_configs:
         with col_container:
-            is_driver = label == driver
+            is_driver = key == driver
             chart_color = COLORS["accent"] if is_driver else base_color
 
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=kommun_data["year"],
-                y=kommun_data[col_name],
+                x=component_data["year"],
+                y=component_data[col_name],
                 mode="lines+markers",
                 line=dict(color=chart_color, width=2.5 if is_driver else 2),
                 marker=dict(size=5, color=chart_color),
@@ -321,9 +316,8 @@ with st.container(border=True):
                 hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:,.2f}} {unit}<extra></extra>",
             ))
 
-            title_prefix = ""
             layout = get_chart_layout(
-                title=f"{title_prefix}{label}",
+                title=label,
                 height=250,
                 yaxis_title=unit,
                 showlegend=False,
@@ -333,11 +327,16 @@ with st.container(border=True):
             fig.update_layout(**layout)
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
 
-    if driver:
-        st.markdown(
-            T("kd.v1_har_storst_relativ_variation_och_driver", v0=COLORS['text_secondary'], v1=driver, v2=selected_kommun),
-            unsafe_allow_html=True,
-        )
+    if change:
+        names = {key: label for key, label, *_ in component_configs}
+        pct = {k: f"{v:+.0f}".replace("-", "\u2212") for k, v in change.parts_pct.items()}
+        st.markdown(L(
+            "kd.komp_uppdelning",
+            v0=selected_kommun, v1=change.from_year, v2=change.to_year,
+            v3=f"{change.total_pct:+.0f}".replace("-", "\u2212"),
+            v4=pct["income"], v5=pct["price"], v6=pct["real_rate"],
+            v7=names[driver].lower(),
+        ))
 
 with st.expander(L("kd.om_komponenterna")):
     st.markdown(L("kd.om_komponenterna_text"))

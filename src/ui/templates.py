@@ -32,7 +32,6 @@ TEMPLATES: dict[str, str] = {
     <div class="shai-section-title">Vad hittar du här?</div>
 </div>
 """,
-    "kd.v1_har_storst_relativ_variation_och_driver": "<div style='font-size:13px;color:{v0};text-align:center;padding:8px 0;'><strong>{v1}</strong> har störst relativ variation och driver mest av SHAI-förändringen för {v2}.</div>",
     "ki.fore_2010_bolanetak_amorteringskrav_skarpt": """
 <div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
   <div style="flex:3;background:{v0};display:flex;align-items:center;justify-content:center;padding:0 6px;">

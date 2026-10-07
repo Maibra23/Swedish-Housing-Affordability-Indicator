@@ -397,4 +397,4 @@ render_assumptions(_ctx)
 
 # ── 9 · Footer ────────────────────────────────────────────────────────
 vintage_badge()
-footer_note(source="SCB, Riksbanken, Finansinspektionen")
+footer_note()

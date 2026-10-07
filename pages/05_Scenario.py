@@ -173,7 +173,7 @@ with col_price:
         value=int(st.session_state.get("sc_price_slider", 0)),
         step=5,
         key="sc_price_slider",
-        help="−20 % ≈ det svenska bostadsprisfallet 2022. +25 % simulerar en prisspiral.",
+        help=L("sc.prischock_hjalp"),
     )
 
 with col_cpi:

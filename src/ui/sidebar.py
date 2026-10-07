@@ -64,7 +64,6 @@ def footer_html() -> str:
     """
     return f"""
         <div class="shai-sidebar-footer">
-            <div style="margin-bottom:4px;"><strong>KÄLLA:</strong> SCB, Riksbanken, Kolada</div>
             <div>Data uppdaterad: {data_vintage()}</div>
             <div style="margin-top:4px;font-size:10px;color:#8A8FA8;">v{APP_VERSION}</div>
         </div>

@@ -141,10 +141,16 @@ def test_footer_drops_the_forward_fill_note():
         assert stale not in html, f"footer still claims {stale!r}"
 
 
-def test_footer_still_credits_the_sources():
+def test_sources_are_credited_on_the_methodology_page_only():
+    """Sources are cited once, on Sida 06, and not repeated in every page's chrome."""
+    from src.ui.labels import SWEDISH_LABELS
+
     html = sidebar.footer_html()
     for source in ("SCB", "Riksbanken", "Kolada"):
-        assert source in html
+        assert source not in html, f"the sidebar still credits {source}"
+    credit = SWEDISH_LABELS["mt.kalla_sidfot"]
+    for source in ("SCB", "Riksbanken", "Kolada", "Finansinspektionen"):
+        assert source in credit, f"the methodology footer no longer credits {source}"
 
 
 # ---------------------------------------------------------------------------
