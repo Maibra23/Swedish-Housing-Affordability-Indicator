@@ -3,7 +3,7 @@
 Version C is a reciprocal of the real interest rate, floored at 0,5 pp. In the
 committed panel that floor binds in 9 of 11 years, during which Version C is
 exactly 200 x (income / price) and the rate contributes nothing. The real rate
-carries 99 % of the variance in year-on-year changes of log C.
+carries most of the variance in year-on-year changes of log C.
 
 That is why nothing here extrapolates it. Income and price are carried forward at
 documented rates; the real rate is a stated scenario. These tests pin the

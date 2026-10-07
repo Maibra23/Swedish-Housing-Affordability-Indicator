@@ -361,7 +361,7 @@ income 16.2 % error against 6.7 %, price 19.5 % against 5.4 %, the real rate 18.
 against 17.5 %. The first projected year was implausible for 21 of 21 counties.
 
 The deeper reason is the formula. C is a reciprocal of the real rate, and the real
-rate carries 99 % of the variance in year on year changes of `log C`. Projecting C
+rate carries most of the variance in year on year changes of `log C`. Projecting C
 six years out means projecting central bank policy six years out. The full evidence
 is R16 in `docs/OPEN_RISKS.md` and D19 in `docs/DEVIATIONS.md`.
 

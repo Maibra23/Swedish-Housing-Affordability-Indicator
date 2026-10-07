@@ -88,7 +88,6 @@ TEMPLATES: dict[str, str] = {
     "mt.fore_2010_inget_formellt_krav_okt_2010": """
     <div style="position:relative;padding:20px 0;margin:16px 0;">
         <div style="position:absolute;top:40px;left:0;right:0;height:3px;background:{v0};"></div>
-
         <div style="display:flex;justify-content:space-between;position:relative;">
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v1};margin:32px auto 8px;"></div>
@@ -113,7 +112,7 @@ TEMPLATES: dict[str, str] = {
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v9};margin:32px auto 8px;border:2px solid {v10};"></div>
                 <div style="font-size:11px;font-weight:700;">Apr 2026</div>
-                <div style="font-size:10px;color:{v11};">Lättnader 2026</div>
+                <div style="font-size:10px;color:{v11};">Lättnad 2026</div>
             </div>
         </div>
     </div>

@@ -315,9 +315,9 @@ has learned the right thing.
 `max(R − π, 0,5)`. Stockholm's real rate ran 0,63, then 0,50 for nine years, then
 0,77 — **at the floor in 9 of 11 years**. While it binds, Version C is *exactly*
 200 × (inkomst / pris) and the rate contributes nothing; the identity holds to
-four decimal places in the committed artifact. Yet the real rate carries **99 %**
+four decimal places in the committed artifact. Yet the real rate carries **most**
 of the variance in year-on-year changes of `log C`. A variable that is clamped
-82 % of the time and still explains nearly all the movement is what makes an
+82 % of the time and still explains most of the movement is what makes an
 extrapolated denominator unusable.
 
 **Why nothing is fitted, in one line.** A fitted model's first year was

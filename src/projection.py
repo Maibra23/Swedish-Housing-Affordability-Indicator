@@ -10,7 +10,7 @@ lost on every component: income 16,2 % against 6,7 %, price 19,5 % against
 **And the formula amplifies the resulting error.** Version C is a reciprocal of
 `max(R - pi, 0.5)`. That floor binds in 9 of the 11 observed years, during which
 C is exactly `200 * income / price` and the rate contributes nothing at all. The
-real rate carries 99 % of the variance in year-on-year changes of `log C`, so a
+real rate carries most of the variance in year-on-year changes of `log C`, so a
 model that lets the rate escape the floor moves C by a multiple.
 
 The conclusion is not that a better model is needed. It is that an unconditional

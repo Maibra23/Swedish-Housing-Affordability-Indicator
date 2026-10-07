@@ -243,6 +243,9 @@ NOT_A_VINTAGE = {
     # "Åren 2020–2021 har negativ realränta" — a statement about the rate cycle
     # that stays true regardless of how far the data now reaches.
     "historical episode reference": r"Åren\s+(?:19|20)\d{2}\s*[–—-]\s*(?:19|20)\d{2}",
+    # "Åren 2015–2023 låg realräntan under golvet" — the floored years, re-derived
+    # in test_methodology_claims rather than classified away.
+    "real-rate floor years, checked there": r"Åren\s+(?:19|20)\d{2}\s*[–—-]",
     # "−0,31 (2015) till +0,78 (2023)" — measured extremes, re-derived in
     # test_the_d5_panel_mean_statistic_still_holds rather than classified away.
     "D5 panel-mean extremes, checked above": r"[+−-]\d+,\d+\s*\(\d{4}\)",

@@ -163,7 +163,7 @@ Affordability did not deteriorate by a third; the floor stopped binding.
 
 Two consequences follow, and both are load-bearing elsewhere in this document.
 Cross-year comparisons of the raw index level are comparisons of whether the floor was
-active, which is why §4 normalises within year. And the real rate carries 99 % of the
+active, which is why §4 normalises within year. And the real rate carries most of the
 variance in year-on-year changes of `log C`, which is why §5 makes it a stated scenario
 rather than something estimated.
 
@@ -345,7 +345,7 @@ disagree. Price growth is stated on the same footing.
 
 ### The real rate is not projected
 
-It is the axis the reader chooses, because it carries 99 % of the variance in
+It is the axis the reader chooses, because it carries most of the variance in
 year-on-year changes of `log C` and is a policy instrument rather than a
 stochastic process. Three scenarios, all at or above the 0,5 pp floor:
 
@@ -435,7 +435,7 @@ positive, every value finite, relative shocks above −100 %. (2026-10-05)
 
 | ID | Limitation | Mitigation | Severity |
 |----|------------|------------|----------|
-| F1 | Native K/T available for ~88% of municipality years; county K/T fallback used for remaining ~12% | `has_native_kt` flag in panel; full list of fallback municipalities on Metodologi page | Low |
+| F1 | Native K/T missing for some municipality years (none in the index period); county K/T used as fallback | `has_native_kt` flag in panel; full list of fallback municipalities on Metodologi page | Low |
 | F2 | National interest rate applied at municipal and county level | Documented explicitly; municipal variation in affordability comes entirely from income and K/T differences | Medium |
 | F3 | Only Makroversion (B) can rank municipalities differently. Bankversion (A) and Realversion (C) rank identically in every year by construction: R and π are national, so within a year A and C differ by a single constant factor, which a within-year z-score on logs removes exactly | Stated in the "Varför skiljer sig versionerna åt" comparison panel on the Län jämförelse page, which tabs only C and B; `tests/test_formula_agreement.py` pins the identity so the copy is revisited if it ever breaks | Low |
 | F4 | Eleven annual observations cannot support a fitted statistical model | Model fitting withdrawn; conditional projection instead (R16) | Medium |

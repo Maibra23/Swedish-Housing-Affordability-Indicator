@@ -1,7 +1,8 @@
 """Sida 06 — Metodologi och källor.
 
-Formler, datakällor, begränsningar (F1–F10) och validering.
-Sections 1–3 always visible, 4–8 in expanders.
+What the index measures, its sources, formulas and normalisation (sections
+1–4, always visible), then projection, regulation, limitations F1–F17,
+validation and references (sections 5–9, in expanders).
 """
 
 import streamlit as st
@@ -73,7 +74,7 @@ page_title(
 # ══════════════════════════════════════════════════════════════════════
 with st.container(border=True):
     st.markdown(
-        card_header("1. Teoretisk grund", L("mt.tre_perspektiv_pa_bostadsoverkomlighet"), "TEORI"),
+        card_header(L("mt.1_vad_shai_mater"), L("mt.tre_perspektiv_pa_bostadsoverkomlighet"), "TEORI"),
         unsafe_allow_html=True,
     )
 
@@ -99,20 +100,22 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
-        card_header("3. Formler", "Tre ekonometriska formler", "FORMLER"),
+        card_header(L("mt.3_formler"), L("mt.tre_satt_att_mata"), "FORMLER"),
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Version A: Bankversion")
-    st.latex(r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}")
+    st.markdown(L("mt.beteckningar"))
+
+    st.markdown(L("mt.version_a_rubrik"))
+    st.latex(r"A(i,t) = \frac{I(i,t)}{P(i,t) \times \max(R(t),\; 0{,}001)}")
     st.markdown(L("mt.mater_flodesoverkomlighet_hushallets_inkomst"))
 
     st.markdown(L("mt.version_b_makrokomposit_tryckmatt"))
-    st.latex(r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)")
+    st.latex(r"B(i,t) = 0{,}35 \cdot z\!\left(\frac{P}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)")
     st.markdown(L("mt.sammansatt_riskindikator_som_viktar_pris"))
 
-    st.markdown("### Version C: Realversion (rekommenderad)")
-    st.latex(r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}")
+    st.markdown(L("mt.version_c_rubrik"))
+    st.latex(r"C(i,t) = \frac{I(i,t)}{P(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}")
     st.markdown(L("mt.justerar_for_inflation_genom_realrantan"))
 
     # F17, with the data rather than a description of it. A documentation page
@@ -123,43 +126,47 @@ with st.container(border=True):
     except Exception as exc:  # noqa: BLE001 — reported, not swallowed
         st.caption(L("mt.rantegolvspanelen_kunde_inte_laddas", v0=str(exc)))
 
-    st.markdown("### Normalisering, rangordning och riskklass")
-    st.markdown(L("mt.formlerna_ger_ett_nivavarde_per_kommun_och", v0=N_KOMMUNER))
+# ══════════════════════════════════════════════════════════════════════
+# SECTION 4 — Från värde till riskklass (always visible)
+# ══════════════════════════════════════════════════════════════════════
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    st.markdown(L("mt.varfor_transaktionspris_i_sek_inte_k_t_eller"))
-    st.markdown(L("mt.tre_alternativa_prismatt_overvagdes"))
+with st.container(border=True):
+    st.markdown(
+        card_header(L("mt.4_fran_varde_till_riskklass"), L("mt.normalisering_rang_och_riskklass"), "NORMALISERING"),
+        unsafe_allow_html=True,
+    )
+    st.markdown(L("mt.formlerna_ger_ett_nivavarde_per_kommun_och"))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 4 — Projektion (expander)
+# SECTION 5 — Projektion (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.expander_4_projektion_villkorad")):
     st.markdown(L("mt.projektion_tre_scenarier_realranta", v0=N_YEARS, v1=PERIOD))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 5 — Kontantinsats (expander)
+# SECTION 6 — Kontantinsats (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.expander_5_kontantinsats_regimhistorik")):
-    st.markdown("Fem regulatoriska regimer modelleras:")
-
     # Timeline visual
     st.markdown(T("mt.fore_2010_inget_formellt_krav_okt_2010", v0=COLORS['border'], v1=COLORS['text_tertiary'], v2=COLORS['text_secondary'], v3=COLORS['accent'], v4=COLORS['text_secondary'], v5=COLORS['medium_risk'], v6=COLORS['text_secondary'], v7=COLORS['high_risk'], v8=COLORS['text_secondary'], v9=COLORS['low_risk'], v10=COLORS['accent'], v11=COLORS['text_secondary']), unsafe_allow_html=True)
 
     st.markdown(L("mt.regelverk_period_kontantinsats"))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 6 — Begränsningar F1–F10 (expander)
+# SECTION 7 — Begränsningar F1–F17 (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.6_begransningar_f1f15")):
-    st.markdown(L("mt.id_begransning_atgard_f1_kommunal"))
+    st.markdown(L("mt.id_begransning_atgard_f1_kommunal", v0=N_YEARS))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 7 — Datavalidering (expander)
+# SECTION 8 — Datavalidering (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.expander_7_datavalidering")):
-    st.markdown(L("mt.foljande_valideringskontroller_kors_innan", income_max=SOURCE_MAX["income_max"]))
+    st.markdown(L("mt.foljande_valideringskontroller_kors_innan"))
 
 # ══════════════════════════════════════════════════════════════════════
-# SECTION 8 — Referenser (expander)
+# SECTION 9 — Referenser (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.expander_8_referenser")):
     st.markdown(L("mt.scb_bo0501_fastighetspriser_och_lagfarter"))
