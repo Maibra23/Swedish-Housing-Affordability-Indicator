@@ -14,7 +14,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.scenario.panel_scenario import shock_panel
+from src.scenario.panel_scenario import PanelShockOutcome, shock_panel
 from src.ui.components import (
     card_header,
     delta_meta,
@@ -23,6 +23,10 @@ from src.ui.components import (
     render_kpi_row,
 )
 from src.ui.labels import L
+
+#: Below this change in the median, in percent, the national section says
+#: nothing about it: the move is rounding, not a result.
+MEDIAN_SILENCE_PCT = 0.05
 
 
 def render_national_outcome(
@@ -101,7 +105,44 @@ def render_national_outcome(
         else:
             st.markdown(L("sc.riket_ingen_rorelse"))
 
+        median_text = explain_national_median(outcome)
+        if median_text:
+            st.markdown(median_text)
+
         st.caption(L("sc.riket_forklaring"))
+
+
+def explain_national_median(outcome: PanelShockOutcome) -> str | None:
+    """The median Version C shift, beside class counts that can stop moving.
+
+    The counts saturate: on 2024 a +4 pp rate shock puts every municipality in
+    hög risk, so +5 pp reads the same as +4. On a floored year they freeze
+    instead. The median is continuous and keeps answering how far the country
+    moved.
+
+    Args:
+        outcome: The panel shock result.
+
+    Returns:
+        A sentence, or None when the median did not move, so an untouched or
+        fully absorbed scenario adds no line saying "0 %".
+    """
+    before, after = outcome.median_c_before, outcome.median_c_after
+    change_pct = (after / before - 1) * 100
+    if abs(change_pct) < MEDIAN_SILENCE_PCT:
+        return None
+    return L(
+        "sc.riket_median_v0_v1_v2",
+        v0=_sv(before),
+        v1=_sv(after),
+        v2=_sv(change_pct, 1, signed=True),
+    )
+
+
+def _sv(value: float, decimals: int = 1, *, signed: bool = False) -> str:
+    """Swedish decimal comma; `signed` adds a sign and a typographic minus."""
+    text = f"{value:+.{decimals}f}" if signed else f"{value:.{decimals}f}"
+    return text.replace(".", ",").replace("-", "−")
 
 
 def render_purpose() -> None:

@@ -32,16 +32,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# The refresh toolchain: SCB/Riksbanken/Kolada clients and the forecast
-# pipelines. Runs on a developer's machine and commits parquet artifacts; the
-# serving host only reads them. prophet and pmdarima compile from source, which
-# is precisely why they must not reach the deploy environment.
+# The refresh toolchain: the SCB/Riksbanken/Kolada clients. Runs on a
+# developer's machine and commits parquet artifacts; the serving host only reads
+# them. The compiled statistical packages left with the pipelines they served
+# (R16), so the refresh toolchain now compiles nothing at all.
 #     pip install -e ".[pipeline]"
 pipeline = [
     "requests>=2.31.0",
-    "prophet>=1.1.5",
-    "pmdarima>=2.0.4",
-    "statsmodels>=0.14.0",
 ]
 
 # Test suite. scipy backs the normality tests behind decision D6.

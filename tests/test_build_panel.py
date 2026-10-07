@@ -2,7 +2,7 @@
 
 R5 and R10, which are one problem wearing two hats. `build_panel.py` is where
 ten raw SCB and Kolada tables become the three panels every page, index and
-forecast reads. It held 0 % coverage while being the largest module in the
+projection reads. It held 0 % coverage while being the largest module in the
 project, and the register's standing recommendation was "tests before splitting,
 in that order... the way out is coverage, not courage".
 

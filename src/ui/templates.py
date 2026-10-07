@@ -32,7 +32,6 @@ TEMPLATES: dict[str, str] = {
     <div class="shai-section-title">Vad hittar du här?</div>
 </div>
 """,
-    "kd.v1_har_storst_relativ_variation_och_driver": "<div style='font-size:13px;color:{v0};text-align:center;padding:8px 0;'><strong>{v1}</strong> har störst relativ variation och driver mest av SHAI-förändringen för {v2}.</div>",
     "ki.fore_2010_bolanetak_amorteringskrav_skarpt": """
 <div style="display:flex;width:100%;border-radius:6px;overflow:hidden;margin-top:8px;height:48px;">
   <div style="flex:3;background:{v0};display:flex;align-items:center;justify-content:center;padding:0 6px;">
@@ -88,7 +87,6 @@ TEMPLATES: dict[str, str] = {
     "mt.fore_2010_inget_formellt_krav_okt_2010": """
     <div style="position:relative;padding:20px 0;margin:16px 0;">
         <div style="position:absolute;top:40px;left:0;right:0;height:3px;background:{v0};"></div>
-
         <div style="display:flex;justify-content:space-between;position:relative;">
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v1};margin:32px auto 8px;"></div>
@@ -113,7 +111,7 @@ TEMPLATES: dict[str, str] = {
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v9};margin:32px auto 8px;border:2px solid {v10};"></div>
                 <div style="font-size:11px;font-weight:700;">Apr 2026</div>
-                <div style="font-size:10px;color:{v11};">Lättnader 2026</div>
+                <div style="font-size:10px;color:{v11};">Lättnad 2026</div>
             </div>
         </div>
     </div>

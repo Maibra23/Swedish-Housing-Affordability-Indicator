@@ -122,10 +122,10 @@ def test_the_register_heading_matches_the_ids_it_contains() -> None:
     [
         # Each caveat names the thing it is warning about, not merely an id.
         ("mt.sammansatt_riskindikator_som_viktar_pris", ["F13", "nationella"]),
-        ("mt.justerar_for_inflation_genom_realrantan", ["M4", "negativ realränta"]),
+        ("mt.justerar_for_inflation_genom_realrantan", ["F17", "golvet"]),
         ("mt.formlerna_ger_ett_nivavarde_per_kommun_och", ["F16", "kvantiler"]),
         ("ki.inkomsten_ar_individuell_bruttoinkomst_scb", ["F14"]),
-        ("sc.version_c_realversion_beraknas_som_text", ["F15", "konstant"]),
+        ("sc.version_c_realversion_beraknas_som_text", ["F15", "alla kommuner"]),
     ],
 )
 def test_caveat_states_its_limitation(key: str, must_mention: list[str]) -> None:

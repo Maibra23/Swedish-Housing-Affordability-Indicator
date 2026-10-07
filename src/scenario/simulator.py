@@ -9,6 +9,28 @@ All rates in percentage points throughout.
 
 from __future__ import annotations
 
+import math
+
+
+def _validate(**values: float) -> None:
+    """Refuse inputs that would return NaN, infinity or a negative index.
+
+    Income and price must be positive, every value finite, and a relative shock
+    of -100 % or below would leave nothing to divide by.
+
+    Raises:
+        ValueError: Naming the argument and the value it received.
+    """
+    for name, value in values.items():
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number, got {value!r}")
+    for name in ("income", "price"):
+        if values[name] <= 0:
+            raise ValueError(f"{name} must be positive, got {values[name]!r}")
+    for name in ("income_shock", "price_shock"):
+        if values[name] <= -1:
+            raise ValueError(f"{name} must be above -1 (-100 %), got {values[name]!r}")
+
 
 def simulate(
     county_kod: str,
@@ -40,6 +62,11 @@ def simulate(
     price = baseline_panel["transaction_price_sek"]
     rate = baseline_panel["policy_rate"]       # percentage points
     cpi = baseline_panel["cpi_yoy_pct"]        # percentage points
+    _validate(
+        income=income, price=price, policy_rate=rate, cpi_yoy_pct=cpi,
+        rate_shock=rate_shock, income_shock=income_shock,
+        price_shock=price_shock, cpi_shock=cpi_shock,
+    )
 
     # Baseline Version C — matches affordability.py compute_version_c
     real_rate_base = max(rate - cpi, 0.5)              # pp, floored at 0.5

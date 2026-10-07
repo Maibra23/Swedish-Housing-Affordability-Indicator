@@ -138,7 +138,7 @@ def fetch_unemployment(force: bool = False) -> pd.DataFrame:
     Source: SCB AM0210 — ArbStatusM (preliminary monthly data)
     https://www.scb.se/am0210
 
-    NOTE: The prompts reference AM0101 but the correct table for municipal
+    NOTE: The original spec named AM0101, but the correct table for municipal
     monthly unemployment is AM0210.
     """
     cache = _cache_path("AM0210_unemployment")

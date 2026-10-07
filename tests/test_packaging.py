@@ -1,8 +1,8 @@
 """`pyproject.toml` must describe two audiences without mixing them.
 
 The server runs the app and reads committed parquet. A developer refreshing the
-data runs SCB and Riksbanken clients, Prophet and ARIMA. One dependency list for
-both meant every cold start on Streamlit Cloud compiled Stan. The split is
+data runs the SCB and Riksbanken clients. One dependency list for both meant
+every cold start on Streamlit Cloud compiled Stan. The split is
 `[project.dependencies]` for the first and the `pipeline` extra for the second,
 with `requirements.txt` mirroring the first exactly. See Finding I, task T2.2.
 
@@ -26,7 +26,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"
 REQUIREMENTS = ROOT / "requirements.txt"
 
-PIPELINE_ONLY = {"prophet", "pmdarima", "statsmodels", "requests"}
+# Refresh-pipeline packages: installed by the `pipeline` extra, never by the
+# runtime set. The compiled statistical packages were removed with the pipelines
+# they served (R16), so `requests` is all that remains and the refresh toolchain
+# now compiles nothing.
+PIPELINE_ONLY = {"requests"}
 
 
 def _config() -> dict:

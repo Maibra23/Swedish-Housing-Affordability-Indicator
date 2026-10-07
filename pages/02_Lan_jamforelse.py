@@ -1,6 +1,9 @@
 """Sida 02 — Län jämförelse.
 
-Jämför 21 län under tre formelversioner (A, B, C) med trendlinjer och rankingtabeller.
+En flik per formel som kan rangordna annorlunda: Realversion (C) och
+Makroversion (B), var och en med trendlinje och rankingtabell. Bankversion (A)
+rangordnar identiskt med C och förklaras i jämförelseavsnittet i stället för att
+få en egen flik.
 """
 
 import streamlit as st
@@ -15,9 +18,7 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
-import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 
 from src.provenance import (
     complete_case_max_year,
@@ -37,9 +38,16 @@ from src.ui.components import (
     page_title,
     vintage_badge,
 )
-from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
+from src.ui.chart_theme import CHART_PALETTE
 from src.ui.data_table import Column, render_table
-from src.indices.agreement import measure_agreement, where_b_and_c_disagree
+from src.lan.charts import county_colours, county_trend_chart
+from src.indices.agreement import (
+    inflation_adjustment,
+    measure_agreement,
+    where_b_and_c_disagree,
+)
+from src.ui.interpret import explain_inflation_adjustment
+from src.ui.floor_panel import render_floor_history
 
 inject_css()
 selections = render_sidebar()
@@ -86,12 +94,21 @@ page_title(
 )
 
 # ── Formula config ───────────────────────────────────────────────────
-# Realversion (C) first, because it is the one the site runs on: the map, the
-# risk classes, the KPI row, the forecasts and the simulator all read C. The
-# tab order is also the default tab, and opening on Bankversion (A) led with
-# the formula this page's own copy calls a robustness check.
+# Two tabs, not three. Bankversion (A) used to sit here as a peer, which implied
+# it corroborated C. It cannot: within a year the rate and inflation are national
+# constants, so A and C differ by a single constant factor and rank *identically*
+# — rank correlation 1,0000 on this page's own county figures in every year. A
+# third tab showing the same ordering with different numbers is not evidence, it
+# is the appearance of evidence. Version B is the only formula that can rank
+# differently, and it does: rank correlation -0,96 against C.
+#
+# A is not dropped from the site, but it is no longer presented as a third
+# formula. It had a row in the Robusthet class table, identical to C's by
+# construction, which is the same misreading in a smaller font. What it has
+# instead is the one thing it alone states: the size of the inflation
+# adjustment, derived from the selected year in the comparison expander below.
 FORMULA_INFO = {
-    "Realversion (C)": {
+    "Realversion": {
         "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
         "desc": (
             L("lj.den_rekommenderade_versionen_justerar_for")
@@ -103,16 +120,7 @@ FORMULA_INFO = {
             L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
     },
-    "Bankversion (A)": {
-        "formula": r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}",
-        "desc": (
-            L("lj.den_enklaste_versionen_mater_hushallets")
-        ),
-        "col": "version_a",
-        "color_highlight": COLORS["high_risk"],
-        "color_others": COLORS["secondary"],
-    },
-    "Makroversion (B)": {
+    "Makroversion": {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
         "desc": (
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
@@ -126,94 +134,60 @@ FORMULA_INFO = {
     },
 }
 
+#: Version A's formula, kept for the comparison expander. It is not a tab; see
+#: the note on FORMULA_INFO above.
+VERSION_A_FORMULA = r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}"
+
+# ── County colours and selection ─────────────────────────────────────
+# Every county gets its own colour, keyed by code so it survives a filter change
+# or a tab switch. The chart used to draw all 21 in one muted tone, which left
+# every line but Stockholm anonymous.
+_all_codes = sorted(county_versions["lan_code"].unique())
+_colours = county_colours(_all_codes)
+_names_by_code = (
+    county_versions.drop_duplicates("lan_code").set_index("lan_code")["region_name"].to_dict()
+)
+_name_to_code = {v: k for k, v in _names_by_code.items()}
+
+# Collapsed: 21 chips expanded is taller than the chart they filter. The count
+# below stays visible, so the filter's state is never hidden even when the
+# control is.
+with st.expander(L("lj.valj_lan")):
+    _picked_names = st.multiselect(
+        L("lj.valj_lan"),
+        options=sorted(_name_to_code),
+        default=sorted(_name_to_code),
+        key="lj_counties",
+        label_visibility="collapsed",
+    )
+_selected = [_name_to_code[n] for n in _picked_names]
+if not _selected:
+    st.info(L("lj.inga_lan_valda"))
+    st.stop()
+st.caption(L("lj.v0_av_v1_lan_visas", v0=len(_selected), v1=len(_all_codes)))
+
 # ── Tabs ─────────────────────────────────────────────────────────────
 tabs = st.tabs(list(FORMULA_INFO.keys()))
 
 for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
     with tab:
-        st.latex(info["formula"])
-        st.markdown(
-            f"<div style='font-size:14px;color:{COLORS['text_secondary']};margin-bottom:20px;'>"
-            f"{info['desc']}</div>",
-            unsafe_allow_html=True,
-        )
-        if "footnote" in info:
-            st.caption(f"ℹ️ {info['footnote']}")
+        # Full width, with the ranking beneath rather than beside. A 21-series
+        # legend in a three-fifths column fitted two entries per row and clipped
+        # the longest names; across the full width it fits six and reads cleanly.
+        with st.container(border=True):
+            st.plotly_chart(
+                county_trend_chart(
+                    county_versions,
+                    value_column=info["col"],
+                    selected=_selected,
+                    colours=_colours,
+                    title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=PERIOD),
+                ),
+                width="stretch",
+                config={"displayModeBar": "hover"},
+            )
 
-        st.caption(L("lj.stockholm_visas_som_referenslan_markerat_med"))
-
-        col_chart, col_table = st.columns([3, 2])
-
-        with col_chart:
-            with st.container(border=True):
-                fig = go.Figure()
-                for _, county_row in county_names.iterrows():
-                    lk = county_row["lan_code"]
-                    name = county_row["region_name"]
-                    cdata = county_versions[county_versions["lan_code"] == lk].sort_values("year")
-                    if len(cdata) == 0:
-                        continue
-
-                    is_sthlm = lk == "01"
-                    fig.add_trace(go.Scatter(
-                        x=cdata["year"],
-                        y=cdata[info["col"]],
-                        name=name,
-                        mode="lines",
-                        line=dict(
-                            width=3 if is_sthlm else 1.2,
-                            color=info["color_highlight"] if is_sthlm else info["color_others"],
-                        ),
-                        opacity=1.0 if is_sthlm else 0.35,
-                        hovertemplate=L("lj.v0_ar_x_varde_y_2f", v0=name),
-                    ))
-
-                # No imputed-income shading here, deliberately. T2.4 made
-                # `step_compute_indices` score only `complete_case()` rows, so the
-                # affordability artifacts this page reads carry zero forward-filled
-                # years by construction — the flag is False on all 3190 rows. The
-                # shading that used to sit here could not render, and advertising
-                # an annotation that never appears is worse than not having one.
-                # The imputed tail is visible where it exists, in the panel.
-                # The plotted range is the index period, which this page already
-                # resolves from provenance at the top. Re-deriving it from the
-                # frame was R2's third site.
-                yr_range = PERIOD
-                vcol = info["col"]
-
-                layout = get_chart_layout(
-                    title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=yr_range),
-                    height=420,
-                    xaxis_title=L("lj.ar"),
-                    yaxis_title=L("lj.indexvarde"),
-                    showlegend=False,
-                )
-                layout["xaxis"]["dtick"] = 1
-                # A and C are ratios with the policy rate in the denominator, so
-                # when the rate approached zero in 2015 to 2021 they ran to 400+
-                # and squashed 2022 onward flat against the axis: the years a
-                # reader cares about were the unreadable ones. A log axis is the
-                # same treatment decision D6 already applies to these two for
-                # z-scoring, and for the same reason. B is a weighted sum of
-                # z-scores that goes negative, where a log is undefined.
-                if vcol in ("version_a", "version_c"):
-                    layout["yaxis"]["type"] = "log"
-                    # Explicit ticks: Plotly's log minors label 90 and 9 both as
-                    # "9", which on a chart spanning one to several hundred is
-                    # ambiguous in exactly the range that matters.
-                    import math
-
-                    _vals = county_versions[vcol].dropna()
-                    _hi = float(_vals.max()) if len(_vals) else 100.0
-                    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100, 200, 500)
-                             if t <= _hi * 1.6]
-                    layout["yaxis"]["tickmode"] = "array"
-                    layout["yaxis"]["tickvals"] = ticks
-                    layout["yaxis"]["ticktext"] = [str(t) for t in ticks]
-                fig.update_layout(**layout)
-                st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})
-
-        with col_table:
+        with st.container(border=True):
             year_data = county_versions[county_versions["year"] == selected_year].copy()
             vcol = info["col"]
 
@@ -251,24 +225,56 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                     unsafe_allow_html=True,
                 )
 
+        # The formula sits below the chart, collapsed. It is reference material
+        # that a reader consults once and then skips past on every later visit,
+        # and at the top of the tab it stood between them and the thing they
+        # came for.
+        with st.expander(L("lj.formel_och_definition")):
+            st.latex(info["formula"])
+            st.markdown(info["desc"])
+            if "footnote" in info:
+                st.caption(info["footnote"])
+
 # ── Cross-formula comparison ─────────────────────────────────────────
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 
-with st.container(border=True):
+# Collapsed, and it now answers its own question before showing the lists. The
+# heading asked "why do the versions differ?" and then showed three rankings
+# without saying what differs, which left the reader to infer a methodology from
+# a set of county names.
+with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
+    st.markdown(L("lj.versionsskillnader_text"))
     st.markdown(
-        card_header(
-            L("lj.varfor_skiljer_sig_versionerna_at"),
-            L("lj.topp_5_och_botten_5_lan_under_varje_formel"),
-            L("lj.jamforelse"),
+        render_table(
+            pd.DataFrame([
+                {"v": L("lj.version_a_kort"), "m": L("lj.vad_a_mater"), "r": L("lj.riktning_hogre_battre")},
+                {"v": L("lj.version_b_kort"), "m": L("lj.vad_b_mater"), "r": L("lj.riktning_hogre_samre")},
+                {"v": L("lj.version_c_kort"), "m": L("lj.vad_c_mater"), "r": L("lj.riktning_hogre_battre")},
+            ]),
+            [
+                Column(L("lj.version"), lambda row: str(row["v"]), kind="name"),
+                Column(L("lj.mater"), lambda row: str(row["m"])),
+                Column(L("lj.riktning"), lambda row: str(row["r"])),
+            ],
         ),
         unsafe_allow_html=True,
     )
+    st.markdown(L("lj.darfor_ingen_a_flik"))
+    st.latex(VERSION_A_FORMULA)
+    st.caption(L("lj.den_enklaste_versionen_mater_hushallets"))
+
+    # What A is for, as one figure rather than as a column. Derived from the
+    # selected year: the factor is 4,71 in 2024 and 0,20 in every year from 2015
+    # to 2021, where it is two rate floors divided and means nothing about
+    # inflation. `explain_inflation_adjustment` picks the sentence that is true.
+    st.markdown(explain_inflation_adjustment(inflation_adjustment(municipal, selected_year)))
+    st.caption(L("lj.topp_5_och_botten_5_lan_per_flik"))
 
     year_data = county_versions[county_versions["year"] == selected_year].copy()
 
     if len(year_data) > 0:
-        cols = st.columns(3)
-        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4], CHART_PALETTE[6]]
+        cols = st.columns(len(FORMULA_INFO))
+        formula_colors = [CHART_PALETTE[0], CHART_PALETTE[4]]
         for col_idx, (name, info) in enumerate(FORMULA_INFO.items()):
             with cols[col_idx]:
                 st.markdown(
@@ -288,6 +294,13 @@ with st.container(border=True):
                 st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
+
+st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+
+# The comparison expander states the factor for one year. This is the other ten,
+# and the reason the trend chart above cannot be read straight across years.
+# Streamlit does not nest expanders, so it sits beside that one rather than in it.
+render_floor_history(municipal, highlight_year=selected_year)
 
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 
@@ -313,9 +326,11 @@ with st.container(border=True):
                 "version": label,
                 **{cls: agreement.counts[key][cls] for cls in ("hog", "medel", "lag")},
             }
+            # A is absent on purpose: `risk_a` equals `risk_c` on every row, so
+            # the row would have been C's own counts under another name. The
+            # level difference it does carry is stated in the expander above.
             for key, label in (
                 ("c", L("lj.version_c_kort")),
-                ("a", L("lj.version_a_kort")),
                 ("b", L("lj.version_b_kort")),
             )
         ]
@@ -336,7 +351,7 @@ with st.container(border=True):
 
     st.markdown(
         L(
-            "lj.a_och_c_ar_identiska",
+            "lj.b_ar_den_enda_som_kan_vara_oense",
             v0=str(agreement.b_differs_from_c),
             v1=str(agreement.n_kommuner),
             v2=f"{agreement.b_differs_pct:.0f}",

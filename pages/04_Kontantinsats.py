@@ -276,15 +276,19 @@ _individual_income = selected_row["median_income"]
 # Par case does and does not model; it is the line this page got wrong before.
 income = household_income(_individual_income, household_multiplier)
 rate = selected_row["policy_rate"] / 100.0
-effective_rate_display_pct = selected_row["policy_rate"] + bank_margin_pct
 
 _sparkvot_caption.caption(
     L("ki.v0_sek_ar_v1", v0=format_sek(income * savings_rate), v1='par' if household_multiplier == 2 else 'singel')
 )
 
 # ── Compute all regimes ──────────────────────────────────────────────
-results = compare_regimes(price, income, rate, savings_rate, bank_margin)
+try:
+    results = compare_regimes(price, income, rate, savings_rate, bank_margin)
+except ValueError as e:
+    st.error(f"{L('ki.berakningsfel')} ({e})")
+    st.stop()
 baseline = results[BASELINE_REGIME]
+effective_rate_display_pct = baseline["effective_rate"] * 100  # engine's, floored at 0
 regime_keys = REGIME_KEYS
 
 # Which regime is cheapest and dearest by monthly cost. Page state, not
@@ -393,4 +397,4 @@ render_assumptions(_ctx)
 
 # ── 9 · Footer ────────────────────────────────────────────────────────
 vintage_badge()
-footer_note(source="SCB, Riksbanken, Finansinspektionen")
+footer_note()

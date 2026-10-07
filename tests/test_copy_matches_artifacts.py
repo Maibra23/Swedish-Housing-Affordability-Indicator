@@ -20,7 +20,7 @@ comparing copy to data would be tautological, so what is guarded instead is that
 they stay derived: a re-introduced literal fails `test_*_is_not_hardcoded`. This
 is the stronger position. Drift becomes impossible rather than merely detected.
 
-*Non-derivable* values — a forecast horizon, a regulatory threshold, an editorial
+*Non-derivable* values — a projection horizon, a regulatory threshold, an editorial
 aside like "typisk 2024 bankmarknad" — cannot be read from an artifact. Those are
 compared where an artifact knows something adjacent, and otherwise classified by
 `NOT_A_VINTAGE` so a new one cannot quietly join them unexamined.
@@ -154,19 +154,14 @@ def test_index_period_spans_in_copy_match_provenance() -> None:
     )
 
 
-def test_forecast_base_year_matches_the_index_end() -> None:
-    """"Framskrivet från X" must name the last year the index actually covers."""
-    end = complete_case_max_year()
-    offenders = [
-        (key, match.group(1))
-        for key, value in ALL_COPY.items()
-        for match in re.finditer(r"[Ff]ramskrivet från\s*(\d{4})", value)
-        if int(match.group(1)) != end
-    ]
-    assert not offenders, (
-        f"copy projects from a year other than the index end ({end}): {offenders}. "
-        "The forecast trains to complete_case_max_year()."
+def test_projection_starts_where_the_observed_data_stops() -> None:
+    """The projection extends the index; it must not overlap or skip a year."""
+    import pandas as pd
+
+    projection = pd.read_parquet(
+        Path(__file__).resolve().parents[1] / "data" / "processed" / "projection.parquet"
     )
+    assert int(projection["target_year"].min()) == complete_case_max_year() + 1
 
 
 def test_municipality_counts_in_copy_match_the_panel() -> None:
@@ -239,7 +234,7 @@ VINTAGE_SHAPED = re.compile(r"\b(19[6-9]\d|20[0-4]\d)\b")
 NOT_A_VINTAGE = {
     "regulatory regime start": r"\b(?:sedan\s+)?(?:2010|2016|2018|2026)\b",
     "upstream series start year": r"\b(?:19[6-9]\d|198\d|199\d|200\d|2011)\s*[–—-]",
-    "forecast horizon end": r"\b202[5-9]\s*[–—-]\s*203\d\b",
+    "projection horizon end": r"\b202[5-9]\s*[–—-]\s*203\d\b",
     "historical rate-cycle reference": r"\b202[23]\b",
     "editorial market reference": r"typisk\s+\d{4}\s+bankmarknad",
     # "Prisindex (1990=100)", "KPI (2020=100)" — an index's base period, a
@@ -248,6 +243,9 @@ NOT_A_VINTAGE = {
     # "Åren 2020–2021 har negativ realränta" — a statement about the rate cycle
     # that stays true regardless of how far the data now reaches.
     "historical episode reference": r"Åren\s+(?:19|20)\d{2}\s*[–—-]\s*(?:19|20)\d{2}",
+    # "Åren 2015–2023 låg realräntan under golvet" — the floored years, re-derived
+    # in test_methodology_claims rather than classified away.
+    "real-rate floor years, checked there": r"Åren\s+(?:19|20)\d{2}\s*[–—-]",
     # "−0,31 (2015) till +0,78 (2023)" — measured extremes, re-derived in
     # test_the_d5_panel_mean_statistic_still_holds rather than classified away.
     "D5 panel-mean extremes, checked above": r"[+−-]\d+,\d+\s*\(\d{4}\)",

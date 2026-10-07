@@ -23,6 +23,12 @@ from dataclasses import dataclass
 
 import streamlit as st
 
+from src.indices.agreement import (
+    NOMINAL_RATE_FLOOR_PP,
+    REAL_RATE_FLOOR_PP,
+    InflationAdjustment,
+)
+from src.scenario.presets import is_riksbanken_2022
 from src.ui.labels import L
 
 # Typical Swedish bank practice, not a legal limit. Lending above roughly this
@@ -42,6 +48,15 @@ HOUSING_COST_SHARE_GUIDELINE = 30.0
 SAVE_YEARS_COMFORTABLE = 5.0
 SAVE_YEARS_STRAINED = 10.0
 
+#: How close to the floor, in percentage points, a baseline real rate must sit
+#: before Sida 05 warns that the result is fragile. Within 0,5 pp, a 0,1 pp CPI
+#: revision moves Version C by at least 10 %.
+NEAR_FLOOR_MARGIN_PP = 0.5
+
+#: The size of revision the warning quotes: one decimal of an annual-mean CPI,
+#: the precision SCB publishes it at.
+CPI_REVISION_PP = 0.1
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -59,6 +74,15 @@ class Finding:
 def _sv(value: float, decimals: int = 1) -> str:
     """Format a number Swedish style, with a comma for the decimal mark."""
     return f"{value:.{decimals}f}".replace(".", ",")
+
+
+def _signed(value: float, decimals: int = 1) -> str:
+    """As `_sv`, with a typographic minus rather than a hyphen.
+
+    A negative real rate is read as prose, not as code, and the rest of the
+    site's copy writes it as "−5,19".
+    """
+    return _sv(value, decimals).replace("-", "\u2212")
 
 
 # ── Kontantinsats ─────────────────────────────────────────────────────
@@ -171,9 +195,10 @@ def interpret_scenario(
         Findings ordered most serious first.
     """
     findings: list[Finding] = []
+    fragility = _baseline_fragility(result)
     untouched = not any((rate_shock, income_shock_pct, price_shock_pct, cpi_shock))
     if untouched:
-        return [Finding("note", L("sc.tolk_inget_scenario"))]
+        return [Finding("note", L("sc.tolk_inget_scenario")), *fragility]
 
     delta_pct = result["delta_pct"]
     real_base = result["real_rate_base"]
@@ -192,6 +217,7 @@ def interpret_scenario(
         findings.append(Finding("warning", L("sc.tolk_riktning_ner", **shift)))
     else:
         findings.append(Finding("note", L("sc.tolk_riktning_oforandrad", **shift)))
+    findings.extend(fragility)
 
     # 2. What actually drove it. The real rate is the term most people do not
     #    track, so name it explicitly whenever it moved.
@@ -199,12 +225,29 @@ def interpret_scenario(
         findings.append(Finding("note", L(
             "sc.tolk_realranta", v0=_sv(real_base, 2), v1=_sv(real_scen, 2),
         )))
-    if real_scen <= 0.5 and (real_base - real_scen) > 0.01:
+    if real_scen <= REAL_RATE_FLOOR_PP and (real_base - real_scen) > 0.01:
         findings.append(Finding("note", L("sc.tolk_golv_binder")))
 
+    # 2b. The floor held the real rate still, so the rate and CPI sliders did
+    #     nothing. Without this the page reported "oförändrad" and left the
+    #     reader to guess why, on every floored baseline (2015–2023).
+    absorbed = (
+        bool(rate_shock or cpi_shock)
+        and real_base <= REAL_RATE_FLOOR_PP
+        and real_scen <= REAL_RATE_FLOOR_PP
+    )
+    if absorbed:
+        raw_scen = result["scenario_rate"] - result["scenario_cpi"]
+        findings.append(Finding("note", L("sc.tolk_golv_absorberar", v0=_signed(raw_scen, 2))))
+
+    # 2c. The preset that looks like a bug. APP_GUIDE section 5 item 2.
+    if is_riksbanken_2022(rate_shock, income_shock_pct, price_shock_pct, cpi_shock) and delta_pct > 0:
+        findings.append(Finding("note", L("sc.tolk_preset_2022")))
+
     # 3. The specific misreading this page invites: moving the rate alone treats
-    #    the entire nominal change as a change in the real rate.
-    if rate_shock != 0 and cpi_shock == 0:
+    #    the entire nominal change as a change in the real rate. Not when the
+    #    floor absorbed it, where none of the change counted at all.
+    if rate_shock != 0 and cpi_shock == 0 and not absorbed:
         findings.append(Finding("warning", L("sc.tolk_ranta_utan_inflation", v0=_sv(rate_shock, 2))))
 
     # 4. Scale. This number is not the one the map shows.
@@ -213,7 +256,96 @@ def interpret_scenario(
     return findings
 
 
+def _baseline_fragility(result: dict) -> list[Finding]:
+    """Warn when the baseline real rate sits just above the floor.
+
+    Version C goes as 1 / (R − π), so the closer the real rate is to the floor,
+    the more a small error in its inputs moves the result. In 2024 the real rate
+    is 0,77 pp and a 0,1 pp revision to annual CPI moves the baseline by about
+    13 %, more than many scenarios do. On a floored baseline the floor absorbs
+    such errors, and further from it they fade, so only this band is flagged.
+
+    Args:
+        result: `simulate` output.
+
+    Returns:
+        One warning, or an empty list.
+    """
+    raw_base = result["baseline_rate"] - result["baseline_cpi"]
+    if not REAL_RATE_FLOOR_PP < raw_base <= REAL_RATE_FLOOR_PP + NEAR_FLOOR_MARGIN_PP:
+        return []
+    swing_pct = CPI_REVISION_PP / raw_base * 100
+    return [Finding("warning", L(
+        "sc.tolk_nara_golvet", v0=_sv(raw_base, 2), v1=_sv(swing_pct, 0),
+    ))]
+
+
 # ── Rendering ─────────────────────────────────────────────────────────
+
+# ── Sida 02 ───────────────────────────────────────────────────────────
+
+
+def explain_inflation_adjustment(adjustment: InflationAdjustment) -> str:
+    """Say what the gap between Versions A and C is worth in one year.
+
+    Version A earns its place on the site by being the inflation adjustment made
+    visible: C divided by A is what correcting for inflation costs or pays in
+    that year. That reading holds only while both formulas are dividing by a
+    rate rather than by a floor, and on this panel the floors bind in nine of
+    eleven years. Where they do, the same quotient means something else — the
+    nominal rate over a constant in 2022–2023, one constant over another in
+    2015–2021, where it is 0,1/0,5 for seven years running.
+
+    A fixed sentence quoting 2024's 4,71x would therefore be wrong in nine
+    years out of eleven, which is the defect that removing A's Robusthet row
+    was meant to fix, moved one paragraph down the page. So the figure is
+    derived from the selected year and the sentence states which of the four
+    situations that year is in.
+
+    Args:
+        adjustment: `inflation_adjustment` for the year on display.
+
+    Returns:
+        A finished Swedish markdown paragraph.
+    """
+    factor = _sv(adjustment.factor, 2)
+    year = str(adjustment.year)
+
+    if not adjustment.is_national_constant:
+        # Defensive: the quotient is national arithmetic, so this is a data
+        # defect rather than a reading. Stating the median anyway would be
+        # asserting a constant that the rows contradict.
+        return L(
+            "lj.skillnaden_mellan_a_och_c_varierar",
+            v0=factor,
+            v1=year,
+            v2=f"{adjustment.spread:.0e}",
+        )
+    if adjustment.is_an_inflation_adjustment:
+        return L("lj.inflationsjusteringen_ar_vard_v0", v0=factor, v1=year)
+    if adjustment.nominal_floor_binds and adjustment.real_floor_binds:
+        return L(
+            "lj.bada_formlerna_raknar_med_sina_golv",
+            v0=factor,
+            v1=year,
+            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
+            v3=_sv(REAL_RATE_FLOOR_PP, 1),
+        )
+    if adjustment.nominal_floor_binds:
+        return L(
+            "lj.bankversionen_raknar_med_sitt_golv",
+            v0=factor,
+            v1=year,
+            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
+        )
+    return L(
+        "lj.skillnaden_mellan_a_och_c_ar_inte_inflationsjusteringen",
+        v0=factor,
+        v1=year,
+        v2=_signed(adjustment.real_rate, 2),
+        v3=_sv(REAL_RATE_FLOOR_PP, 1),
+    )
+
 
 #: Severity levels, most serious first. Presentation is a coloured dot defined in
 #: the stylesheet, reusing the site's three risk tokens rather than introducing a

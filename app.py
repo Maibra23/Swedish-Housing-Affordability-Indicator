@@ -56,7 +56,7 @@ render_landing_stat_strip([
     },
     {"label": "Kommuner", "value": str(N_KOMMUNER), "unit": "analyserade"},
     {"label": L("landing.lan"), "value": "21", "unit": L("landing.jamforda")},
-    {"label": "Formler", "value": "3", "unit": "ekonometriska versioner"},
+    {"label": "Formler", "value": "3", "unit": "indexversioner"},
 ])
 
 explanation(L("landing.forklaring_statistik", v0=N_KOMMUNER, v1=N_YEARS, v2=PERIOD_END))
@@ -89,7 +89,7 @@ with col1:
 with col2:
     st.markdown(render_landing_nav_card(
         "Kommun djupanalys",
-        "Historisk analys och prognos per kommun med Prophet och ARIMA.",
+        L("landing.kommun_djupanalys_beskrivning"),
         tag="SIDA 03",
     ), unsafe_allow_html=True)
     st.markdown(render_landing_nav_card(

@@ -1,8 +1,8 @@
 """`requirements.txt` must list what the running app imports — no more, no less.
 
 Streamlit Community Cloud installs from `requirements.txt` and then boots the
-app. Every package in that file is build time on a cold start, and `prophet` and
-`pmdarima` both compile: they pull a C/C++ toolchain and, in Prophet's case,
+app. Every package in that file is build time on a cold start. The refresh
+extra once carried packages that compiled: they pulled a C/C++ toolchain and,
 Stan. Neither is imported by any page — they belong to the refresh pipeline,
 which runs on a developer's machine, not on the server. Shipping them made
 deploys slow and fragile for no runtime benefit. See Finding I, task T2.1.
@@ -37,8 +37,11 @@ DISTRIBUTION: dict[str, str] = {}
 # Each entry has to justify itself in `test_indirect_dependencies_are_justified`.
 INDIRECT = {"pyarrow": "pandas needs it to read the .parquet artifacts"}
 
-# Refresh-pipeline packages. These must not reach the deploy environment.
-PIPELINE_ONLY = {"prophet", "pmdarima", "statsmodels", "requests"}
+# Refresh-pipeline packages: installed by the `pipeline` extra, never by the
+# runtime set. The compiled statistical packages were removed with the pipelines
+# they served (R16), so `requests` is all that remains and the refresh toolchain
+# now compiles nothing.
+PIPELINE_ONLY = {"requests"}
 
 
 def _imports(path: Path) -> list[str]:
@@ -128,7 +131,7 @@ def test_pipeline_packages_are_absent() -> None:
     present = _declared() & PIPELINE_ONLY
     assert not present, (
         f"refresh-pipeline packages in the runtime file: {sorted(present)}. "
-        "prophet and pmdarima compile from source on Streamlit Cloud."
+        "the refresh toolchain has no place in the serving environment."
     )
 
 

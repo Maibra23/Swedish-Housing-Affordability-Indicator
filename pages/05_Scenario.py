@@ -30,6 +30,7 @@ from src.ui.components import (
 from src.ui.chart_theme import get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.charts import rate_inflation_surface
+from src.scenario.presets import RIKSBANKEN_2022
 from src.scenario.simulator import simulate
 from src.scenario.sections import render_national_outcome, render_purpose
 
@@ -94,7 +95,7 @@ st.markdown(L("sc.forinstallda_scenarier"))
 preset_col1, preset_col2, preset_col3, preset_col4 = st.columns(4)
 
 _presets = {
-    "riksbanken_2022": {"rate": 4.0, "income": 0, "price": -15, "cpi": 8},
+    "riksbanken_2022": RIKSBANKEN_2022,
     "deflation_risk":  {"rate": -1.0, "income": 0, "price": -10, "cpi": -2},
     L("sc.loneboom"):        {"rate": 1.0, "income": 5, "price": 10, "cpi": 3},
     "reset":           {"rate": 0.0, "income": 0, "price": 0, "cpi": 0},
@@ -172,7 +173,7 @@ with col_price:
         value=int(st.session_state.get("sc_price_slider", 0)),
         step=5,
         key="sc_price_slider",
-        help="−20 % ≈ det svenska bostadsprisfallet 2022. +25 % simulerar en prisspiral.",
+        help=L("sc.prischock_hjalp"),
     )
 
 with col_cpi:
@@ -294,6 +295,8 @@ with st.container(border=True):
         config={"displayModeBar": "hover"},
     )
     st.caption(L("sc.yta_forklaring"))
+    with st.expander(L("sc.yta_mer_rubrik")):
+        st.markdown(L("sc.yta_mer_text"))
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
