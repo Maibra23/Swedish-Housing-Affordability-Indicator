@@ -28,6 +28,7 @@ from folium.template import Template
 import streamlit.components.v1 as components
 
 from src.ui.css import DIVERGING_SCALE
+from src.ui.map_legend import colormap_legend_html
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 GEOJSON_PATH = PROJECT_ROOT / "data" / "geo" / "kommuner.geojson"
@@ -155,7 +156,7 @@ def build_colormap(scores: pd.Series) -> cm.LinearColormap:
         index=stops,
         vmin=stops[0],
         vmax=stops[-1],
-        caption="SHAI Poäng  ·  Lägre = bättre överkomlighet",
+        caption=L("rv.kartlegend_rubrik"),
     )
 
 
@@ -340,7 +341,10 @@ def _map_html(
     labels.add_to(m)
     _ZoomGatedKommunLabels(labels, _LABEL_MIN_ZOOM).add_to(m)
 
-    colormap.add_to(m)
+    # No `colormap.add_to(m)`: branca draws its legend as a 450 px SVG with no
+    # viewBox, so on any map narrower than that (every phone, and a tablet with
+    # the sidebar open) both ends and the caption were cut. The page draws the
+    # legend beneath the map instead, with `colormap_legend_html`.
 
     return m.get_root().render()
 
@@ -370,3 +374,7 @@ def render_choropleth(
     # `st.components.v1.html` directly, rather than `folium_static`, which is
     # deprecated and scheduled for removal (R8). This is what it did anyway.
     components.html(html, height=height, scrolling=False)
+    st.markdown(
+        colormap_legend_html(build_colormap(data[value_col].astype(float))),
+        unsafe_allow_html=True,
+    )

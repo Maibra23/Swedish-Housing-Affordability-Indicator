@@ -40,7 +40,7 @@ from src.ui.components import (
 )
 from src.ui.chart_theme import CHART_PALETTE
 from src.ui.data_table import Column, render_table
-from src.lan.charts import county_colours, county_trend_chart
+from src.lan.charts import county_colours, county_legend_html, county_trend_chart
 from src.indices.agreement import (
     inflation_adjustment,
     measure_agreement,
@@ -175,16 +175,24 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
         # legend in a three-fifths column fitted two entries per row and clipped
         # the longest names; across the full width it fits six and reads cleanly.
         with st.container(border=True):
+            # Title in the card header, where it wraps, not in the figure.
+            st.markdown(
+                card_header(L("lj.lansutveckling"), f"{tab_name} · {PERIOD}"),
+                unsafe_allow_html=True,
+            )
             st.plotly_chart(
                 county_trend_chart(
                     county_versions,
                     value_column=info["col"],
                     selected=_selected,
                     colours=_colours,
-                    title=L("lj.v0_lansutveckling_v1", v0=tab_name, v1=PERIOD),
                 ),
                 width="stretch",
                 config={"displayModeBar": "hover"},
+            )
+            st.markdown(
+                county_legend_html(_selected, _colours, _names_by_code),
+                unsafe_allow_html=True,
             )
 
         with st.container(border=True):

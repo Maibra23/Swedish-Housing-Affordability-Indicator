@@ -134,13 +134,13 @@ def render_index_visual_block() -> None:
 
             <!-- Input indicators -->
             <rect x="0" y="8" width="110" height="26" rx="4" fill="rgba(74,111,165,0.1)" stroke="#4A6FA5" stroke-width="1"/>
-            <text x="55" y="25" text-anchor="middle" fill="#4A6FA5" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Inkomst</text>
+            <text x="55" y="25" text-anchor="middle" fill="#4A6FA5" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Inkomst</text>
 
             <rect x="0" y="42" width="110" height="26" rx="4" fill="rgba(61,139,110,0.1)" stroke="#3D8B6E" stroke-width="1"/>
-            <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Bostadspris</text>
+            <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Bostadspris</text>
 
             <rect x="0" y="76" width="110" height="26" rx="4" fill="rgba(196,163,90,0.1)" stroke="#C4A35A" stroke-width="1"/>
-            <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="Source Sans 3, sans-serif" font-weight="600">Ränta &amp; Inflation</text>
+            <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Ränta &amp; Inflation</text>
 
             <!-- Arrows to center -->
             <line x1="115" y1="21" x2="210" y2="55" stroke="#C4A35A" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -149,8 +149,8 @@ def render_index_visual_block() -> None:
 
             <!-- SHAI box -->
             <rect x="215" y="32" width="130" height="46" rx="5" fill="#0B1F3F" stroke="#C4A35A" stroke-width="1.5"/>
-            <text x="280" y="52" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="bold" font-family="Source Sans 3, sans-serif">SHAI Index</text>
-            <text x="280" y="68" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="9" font-family="IBM Plex Mono, monospace">A · B · C</text>
+            <text x="280" y="52" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="bold" font-family="'Source Sans 3', sans-serif">SHAI Index</text>
+            <text x="280" y="68" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="9" font-family="'IBM Plex Mono', monospace">A · B · C</text>
 
             <!-- Arrows to outputs -->
             <line x1="350" y1="42" x2="420" y2="21" stroke="#2E7D5B" stroke-width="1.5" marker-end="url(#arr-g)"/>
@@ -159,13 +159,13 @@ def render_index_visual_block() -> None:
 
             <!-- Risk class outputs -->
             <rect x="425" y="8" width="110" height="26" rx="4" fill="rgba(46,125,91,0.12)" stroke="#2E7D5B" stroke-width="1"/>
-            <text x="480" y="25" text-anchor="middle" fill="#2E7D5B" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Låg risk</text>
+            <text x="480" y="25" text-anchor="middle" fill="#2E7D5B" font-size="10" font-weight="600" font-family="'Source Sans 3', sans-serif">Låg risk</text>
 
             <rect x="425" y="42" width="110" height="26" rx="4" fill="rgba(212,160,60,0.12)" stroke="#D4A03C" stroke-width="1"/>
-            <text x="480" y="59" text-anchor="middle" fill="#D4A03C" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Medel risk</text>
+            <text x="480" y="59" text-anchor="middle" fill="#D4A03C" font-size="10" font-weight="600" font-family="'Source Sans 3', sans-serif">Medel risk</text>
 
             <rect x="425" y="76" width="110" height="26" rx="4" fill="rgba(185,74,72,0.12)" stroke="#B94A48" stroke-width="1"/>
-            <text x="480" y="93" text-anchor="middle" fill="#B94A48" font-size="10" font-weight="600" font-family="Source Sans 3, sans-serif">Hög risk</text>
+            <text x="480" y="93" text-anchor="middle" fill="#B94A48" font-size="10" font-weight="600" font-family="'Source Sans 3', sans-serif">Hög risk</text>
         </svg>
     </div>
     """

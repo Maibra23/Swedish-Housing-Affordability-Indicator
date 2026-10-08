@@ -24,7 +24,7 @@ import pytest
 
 from sourcetools import executable_source
 
-from src.ui import choropleth
+from src.ui import choropleth, map_legend
 from src.ui.css import DIVERGING_SCALE
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
@@ -188,3 +188,33 @@ def test_missing_geojson_warns_instead_of_crashing(ranked, monkeypatch):
 
     assert warnings, "a missing GeoJSON produced no warning"
     assert "kommuner.geojson" in warnings[0]
+
+
+# ── The legend fits any width ────────────────────────────────────────
+
+
+def test_the_map_carries_no_fixed_width_legend(ranked: pd.DataFrame):
+    """branca's legend is a 450 px SVG; on a phone both ends and the caption
+    were cut. The map must not draw it; the page draws its own."""
+    html = choropleth._map_html(ranked[ranked["year"] == 2024])
+    assert ".legend.leaflet-control" not in html
+
+
+def test_the_page_legend_shows_the_painted_scale(scores_2024: pd.Series):
+    colormap = choropleth.build_colormap(scores_2024)
+    legend = map_legend.colormap_legend_html(colormap)
+    for colour in DIVERGING_SCALE:
+        assert colour in legend, f"{colour} is painted on the map but missing from the legend"
+    assert "0.0%" in legend and "100.0%" in legend, "the gradient does not span the domain"
+    for value in (colormap.vmin, colormap.index[3], colormap.vmax):
+        assert map_legend._sv_number(float(value)) in legend
+
+
+def test_the_page_legend_has_no_fixed_width(scores_2024: pd.Series):
+    legend = map_legend.colormap_legend_html(choropleth.build_colormap(scores_2024))
+    assert "width:" not in legend and "width=" not in legend
+
+
+def test_the_legend_writes_swedish_numbers():
+    assert map_legend._sv_number(-2.386) == "−2,39"
+    assert map_legend._sv_number(1.5) == "1,50"

@@ -8,11 +8,14 @@ The county trend chart used to draw all 21 counties in one muted colour with
 Stockholm highlighted and the legend switched off. A reader could see the shape
 of the spread but not which line was which, which made the chart decorative
 rather than readable. Every county now carries its own colour from
-`COUNTY_PALETTE`, the legend is on, and the page offers a selection so the
-reader can cut 21 lines down to the handful they care about.
+`COUNTY_PALETTE`, the page draws the legend beneath the chart
+(`county_legend_html`) so it wraps at any width, and the page offers a selection
+so the reader can cut 21 lines down to the handful they care about.
 """
 
 from __future__ import annotations
+
+from html import escape
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -55,7 +58,7 @@ def county_trend_chart(
     value_column: str,
     selected: list[str],
     colours: dict[str, str],
-    title: str,
+    title: str = "",
 ) -> go.Figure:
     """One line per county over the index period.
 
@@ -65,7 +68,10 @@ def county_trend_chart(
         selected: County codes to draw in colour. Everything else is drawn as
             faint context so the reader keeps a sense of the full spread.
         colours: From :func:`county_colours`.
-        title: Chart title.
+        title: Chart title. The page leaves it empty and writes the title in
+            the card header instead: a Plotly title is one line that cannot
+            wrap, and "Realversion · Länsutveckling 2014–2024" ran past the
+            edge of a phone.
 
     Returns:
         A themed Plotly figure.
@@ -95,7 +101,7 @@ def county_trend_chart(
         short = name[: -len(" län")] if name.endswith(" län") else name
         fig.add_trace(go.Scatter(
             x=group["year"], y=group[value_column],
-            mode="lines", name=short,
+            mode="lines", name=short, showlegend=False,
             line=dict(width=2.2, color=colours[lan_code]),
             hovertemplate=L("lj.v0_ar_x_varde_y_2f", v0=name),
         ))
@@ -105,21 +111,14 @@ def county_trend_chart(
         height=460,
         xaxis_title=L("lj.ar"),
         yaxis_title=L("lj.indexvarde"),
-        showlegend=True,
+        showlegend=False,
     )
     layout["xaxis"]["dtick"] = 1
     layout["xaxis"]["title"] = {"text": L("lj.ar"), "standoff": 12}
-    # `entrywidth` in pixels rather than Plotly's automatic fraction: left to
-    # itself it sized entries to the average name and clipped the longest,
-    # "Västra Götalands", mid-word. A fixed width wide enough for that name wraps
-    # to more rows instead of truncating, which costs vertical space and keeps
-    # every county readable.
-    layout["legend"] = dict(
-        orientation="h", yanchor="top", y=-0.22,
-        xanchor="left", x=0, font=dict(size=10),
-        entrywidthmode="pixels", entrywidth=140,
-    )
-    layout["margin"] = dict(l=50, r=20, t=48, b=130)
+    # No Plotly legend: the page draws one beneath the chart with
+    # `county_legend_html`. Inside a fixed-height figure, 21 entries on a phone
+    # became a cramped scroll box with names cut off; as page content they wrap.
+    layout["margin"] = dict(l=50, r=20, t=48 if title else 16, b=50)
 
     if value_column in LOG_SCALED:
         layout["yaxis"]["type"] = "log"
@@ -132,3 +131,29 @@ def county_trend_chart(
 
     fig.update_layout(**layout)
     return fig
+
+
+def county_legend_html(
+    selected: list[str], colours: dict[str, str], names: dict[str, str]
+) -> str:
+    """The trend chart's legend, as page content that wraps at any width.
+
+    Args:
+        selected: County codes drawn in colour, in display order.
+        colours: From :func:`county_colours`.
+        names: County code to full name; the " län" suffix is dropped, as in
+            the chart's hover-free trace names.
+
+    Returns:
+        HTML for a `.shai-legend` row, to render with `unsafe_allow_html`.
+    """
+    items = []
+    for code in selected:
+        name = names[code]
+        short = name[: -len(" län")] if name.endswith(" län") else name
+        items.append(
+            f'<span class="shai-legend-item">'
+            f'<span class="shai-legend-swatch" style="background:{colours[code]}"></span>'
+            f"{escape(short)}</span>"
+        )
+    return f'<div class="shai-legend">{"".join(items)}</div>'

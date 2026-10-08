@@ -68,7 +68,7 @@ The choropleth does **not** apply this scale at fixed breakpoints. See section 4
 
 ## 3. Class inventory
 
-Every `.shai-*` class in the composed stylesheet. 90 in total.
+Every `.shai-*` class in the composed stylesheet. 97 in total.
 
 | Class | Purpose |
 |-------|---------|
@@ -90,6 +90,10 @@ Every `.shai-*` class in the composed stylesheet. 90 in total.
 | `.shai-legend` | Chart legend drawn as page content, so it wraps at any width (Sida 02 county trends). |
 | `.shai-legend-item` | One legend entry: swatch and name. |
 | `.shai-legend-swatch` | The entry's line colour. |
+| `.shai-map-legend` | The national map's colour scale, drawn under the map so it takes the map's width (Sida 01). |
+| `.shai-map-legend-bar` | The gradient, with stops at the colormap's own index. |
+| `.shai-map-legend-ticks` | Lowest score, median and highest score under the bar. |
+| `.shai-map-legend-caption` | What the scale measures; wraps on a phone. |
 | `.shai-mood-good` | KPI delta colour when the movement is good for *this* metric. |
 | `.shai-mood-bad` | The same, when it is bad. |
 | `.shai-mood-neutral` | The same, when the metric carries no direction. |

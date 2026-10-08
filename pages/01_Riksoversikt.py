@@ -233,6 +233,12 @@ with col_hist:
                     ))
 
             median_z = z_vals.median()
+            # The label goes on the side of the line with more room. z_c is
+            # left-skewed, so the median sits right of centre, and a label to
+            # its right ran past the chart edge in a narrow column.
+            median_side = (
+                "top left" if median_z > (z_vals.min() + z_vals.max()) / 2 else "top right"
+            )
             fig.add_vline(
                 x=median_z,
                 line_dash="dash",
@@ -241,7 +247,7 @@ with col_hist:
                 # Anchored inside the plot rather than "top": at "top" the
                 # annotation sat on the legend row and the two overlapped.
                 annotation_text=f"Median: {median_z:.2f}".replace(".", ","),
-                annotation_position="top right",
+                annotation_position=median_side,
                 annotation_yshift=-12,
                 annotation_font=dict(size=11, color=COLORS["primary"]),
             )

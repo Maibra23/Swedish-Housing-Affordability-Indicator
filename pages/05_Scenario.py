@@ -27,7 +27,7 @@ from src.ui.components import (
     page_title, delta_meta, kpi_card, render_kpi_row, format_sek, format_pct,
     card_header, footer_note,
 )
-from src.ui.chart_theme import get_chart_layout
+from src.ui.chart_theme import MONO_FONT, get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.charts import rate_inflation_surface
 from src.scenario.presets import RIKSBANKEN_2022
@@ -337,7 +337,7 @@ with col_chart:
                 f"{result['scenario_v_c']:.1f}".replace(".", ","),
             ],
             textposition="outside",
-            textfont=dict(family="IBM Plex Mono, monospace", size=14, color=COLORS["text_primary"]),
+            textfont=dict(family=MONO_FONT, size=14, color=COLORS["text_primary"]),
             hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra></extra>",
             width=0.5,
         ))

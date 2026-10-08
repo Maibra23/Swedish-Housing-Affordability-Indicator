@@ -114,6 +114,8 @@ def test_the_split_modules_still_exist() -> None:
         "src/ui/css_purpose.py",
         "src/ui/css_layout.py",
         "src/ui/css_components.py",
+        "src/ui/css_charts.py",
+        "src/ui/map_legend.py",
         "src/ui/css_landing.py",
         "src/ui/css_responsive.py",
         "src/ui/landing.py",
