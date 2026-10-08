@@ -136,7 +136,7 @@ FORMULA_INFO = {
 
 #: Version A's formula, kept for the comparison expander. It is not a tab; see
 #: the note on FORMULA_INFO above.
-VERSION_A_FORMULA = r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times R(t)}"
+VERSION_A_FORMULA = r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t),\; 0{,}001)}"
 
 # ── County colours and selection ─────────────────────────────────────
 # Every county gets its own colour, keyed by code so it survives a filter change

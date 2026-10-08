@@ -6,6 +6,7 @@ Design tokens match the KRI design system exactly.
 
 from __future__ import annotations
 
+from html import escape as _escape_attr
 import re
 import streamlit as st
 
@@ -190,7 +191,7 @@ def kpi_card(
         delta_html = f'<div class="shai-kpi-delta {classes}">{arrow} {delta}</div>'
 
     unit_html = f'<span class="shai-kpi-unit">{unit}</span>' if unit else ""
-    tip_attr = f'title="{tooltip}"' if tooltip else ""
+    tip_attr = f'title="{_escape_attr(tooltip, quote=True)}"' if tooltip else ""
     tip_class = " shai-kpi-card--tipped" if tooltip else ""
 
     return f"""

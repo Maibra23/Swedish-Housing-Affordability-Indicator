@@ -292,11 +292,20 @@ baseline = results[BASELINE_REGIME]
 effective_rate_display_pct = baseline["effective_rate"] * 100  # engine's, floored at 0
 regime_keys = REGIME_KEYS
 
-# Which regime is cheapest and dearest by monthly cost. Page state, not
-# reference data: each comparison chart highlights a different pair.
-monthly_costs = {k: results[k]["monthly_total"] for k in regime_keys}
-min_cost_key = min(monthly_costs, key=monthly_costs.get)
-max_cost_key = max(monthly_costs, key=monthly_costs.get)
+
+
+def _best_and_worst(metric: str, lower_is_better: bool | None) -> tuple[str | None, str | None]:
+    """The regimes to colour best and worst on `metric`, or (None, None).
+
+    Each chart ranks on its own metric. Monthly cost and Kvar are not ranked at
+    all: both count amortisation, which is saving, so the regime without an
+    amortisation requirement would always come out "best".
+    """
+    if lower_is_better is None:
+        return None, None
+    values = {k: results[k][metric] for k in regime_keys}
+    low, high = min(values, key=values.get), max(values, key=values.get)
+    return (low, high) if lower_is_better else (high, low)
 
 # Derived once: read by three display sections and by the comparison charts.
 monthly_income = income / 12
@@ -319,8 +328,6 @@ _ctx = Context(
     household_type=household_type,
     income=income,
     monthly_income=monthly_income,
-    max_cost_key=max_cost_key,
-    min_cost_key=min_cost_key,
     price=price,
     price_source_label=price_source_label,
     pristyp_fallback_note=pristyp_fallback_note,
@@ -341,7 +348,7 @@ render_baseline_kpis(_ctx)
 # ── 4 · Regelverkstidslinje ───────────────────────────────────────────
 with st.container(border=True):
     st.markdown(
-        card_header("Regelverksutveckling", "Fem milstolpar 2010–2026", "TIDSLINJE"),
+        card_header("Regelverksutveckling", L("ki.fyra_regelandringar_2010_2026"), "TIDSLINJE"),
         unsafe_allow_html=True,
     )
     timeline_html = T("ki.fore_2010_bolanetak_amorteringskrav_skarpt", v0=COLORS['text_tertiary'], v1=COLORS['accent'], v2=COLORS['medium_risk'], v3=COLORS['high_risk'], v4=COLORS['low_risk'], v5=COLORS['accent'], v6=COLORS['text_tertiary'], v7=COLORS['text_secondary'], v8=COLORS['text_secondary'], v9=COLORS['text_secondary'], v10=COLORS['text_secondary'])
@@ -365,10 +372,11 @@ with st.container(border=True):
                 ),
                 unsafe_allow_html=True,
             )
+            _best, _worst = _best_and_worst(spec["metric"], spec["lower_is_better"])
             st.plotly_chart(
                 comparison_barchart(
-                    best_key=min_cost_key,
-                    worst_key=max_cost_key,
+                    best_key=_best,
+                    worst_key=_worst,
                     y_values=[results[k][spec["metric"]] for k in regime_keys],
                     yaxis_title=spec["yaxis"],
                     value_fmt=spec["value_fmt"],

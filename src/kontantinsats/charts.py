@@ -38,8 +38,8 @@ def comparison_barchart(
     y_values: list[float],
     yaxis_title: str,
     value_fmt: str,
-    best_key: str,
-    worst_key: str,
+    best_key: str | None,
+    worst_key: str | None,
     regime_keys: list[str] | None = None,
     ref_lines: list[dict] | None = None,
 ) -> go.Figure:
@@ -49,8 +49,8 @@ def comparison_barchart(
         y_values: One value per regime, in `regime_keys` order.
         yaxis_title: Axis label.
         value_fmt: "sek", "years", or anything else for `str()`.
-        best_key: Regime to colour as the low-risk outcome.
-        worst_key: Regime to colour as the high-risk outcome.
+        best_key: Regime to colour as the low-risk outcome, or None.
+        worst_key: Regime to colour as the high-risk outcome, or None.
         regime_keys: Regime order. Defaults to `REGIME_KEYS`.
         ref_lines: Horizontal reference lines, each a dict with at least `y`.
 
@@ -129,7 +129,8 @@ def comparison_tab_specs(*, monthly_income: float) -> tuple[dict, ...]:
 
     Returns:
         One dict per tab: tab label, heading, `results` key, axis title, value
-        format, caption and reference lines.
+        format, caption, reference lines, and `lower_is_better` (None when the
+        metric must not be ranked).
     """
     return (
         {
@@ -139,6 +140,8 @@ def comparison_tab_specs(*, monthly_income: float) -> tuple[dict, ...]:
             "yaxis": L("ki.manadskostnad_sek"),
             "value_fmt": "sek",
             "caption": L("ki.lagre_manadskostnad_innebar_mindre_lopande"),
+            # Not ranked: a lower payment is often just less amortisation.
+            "lower_is_better": None,
             "ref_lines": [
                 {
                     "y": monthly_income * 0.30,
@@ -156,6 +159,7 @@ def comparison_tab_specs(*, monthly_income: float) -> tuple[dict, ...]:
             "yaxis": L("ki.ar_att_spara"),
             "value_fmt": "years",
             "caption": L("ki.sparkvoten_paverkar_framst_sparar"),
+            "lower_is_better": True,
             "ref_lines": [
                 {
                     "y": 5,
@@ -184,6 +188,8 @@ def comparison_tab_specs(*, monthly_income: float) -> tuple[dict, ...]:
             "yaxis": L("ki.kvarvarande_inkomst_sek_ar"),
             "value_fmt": "sek",
             "caption": L("ki.hogre_kvarvarande_inkomst_innebar_mer"),
+            # Not ranked: Kvar deducts amortisation, which is saving.
+            "lower_is_better": None,
             "ref_lines": [
                 {
                     "y": 0,

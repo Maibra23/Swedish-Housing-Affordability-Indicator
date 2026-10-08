@@ -74,8 +74,6 @@ class Context:
     household_type: object
     income: object
     monthly_income: object
-    max_cost_key: object
-    min_cost_key: object
     price: object
     price_source_label: object
     pristyp_fallback_note: object
@@ -250,11 +248,11 @@ def render_villa_vs_bostadsratt(ctx: Context) -> None:
                           f"{format_sek(_br_res['monthly_total'])} SEK")
             if use_bostadsratt:
                 st.caption(
-                    L("ki.priskvot_villa_bostadsratt_v0_1f_bada_priser", v0=_ratio, v1=selected_name)
+                    L("ki.priskvot_villa_bostadsratt_v0_1f_bada_priser", v0=f"{_ratio:.1f}".replace(".", ","), v1=selected_name)
                 )
             else:
                 st.caption(
-                    L("ki.priskvot_villa_bostadsratt_v0_1f_villapris", v0=_ratio, v1=selected_name, v2=_lan_name)
+                    L("ki.priskvot_villa_bostadsratt_v0_1f_villapris", v0=f"{_ratio:.1f}".replace(".", ","), v1=selected_name, v2=_lan_name)
                 )
 
 
@@ -302,8 +300,6 @@ def render_baseline_kpis(ctx: Context) -> None:
 def render_regime_cards(ctx: Context) -> None:
     """One card per regulatory regime, with the delta against baseline."""
     baseline = ctx.baseline
-    max_cost_key = ctx.max_cost_key
-    min_cost_key = ctx.min_cost_key
     regime_keys = ctx.regime_keys
     results = ctx.results
     selected_name = ctx.selected_name
@@ -326,11 +322,10 @@ def render_regime_cards(ctx: Context) -> None:
             with col:
                 res = results[key]
                 regime = REGIMES[key]
-                tag = L("ki.lagst") if key == min_cost_key else L("ki.hogst") if key == max_cost_key else ""
 
                 with st.container(border=True):
                     st.markdown(
-                        card_header(regime["label"], regime["period"], tag),
+                        card_header(regime["label"], regime["period"], ""),
                         unsafe_allow_html=True,
                     )
                     st.caption(REGIME_WHAT_CHANGED.get(key, ""))
@@ -361,7 +356,8 @@ def render_regime_cards(ctx: Context) -> None:
                         L("ki.manadskostnad"),
                         f"{format_sek(res['monthly_total'])} SEK",
                         delta=fmt_delta_sek(delta_cost) if key != BASELINE_REGIME else None,
-                        delta_color="inverse",
+                        # Not coloured: a lower payment is often just less amortisation.
+                        delta_color="off",
                         help=L("ki.summa_amortering_rantekostnad_per_manad"),
                     )
 
