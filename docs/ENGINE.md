@@ -4,7 +4,7 @@
 from, in enough detail to check it by hand or to change it safely. It assumes no
 prior knowledge of the project.
 
-`docs/APP_GUIDE.md` tells you what each page is *for*. This document tells you what
+`docs/APP_REFERENCE.md` (Part I) tells you what each page is *for*. This document tells you what
 each page *computes*. `docs/METHODOLOGY.md` is the formal specification of the
 formulas; this is the walkthrough.
 
@@ -51,7 +51,7 @@ index values, and they compute something new on every interaction.
 ### Why the split exists
 
 Three reasons, all of them learned the hard way and recorded in
-`docs/OPEN_RISKS.md`:
+`docs/APP_REFERENCE.md` (Part II):
 
 1. **Reproducibility.** A published number should be checkable. `scripts/audit.py`
    verifies the committed artifacts independently of the test suite. If the app
@@ -216,7 +216,7 @@ Structurally different in three ways:
    within year, are silent about whether the country as a whole improved.
 
 The pooling moments are read from `data/processed/version_b_reference.json`, not
-recomputed. See `src/indices/b_reference.py` and R1 in `docs/OPEN_RISKS.md`.
+recomputed. See `src/indices/b_reference.py` and R1 in `docs/APP_REFERENCE.md` (Part II).
 
 ### Why A and C are one formula wearing two hats
 
@@ -363,7 +363,7 @@ against 17.5 %. The first projected year was implausible for 21 of 21 counties.
 The deeper reason is the formula. C is a reciprocal of the real rate, and the real
 rate carries most of the variance in year on year changes of `log C`. Projecting C
 six years out means projecting central bank policy six years out. The full evidence
-is R16 in `docs/OPEN_RISKS.md`.
+is R16 in `docs/APP_REFERENCE.md` (Part II).
 
 The three scenario values, 0.5 and last observed and 2.0, are the one editorial
 judgement in the whole chain with no artifact behind them.
@@ -416,7 +416,7 @@ Switch the regime to Amorteringskrav 2.0 and nothing changes except the rules:
 1 289 550 SEK of cash, 31.2 years, 3 % amortisation because LTI exceeds 4.5x, and
 50 717 SEK a month. **Ten and a half extra years of saving, from one rule change.**
 
-Two guards sit in front of that arithmetic (2026-10-05, APP_GUIDE section 12):
+Two guards sit in front of that arithmetic (2026-10-05, APP_REFERENCE Part I section 12):
 
 - **The effective rate never goes below zero.** In 2015 to 2020 the policy rate was
   negative, and with the margin slider near 0 the sum used to credit interest to the

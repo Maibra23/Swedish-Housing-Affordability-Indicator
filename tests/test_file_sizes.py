@@ -88,7 +88,7 @@ def test_no_source_module_still_needs_a_ceiling() -> None:
     """R10, closed. Kept as an assertion so a new exemption is a visible choice.
 
     If this fails, someone added a module to EXEMPT_CEILINGS. That may be right,
-    but it reopens the risk and should be recorded in docs/OPEN_RISKS.md rather
+    but it reopens the risk and should be recorded in docs/APP_REFERENCE.md (Part II) rather
     than absorbed.
     """
     assert EXEMPT_CEILINGS == {}, (

@@ -267,7 +267,7 @@ def _sek(value: float) -> str:
 
 
 def test_the_negative_rate_example_in_the_docs_is_the_engine_s() -> None:
-    """APP_GUIDE section 12.1 and ENGINE section 7 quote Stockholm 2017 before and
+    """APP_REFERENCE Part I section 12.1 and ENGINE section 7 quote Stockholm 2017 before and
     after the zero floor. "Before" is the unfloored sum the engine used to apply."""
     mun = pd.read_parquet(PROCESSED / "affordability_municipal.parquet")
     row = mun[(mun["region_name"] == "Stockholm") & (mun["year"] == 2017)].iloc[0]
@@ -280,9 +280,9 @@ def test_the_negative_rate_example_in_the_docs_is_the_engine_s() -> None:
         row["transaction_price_sek"], row["median_income"], rate, BASELINE_REGIME, bank_margin=0.017
     )
 
-    guide = (ROOT / "docs" / "APP_GUIDE.md").read_text(encoding="utf-8")
+    guide = (ROOT / "docs" / "APP_REFERENCE.md").read_text(encoding="utf-8")
     engine_doc = (ROOT / "docs" / "ENGINE.md").read_text(encoding="utf-8")
     for figure in (_sek(before), _sek(after["monthly_total"]), _sek(default["monthly_total"])):
-        assert figure in guide, f"APP_GUIDE 12.1 no longer quotes {figure}"
+        assert figure in guide, f"APP_REFERENCE Part I 12.1 no longer quotes {figure}"
     for figure in (_sek(before), _sek(after["monthly_total"])):
         assert figure in engine_doc, f"ENGINE section 7 no longer quotes {figure}"

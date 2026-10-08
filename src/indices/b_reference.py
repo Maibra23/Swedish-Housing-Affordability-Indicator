@@ -1,6 +1,6 @@
 """The fixed yardstick Version B is measured against.
 
-R1 in `docs/OPEN_RISKS.md`: `compute_version_b` z-scored its four components
+R1 in `docs/APP_REFERENCE.md` (Part II): `compute_version_b` z-scored its four components
 pooled across whatever panel it was handed, so B's published values were a
 function of panel composition. Add a row anywhere and every historical year
 moved, silently, with nothing announcing it.
@@ -51,7 +51,7 @@ day it is adopted, and `tests/test_version_b_reference.py` asserts that.
 ## When to re-base deliberately
 
 A reference is a published decision, not a cache. Bump `version` and record why
-in `docs/OPEN_RISKS.md` when the panel changes enough that the old norm stops
+in `docs/APP_REFERENCE.md` (Part II) when the panel changes enough that the old norm stops
 describing anything useful, and expect every B value to move when you do.
 """
 
@@ -208,7 +208,7 @@ def save(references: dict[str, LevelReference], path: Path | None = None) -> Pat
         "note": (
             "Frozen z-score reference for Version B. Scoring against stored "
             "moments is what stops a refresh re-basing every historical value; "
-            "see R1 in docs/OPEN_RISKS.md and src/indices/b_reference.py. Do not "
+            "see R1 in docs/APP_REFERENCE.md (Part II) and src/indices/b_reference.py. Do not "
             "regenerate this file as part of an ordinary refresh."
         ),
         "levels": {

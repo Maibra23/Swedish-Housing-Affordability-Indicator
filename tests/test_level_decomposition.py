@@ -173,7 +173,7 @@ def test_the_answer_states_its_own_limitation() -> None:
 #: Everywhere the rate-free series or the attribution is written out. All three
 #: are read by someone deciding whether to trust the index, which is the worst
 #: place for a figure nothing re-derives.
-DOCS_QUOTING_THE_SPLIT = ("README.md", "docs/APP_GUIDE.md", "docs/METHODOLOGY.md")
+DOCS_QUOTING_THE_SPLIT = ("README.md", "docs/APP_REFERENCE.md", "docs/METHODOLOGY.md")
 
 
 def _sv(value: float, decimals: int) -> str:

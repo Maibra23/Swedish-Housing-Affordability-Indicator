@@ -8,7 +8,7 @@ the explanation would then silently stop appearing.
 The values are the approximate moves of the 2022–23 tightening cycle, measured
 from the peak to the trough. They are **not** the annual-mean changes the index is
 built on (about +0,8 pp rate, +6,2 pp CPI and +6 % price from 2021 to 2022), and
-`docs/APP_GUIDE.md` section 5 item 2 keeps them as they are on purpose: under
+`docs/APP_REFERENCE.md` (Part I) section 5 item 2 keeps them as they are on purpose: under
 Version C the preset shows an improvement, and the caption explaining why is the
 page's clearest lesson about the real rate.
 """

@@ -175,10 +175,10 @@ def test_bad_input_fails_loudly(panel_override: dict, shocks: dict, fragment: st
 
 
 def test_the_fragility_figure_in_the_audit_record(county: pd.DataFrame) -> None:
-    """APP_GUIDE 12.4 quotes the 2024 real rate and the swing a 0,1 pp CPI revision
+    """APP_REFERENCE Part I 12.4 quotes the 2024 real rate and the swing a 0,1 pp CPI revision
     causes. Both are national, so any county row for 2024 carries them."""
     row = county[county["year"] == 2024].iloc[0]
     real = row["policy_rate"] - row["cpi_yoy_pct"]
-    guide = (ROOT / "docs" / "APP_GUIDE.md").read_text(encoding="utf-8")
+    guide = (ROOT / "docs" / "APP_REFERENCE.md").read_text(encoding="utf-8")
     assert f"{real:.2f}".replace(".", ",") + " pp" in guide
     assert f"about {0.1 / real * 100:.0f} %" in guide

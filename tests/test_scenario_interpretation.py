@@ -8,7 +8,7 @@ sentences around it:
    changes nothing. The page said "oförändrad" and then warned that "hela
    ändringen räknas som real" — the opposite of what happened.
 2. **The Riksbanken 2022 preset shows an improvement** with no explanation,
-   which `docs/APP_GUIDE.md` section 5 item 2 asked to be captioned.
+   which `docs/APP_REFERENCE.md` (Part I) section 5 item 2 asked to be captioned.
 3. **A baseline just above the floor is fragile.** In 2024 the real rate is
    0,77 pp, so 0,1 pp of CPI revision moves Version C by about 13 %.
 4. **The hög-risk count saturates**, so the national section needs a continuous

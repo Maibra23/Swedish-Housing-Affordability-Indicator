@@ -17,7 +17,7 @@
 # passed on that set, so the caps are not a downgrade; they exist so the *next*
 # boundary is a visible resolution failure instead of a silent production break.
 # The 0.x packages get <1, which still admits breaking minor bumps: a residual
-# risk, recorded as R7 in docs/OPEN_RISKS.md.
+# risk, recorded as R7 in docs/APP_REFERENCE.md (Part II).
 #
 # tests/test_runtime_dependencies.py derives the expected package set from the
 # import graph and asserts these specifiers match pyproject.toml exactly, so

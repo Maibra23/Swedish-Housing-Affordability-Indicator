@@ -2,7 +2,7 @@
 
 Detaljanalys per kommun: historisk SHAI över indexets hela period, följd av en
 villkorad projektion sex år framåt under tre uttalade antaganden om realräntan.
-Ingenting modellanpassas. Se R16 i docs/OPEN_RISKS.md.
+Ingenting modellanpassas. Se R16 i docs/APP_REFERENCE.md (Part II).
 """
 
 import streamlit as st

@@ -194,7 +194,7 @@ unused, because `z_c` is left-skewed.
 year, so a colour means "among this year's most stretched", not a fixed price level.
 
 > `folium_static` is deprecated upstream and scheduled for removal. See R8 in
-> `docs/OPEN_RISKS.md`. Migrating to `st_folium` changes rerun behaviour and has not
+> `docs/APP_REFERENCE.md` (Part II). Migrating to `st_folium` changes rerun behaviour and has not
 > been done.
 
 ---
@@ -246,7 +246,7 @@ not show.
 > distinguish from tokens; and it scans call sites for `displayModeBar`. The
 > three deviations this section used to record are fixed, and each one was
 > re-introduced against the guard to confirm it fails. R14 in
-> `docs/OPEN_RISKS.md` is closed.
+> `docs/APP_REFERENCE.md` (Part II) is closed.
 
 ---
 

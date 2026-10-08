@@ -88,7 +88,7 @@ in `docs/METHODOLOGY.md` §3, and the limitation is registered as **F17**.
 
 **It does not predict.** Sida 03 projects six years ahead under three stated real rate
 assumptions. The spread between them is the distance between assumptions, not a
-confidence interval. The evidence behind that choice is R16 in `docs/OPEN_RISKS.md`.
+confidence interval. The evidence behind that choice is R16 in `docs/APP_REFERENCE.md` (Part II).
 
 **It is not mortgage advice.** Prices are kommun means, never your income or a specific
 property.
@@ -151,9 +151,7 @@ To use or change the app:
 |---|---|
 | `docs/ENGINE.md` | How a number reaches the screen: the pipeline, the formulas, and what each page computes |
 | `docs/METHODOLOGY.md` | Formulas, variables, sources, limitations |
-| `docs/APP_GUIDE.md` | What each page is for and how to read its results |
+| `docs/APP_REFERENCE.md` | Part I: what each page is for and how to read its results. Part II: known risks carried deliberately. Part III: map implementation reference |
 | `docs/DEPLOYMENT.md` | Deployment, data refresh, file inventory |
-| `docs/OPEN_RISKS.md` | Known risks carried deliberately |
 | `docs/DESIGN_SYSTEM.md` | Design tokens, chart rules, component patterns |
-| `docs/CHOROPLETH_MAP_REFERENCE.md` | Map implementation reference |
 | `docs/ADR/` | Decision records, including what was rejected and why |

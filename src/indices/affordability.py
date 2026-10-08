@@ -99,7 +99,7 @@ def compute_version_b(
     The four z-scores are pooled across the panel rather than taken within year,
     which is what lets B's level carry a time trend (decision D5). Pooling them
     against *this* panel, however, made every published value a function of panel
-    composition: R1 in `docs/OPEN_RISKS.md`. Pass a stored `reference` and the
+    composition: R1 in `docs/APP_REFERENCE.md` (Part II). Pass a stored `reference` and the
     moments come from there instead, so appending a year leaves history alone.
 
     Args:

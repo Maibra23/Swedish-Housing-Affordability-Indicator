@@ -9,7 +9,7 @@ None of it had a test, because the logic was inlined three times inside function
 that cannot run without `data/raw/`, which is gitignored. D2 extracted it; this
 covers it.
 
-See R5 in docs/OPEN_RISKS.md.
+See R5 in docs/APP_REFERENCE.md (Part II).
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def test_the_anchor_year_is_global_not_per_region() -> None:
     year, so a region whose series ended earlier is **not** filled. That is
     arguably a flaw — but it is the shipped behaviour, and on current data every
     region ends at the same year, so an artifact diff cannot tell the two apart.
-    Changing it is a decision for `docs/OPEN_RISKS.md`, not a detail to fix while
+    Changing it is a decision for `docs/APP_REFERENCE.md` (Part II), not a detail to fix while
     extracting.
     """
     ragged = pd.DataFrame({

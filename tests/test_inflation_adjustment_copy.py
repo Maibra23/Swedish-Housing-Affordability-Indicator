@@ -170,7 +170,7 @@ def test_every_year_states_its_factor(municipal: pd.DataFrame) -> None:
 #: catches the other three, which nothing else reads.
 DOCS_QUOTING_THE_FACTOR = (
     "README.md",
-    "docs/APP_GUIDE.md",
+    "docs/APP_REFERENCE.md",
     "docs/ENGINE.md",
     "docs/METHODOLOGY.md",
 )

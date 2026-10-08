@@ -10,8 +10,8 @@ legend two pages from the map's; they hardcoded the primary navy as a hex
 literal; and they set `displayModeBar` to `False` where the seven charts before
 them set it to `"hover"`.
 
-This file is the missing guard. It closes R14 in `docs/OPEN_RISKS.md` and item 18
-in `docs/APP_GUIDE.md`.
+This file is the missing guard. It closes R14 in `docs/APP_REFERENCE.md` (Part II) and item 18
+in `docs/APP_REFERENCE.md` (Part I).
 
 **Three kinds of assertion, because there are three ways to drift.**
 

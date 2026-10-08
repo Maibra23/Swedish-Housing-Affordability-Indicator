@@ -211,7 +211,7 @@ def selectable_years(path: Path | None = None) -> list[int]:
     rate, later ones have no published income.
 
     Pages used to derive this themselves, each from whichever frame was already
-    loaded. That is R2 in ``docs/OPEN_RISKS.md``, and on two pages it was a live
+    loaded. That is R2 in ``docs/APP_REFERENCE.md` (Part II)`, and on two pages it was a live
     exposure rather than a style point: ``04_Kontantinsats`` and ``05_Scenario``
     built their "pick another year" suggestions from *panel* frames, which run to
     2026, so the fallback offered years the index cannot compute. The sidebar has

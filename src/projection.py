@@ -24,7 +24,7 @@ a scenario the reader chooses. No regime can make this produce an absurd number,
 because every input is observed or stated.
 
 The full evidence, and the two pipelines this replaced, are recorded as R16 in
-`docs/OPEN_RISKS.md`.
+`docs/APP_REFERENCE.md` (Part II).
 """
 
 from __future__ import annotations

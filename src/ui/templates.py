@@ -1,6 +1,6 @@
 """Markup templates, kept out of the copy dictionary.
 
-R9 in `docs/OPEN_RISKS.md`. T3.1 gathered every Swedish string into
+R9 in `docs/APP_REFERENCE.md` (Part II). T3.1 gathered every Swedish string into
 `SWEDISH_LABELS`, which was the right move and is what
 `tests/test_no_inline_copy.py` enforces. The side effect was that the dictionary
 ended up holding two different kinds of thing: sentences a translator would

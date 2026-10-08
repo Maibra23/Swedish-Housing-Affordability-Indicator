@@ -37,7 +37,7 @@ the signal B exists to measure.
 The pooling is against a **stored reference**, not against whatever panel is
 being scored. Recomputing it made every published B value a function of panel
 composition, so appending a year rewrote eleven years of history; see R1 in
-``docs/OPEN_RISKS.md`` and ``src/indices/b_reference.py``. Note that ``z_b``
+``docs/APP_REFERENCE.md` (Part II)` and ``src/indices/b_reference.py``. Note that ``z_b``
 below is still taken *within year* — the pooling lives inside B's construction,
 one level down.
 

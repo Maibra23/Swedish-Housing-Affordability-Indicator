@@ -114,7 +114,7 @@ This runs four steps in sequence:
 2. **Build panels** — rebuilds `data/processed/panel_{municipal,county,national}.parquet`
 3. **Compute indices** — rebuilds `data/processed/affordability_*.parquet`
 4. **Projection** — recomputes `data/processed/projection.parquet` from the county
-   affordability panel. No model fitting; see R16 in `docs/OPEN_RISKS.md`
+   affordability panel. No model fitting; see R16 in `docs/APP_REFERENCE.md` (Part II)
 
 Total runtime: ~10–20 minutes, essentially all of it SCB API chunked fetches. Step 4
 now takes well under a second.

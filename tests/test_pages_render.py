@@ -2,7 +2,7 @@
 
 This is the check that actually proves the app works, and until now it lived in a
 session scratch directory — run at every step of Phases 1 and 2, passing 67/67
-each time, and re-runnable by nobody. See R6 in docs/OPEN_RISKS.md. Phase 3 is
+each time, and re-runnable by nobody. See R6 in docs/APP_REFERENCE.md (Part II). Phase 3 is
 twelve tasks of UI change to exactly the surface this covers, so it lands first.
 
 **Pages are driven through `app.py` and `switch_page`, never as their own

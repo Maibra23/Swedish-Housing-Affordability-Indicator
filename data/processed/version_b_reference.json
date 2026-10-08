@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Frozen z-score reference for Version B. Scoring against stored moments is what stops a refresh re-basing every historical value; see R1 in docs/OPEN_RISKS.md and src/indices/b_reference.py. Do not regenerate this file as part of an ordinary refresh.",
+  "note": "Frozen z-score reference for Version B. Scoring against stored moments is what stops a refresh re-basing every historical value; see R1 in docs/APP_REFERENCE.md (Part II) and src/indices/b_reference.py. Do not regenerate this file as part of an ordinary refresh.",
   "levels": {
     "county": {
       "derived_from": {

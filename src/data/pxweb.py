@@ -5,7 +5,7 @@ selection* and this one holds *how a PxWeb request is made*. The two change for
 different reasons: a table definition changes when SCB republishes something,
 this changes when the API does.
 
-The split was deferred once, deliberately. `docs/OPEN_RISKS.md` R10 recorded that
+The split was deferred once, deliberately. `docs/APP_REFERENCE.md` (Part II) R10 recorded that
 `scb_client.py` sat at 0 % coverage and that splitting an untested module is the
 riskiest refactor available, so it should wait for tests. It now has them:
 `tests/test_variable_contracts.py` exercises the metadata path against the live

@@ -192,7 +192,7 @@ def test_the_d5_panel_mean_statistic_still_holds() -> None:
     written, silently wrong after any refresh, and load-bearing for a locked
     decision. So they are re-derived rather than trusted.
 
-    See R1 in docs/OPEN_RISKS.md: B's values move whenever the panel changes,
+    See R1 in docs/APP_REFERENCE.md (Part II): B's values move whenever the panel changes,
     which makes this the sentence most likely to go stale in the whole document.
     """
     import pandas as pd

@@ -3,7 +3,7 @@
 
 **Version:** 2.2
 **App version:** 1.3.0
-**Companion to:** ENGINE.md, APP_GUIDE.md, DEPLOYMENT.md
+**Companion to:** ENGINE.md, APP_REFERENCE.md (Part I), DEPLOYMENT.md
 **Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
 **Last updated:** 2026-10-05
 
@@ -20,7 +20,7 @@
   the saturating class counts. Commit `9e806a3`.
 - **§7 corrected:** it listed three sliders; the page has had four since the CPI shock
   was added. Full record, with evidence and the tests that guard each item:
-  `docs/APP_GUIDE.md` section 12.
+  `docs/APP_REFERENCE.md` (Part I) section 12.
 
 ### Changelog v2.2 → v2.3 (2026-09-15)
 - **Normalization convention settled on both axes (§4 rewritten).** Versions A and C are
@@ -137,7 +137,7 @@ Where z() denotes z score normalization across the panel.
 Affordability_C(i, t) = Income(i, t) / (P_sek(i, t) × max(R(t) − π(t), 0.005))
 ```
 
-The max() floor prevents division explosion when real rates are near zero or negative. **0.005 is the decimal form of the floor; it is 0,5 percentage points.** Code that works in percentage points writes it that way — `REAL_RATE_FLOOR` in `src/projection.py`, and the `max(R − π, 0,5)` form quoted in `docs/APP_GUIDE.md` — and the two are the same number.
+The max() floor prevents division explosion when real rates are near zero or negative. **0.005 is the decimal form of the floor; it is 0,5 percentage points.** Code that works in percentage points writes it that way — `REAL_RATE_FLOOR` in `src/projection.py`, and the `max(R − π, 0,5)` form quoted in `docs/APP_REFERENCE.md` (Part I) — and the two are the same number.
 
 **The floor is not an edge case. It binds in 9 of the 11 observed years.**
 
@@ -265,7 +265,7 @@ appending one ordinary year moved all 3190 historical rows and changed 947 ranks
 2026-09-21 income-source change moved 225 risk classes. A fixed reference also makes the
 trend itself more honest — under the moving reference, adding a high-rate year inflated the
 pooled standard deviation and pushed earlier high-rate years back toward zero, so the
-yardstick shrank as the thing it measured grew. Recorded as R1 in `docs/OPEN_RISKS.md`.
+yardstick shrank as the thing it measured grew. Recorded as R1 in `docs/APP_REFERENCE.md` (Part II).
 
 *What within-year normalization would cost.* Applying the within-year window to B's
 construction would set its mean to ~0 in every year by definition. The 2022–2023 rate shock —
@@ -326,7 +326,7 @@ The index is projected, not predicted. Statistical model fitting was evaluated
 against a naive carry-forward control and lost on every component of Version C,
 while the formula amplified the residual error into implausible first-year values
 for all 21 counties. It was withdrawn rather than repaired; the measurements are
-recorded as **R16** in `docs/OPEN_RISKS.md`.
+recorded as **R16** in `docs/APP_REFERENCE.md` (Part II).
 
 ### How it works
 

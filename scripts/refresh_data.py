@@ -9,7 +9,7 @@ Steps executed:
   3. Compute affordability indices A/B/C, save affordability parquets, and
      record the data vintage in data/processed/data_provenance.json
   4. Compute the conditional projection (no model fitting; see R16 in
-     docs/OPEN_RISKS.md) and save projection.parquet
+     docs/APP_REFERENCE.md (Part II)) and save projection.parquet
 
 Usage:
     python scripts/refresh_data.py            # full refresh

@@ -157,10 +157,10 @@ def test_each_qualified_claim_points_at_the_panel(key: str) -> None:
 
 # ── The documents that reproduce the table ───────────────────────────
 
-#: Every document that states the floor quotient in prose. The APP_GUIDE copy of
+#: Every document that states the floor quotient in prose. The APP_REFERENCE Part I copy of
 #: the table is the one most likely to rot, being a hand-kept transcription of a
 #: derived frame.
-DOCS_QUOTING_THE_QUOTIENT = ("README.md", "docs/APP_GUIDE.md", "docs/METHODOLOGY.md")
+DOCS_QUOTING_THE_QUOTIENT = ("README.md", "docs/APP_REFERENCE.md", "docs/METHODOLOGY.md")
 
 
 @pytest.mark.parametrize("document", DOCS_QUOTING_THE_QUOTIENT)
@@ -177,16 +177,16 @@ def test_a_document_quoting_the_floor_quotient_quotes_the_derived_one(document: 
 
 
 def test_the_app_guide_table_matches_the_derived_one(history: pd.DataFrame) -> None:
-    """APP_GUIDE reproduces `floor_history` as a markdown table; hold it to the frame.
+    """APP_REFERENCE Part I reproduces `floor_history` as a markdown table; hold it to the frame.
 
     A transcribed table is exactly the kind of prose this project keeps finding
     wrong — the README's worked example was out by 4,7 years before anything
     re-derived it. Each row is checked for its year, its rounded rates, its
     factor and its mean index.
     """
-    guide = (ROOT / "docs" / "APP_GUIDE.md").read_text(encoding="utf-8")
+    guide = (ROOT / "docs" / "APP_REFERENCE.md").read_text(encoding="utf-8")
     block = guide.split("Which rate each formula actually divided by", 1)
-    assert len(block) == 2, "the APP_GUIDE collapsible section has been renamed or removed"
+    assert len(block) == 2, "the APP_REFERENCE Part I collapsible section has been renamed or removed"
     table = block[1].split("</details>", 1)[0]
 
     def sv(value: float, decimals: int) -> str:
@@ -201,12 +201,12 @@ def test_the_app_guide_table_matches_the_derived_one(history: pd.DataFrame) -> N
             f"{sv(row.real_rate, 2)} | "
         )
         assert expected in table, (
-            f"APP_GUIDE's floor table no longer matches the data for {row.year}. "
+            f"APP_REFERENCE Part I's floor table no longer matches the data for {row.year}. "
             f"Expected a row beginning {expected!r}."
         )
         tail = table.split(expected, 1)[1].split("\n", 1)[0]
-        assert f"{sv(row.factor, 2)}×" in tail, f"{row.year}: factor drifted in APP_GUIDE"
-        assert sv(row.mean_index, 1) in tail, f"{row.year}: mean index drifted in APP_GUIDE"
+        assert f"{sv(row.factor, 2)}×" in tail, f"{row.year}: factor drifted in APP_REFERENCE Part I"
+        assert sv(row.mean_index, 1) in tail, f"{row.year}: mean index drifted in APP_REFERENCE Part I"
         assert f"{sv(row.income_to_price, 1)} %" in tail, (
-            f"{row.year}: the rate-free column drifted in APP_GUIDE"
+            f"{row.year}: the rate-free column drifted in APP_REFERENCE Part I"
         )

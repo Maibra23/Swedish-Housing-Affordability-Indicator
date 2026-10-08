@@ -166,7 +166,7 @@ def test_every_requirement_caps_the_next_major() -> None:
     what is known to work; the point is to stop the *next* boundary arriving
     silently, not to pin to the oldest thing that runs.
 
-    See R7 in docs/OPEN_RISKS.md.
+    See R7 in docs/APP_REFERENCE.md (Part II).
     """
     uncapped = [
         line.strip()

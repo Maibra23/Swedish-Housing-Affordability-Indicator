@@ -240,7 +240,7 @@ def interpret_scenario(
         raw_scen = result["scenario_rate"] - result["scenario_cpi"]
         findings.append(Finding("note", L("sc.tolk_golv_absorberar", v0=_signed(raw_scen, 2))))
 
-    # 2c. The preset that looks like a bug. APP_GUIDE section 5 item 2.
+    # 2c. The preset that looks like a bug. APP_REFERENCE Part I section 5 item 2.
     if is_riksbanken_2022(rate_shock, income_shock_pct, price_shock_pct, cpi_shock) and delta_pct > 0:
         findings.append(Finding("note", L("sc.tolk_preset_2022")))
 

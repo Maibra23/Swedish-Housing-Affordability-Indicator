@@ -5,7 +5,7 @@ holds the *shapes*. The two change for different reasons: a cleaner changes when
 a source republishes a column, a builder changes when the panel's structure
 does.
 
-The split was deferred deliberately. `docs/OPEN_RISKS.md` R10 recorded that
+The split was deferred deliberately. `docs/APP_REFERENCE.md` (Part II) R10 recorded that
 `build_panel.py` sat at 0 % coverage and that splitting an untested module is the
 riskiest refactor available, so it should wait for tests. It now has them:
 `tests/test_build_panel.py` covers 87 % of the original module, including every

@@ -1,6 +1,6 @@
 """Version B stops rewriting history when a year is added.
 
-R1 in `docs/OPEN_RISKS.md`, the last open High that changed published numbers.
+R1 in `docs/APP_REFERENCE.md` (Part II), the last open High that changed published numbers.
 `compute_version_b` pooled its four component z-scores across whatever panel it
 was handed, so every published value was a function of panel composition. Append
 a row and all eleven years moved, silently.
