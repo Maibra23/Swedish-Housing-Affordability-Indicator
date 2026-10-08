@@ -87,6 +87,9 @@ Every `.shai-*` class in the composed stylesheet. 90 in total.
 | `.shai-cred` | Credibility strip. |
 | `.shai-cred-meta` | Credibility meta line. |
 | `.shai-explanation` | Prose under a bare number (T3.4). |
+| `.shai-legend` | Chart legend drawn as page content, so it wraps at any width (Sida 02 county trends). |
+| `.shai-legend-item` | One legend entry: swatch and name. |
+| `.shai-legend-swatch` | The entry's line colour. |
 | `.shai-mood-good` | KPI delta colour when the movement is good for *this* metric. |
 | `.shai-mood-bad` | The same, when it is bad. |
 | `.shai-mood-neutral` | The same, when the metric carries no direction. |
@@ -287,8 +290,8 @@ Before opening a pull request that touches the interface:
 ## 8. What this document does not cover
 
 Visual equivalence with Skattekraftspanelen. D2 set convergence on that design as the
-goal, and the components in section 6 were built from the task descriptions in
-`docs/REVITALIZATION_PLAN.md`, because the reference repository is not available on the
+goal, and the components in section 6 were built from written task descriptions,
+because the reference repository is not available on the
 machine this work was done on. The capabilities are present and tested. **Whether they
 look the same is unverified.** Re-check section 6 against the reference before treating
 D2 as met.

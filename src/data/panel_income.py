@@ -12,7 +12,7 @@ pure: a frame in, a frame out, no file access — which is what makes it testabl
 at all, since `data/raw/` is gitignored and the `build_*` functions cannot run
 without it.
 
-See Task D2 in docs/OPTIMIZATION_PLAN.md and R5 in docs/OPEN_RISKS.md.
+See R5 in docs/OPEN_RISKS.md.
 """
 
 from __future__ import annotations

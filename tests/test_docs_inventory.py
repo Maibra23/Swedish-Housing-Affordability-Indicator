@@ -6,11 +6,9 @@ artifacts with no reader, and a `DESIGN_SYSTEM.md` describing a Plotly map that
 Folium replaced. A reader opening the wrong one of a pair gets confidently wrong
 answers, and nothing in the repo indicated which was current.
 
-T4.6 resolved it by deleting the superseded halves, renaming the survivors to
-drop `_v2`, and moving artifacts with no reader to `docs/archive/`. This guards
-the result: a `_v2` suffix cannot come back, every maintained document is linked
-from the README, and nothing outside the archive points into it as current
-guidance.
+It was resolved by deleting superseded documents and build-time records. This
+guards the result: a `_v2` suffix cannot come back, every document is linked from
+the README, and no code points at a document that no longer exists.
 """
 
 from __future__ import annotations
@@ -22,7 +20,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
-ARCHIVE = DOCS / "archive"
 README = ROOT / "README.md"
 
 
@@ -33,9 +30,7 @@ def _maintained() -> list[Path]:
 def test_no_version_suffix_remains() -> None:
     """A `_v2` file implies a `_v1` somewhere, which is the ambiguity itself."""
     suffixed = [p.name for p in DOCS.rglob("*.md") if re.search(r"_v\d+\.md$", p.name)]
-    assert not suffixed or all(ARCHIVE in p.parents for p in DOCS.rglob("*_v*.md")), (
-        f"versioned filenames outside the archive: {suffixed}"
-    )
+    assert not suffixed, f"versioned filenames: {suffixed}"
 
 
 def test_every_maintained_doc_is_linked_from_the_readme() -> None:
@@ -81,13 +76,6 @@ def test_code_never_cites_an_archived_or_deleted_document(path: Path) -> None:
     assert not dangling, f"{path.name} cites missing documents: {dangling}"
 
 
-def test_the_archive_is_marked_as_unmaintained() -> None:
-    readme = README.read_text(encoding="utf-8")
-    assert "docs/archive/" in readme and "not maintained" in readme, (
-        "the README must say the archive is not current guidance, or a reader will "
-        "treat a superseded analysis as live"
-    )
-
 
 # ── Portability ──────────────────────────────────────────────────────
 
@@ -112,51 +100,4 @@ def test_no_hardcoded_absolute_path(path: Path) -> None:
     assert not offenders, (
         f"{path.name} hardcodes an absolute path: {offenders}. Resolve it from "
         "`Path(__file__)` instead."
-    )
-
-
-# ── Documented test counts ───────────────────────────────────────────
-
-
-def test_per_file_test_counts_in_the_plan_are_accurate() -> None:
-    """`docs/REVITALIZATION_PLAN.md` cites how many tests each file holds.
-
-    Five of those were stale when this guard was written: one had never been
-    measured, and four had drifted upward as parametrisation expanded. A number
-    in prose that nothing checks is the defect this whole project has been
-    chasing — including, it turns out, in the document describing the chase.
-    """
-    import subprocess
-    import sys
-
-    plan = (ROOT / "docs" / "REVITALIZATION_PLAN.md").read_text(encoding="utf-8")
-    claimed = {
-        name: int(count)
-        for name, count in re.findall(r"`tests/(test_\w+\.py)`\s*\((\d+)\)", plan)
-    }
-    assert claimed, "the plan cites no per-file counts; has its format changed?"
-
-    collected = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/", "--collect-only", "-q"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=300,
-    ).stdout
-
-    actual: dict[str, int] = {}
-    for line in collected.splitlines():
-        match = re.match(r"tests[\/](test_\w+\.py)::", line)
-        if match:
-            actual[match.group(1)] = actual.get(match.group(1), 0) + 1
-
-    stale = {
-        name: (count, actual.get(name, 0))
-        for name, count in claimed.items()
-        if actual.get(name, 0) != count
-    }
-    assert not stale, (
-        "the plan cites test counts that no longer match, as claimed vs actual: "
-        f"{stale}"
     )

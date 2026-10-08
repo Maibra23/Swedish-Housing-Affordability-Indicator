@@ -7,7 +7,7 @@ moves the first, every refresh moves the second. The app would keep asserting
 the old numbers with total confidence, because nothing connects the sentence to
 the data it describes.
 
-See Finding H in docs/REVITALIZATION_PLAN.md, and task T1.10.
+
 
 Two kinds of assertion live here. The source-level ones prove the literals are
 gone; the behavioural one proves what replaced them actually tracks the

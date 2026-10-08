@@ -99,7 +99,7 @@ def test_skane_among_least_affordable_v_c(ranked):
     """Skane county (lan_code '12') is among the least affordable third.
 
     This asserted "top 5 worst" and had failed since before the revitalization
-    work began (Finding O in docs/REVITALIZATION_PLAN.md). It was verified
+    work began. It was verified
     failing against the pre-T1.1 artifact too, so it never was a regression —
     and T1.8's log transform does not move it either, because a log is
     monotonic and this compares medians of the raw version_c.

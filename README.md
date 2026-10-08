@@ -157,10 +157,3 @@ To use or change the app:
 | `docs/DESIGN_SYSTEM.md` | Design tokens, chart rules, component patterns |
 | `docs/CHOROPLETH_MAP_REFERENCE.md` | Map implementation reference |
 | `docs/ADR/` | Decision records, including what was rejected and why |
-
-Records of how the app was built rather than what it does now:
-`docs/REVITALIZATION_PLAN.md`, `docs/OPTIMIZATION_PLAN.md`, `docs/DEVIATIONS.md`,
-`docs/PRD.md` and `docs/PLAYBOOK.md`.
-
-`docs/archive/` holds superseded analyses. It is kept for provenance, is
-not maintained, and should not be read as current guidance.

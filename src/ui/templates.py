@@ -58,32 +58,11 @@ TEMPLATES: dict[str, str] = {
   <div style="flex:2;text-align:center;font-size:10px;color:{v10};">2026</div>
 </div>
 """,
-    "ki.nyckelinsikt_syntes_for_ett_v2_v3_under": """
-<div class="shai-card" style="border-left:3px solid {v0};">
-  <div class="shai-card-header">
-    <div class="shai-card-title">Nyckelinsikt</div>
-    <span class="shai-card-tag">SYNTES</span>
-  </div>
-  <p style="font-size:14px;color:{v1};line-height:1.7;margin:0;">
-    För ett <strong>{v2}</strong> ({v3}) under
-    <strong>nuvarande regler (Lättnad 2026)</strong> krävs
-    <strong>{v4} SEK</strong> i kontantinsats,
-    vilket tar <strong>{v5:.1f} år</strong> att spara
-    vid {v6} % sparkvot.
-    Månadskostnaden är <strong>{v7} SEK</strong>
-    (<strong>{v8:.0f} % av månadsinkomst</strong>).<br><br>
-    Det historiskt förmånligaste regelverket
-    (<strong>{v9}</strong>) innebar
-    <strong>{v10} SEK lägre</strong> månadskostnad
-    ({v11:.0f} % billigare).
-  </p>
-</div>
-""",
     "ki.indata_v1_v2_analysar_v3_pristyp_v4_pris": "<div style='color:{v0};font-size:13px;line-height:1.55;'><strong>Indata</strong><br>- {v1}: <strong>{v2}</strong> (analysår {v3})<br>- Pristyp: <strong>{v4}</strong><br>- Pris (används): <strong>{v5} SEK</strong><br>",
     "ki.smahuspris_referens_v0_sek": "- Småhuspris (referens): <strong>{v0} SEK</strong><br>",
     "ki.bostadsrattspris_referens_v0_v1_sek": "- Bostadsrättspris (referens, {v0}): <strong>{v1} SEK</strong><br>",
-    "ki.hushallstyp_v0_individuell_medianinkomst_v1": "- Hushållstyp: <strong>{v0}</strong><br>- Individuell medianinkomst: <strong>{v1} SEK</strong><br>- Hushållsinkomst (används): <strong>{v2} SEK</strong>{v3}<br>- Styrränta: <strong>{v4:.2f}%</strong><br>- Bankens räntepåslag: <strong>{v5:.1f} pp</strong><br>- Effektiv bolåneränta (används): <strong>{v6:.2f}%</strong><br>- Sparkvot: <strong>{v7}%</strong><br><br><strong>Konstant mellan regelverk</strong><br>- Samma pris, inkomst och räntenivå används i alla regimer<br>- Skillnaderna drivs av insatskrav, maxbelåning och amorteringsregler<br><br><strong>Metod</strong><br>Se Metodologi (Sida 06), avsnitt 6 för antaganden och definitioner.</div>",
-    "ki.sa_laser_du_tabellen_kolumner_visar_skillnad": "<div style='color:{v0};font-size:13px;line-height:1.55;margin-top:8px;'><strong>Så läser du tabellen</strong><br>- Δ-kolumner visar skillnad mot <strong>idag (Lättnad 2026)</strong><br>- Markeringar: <strong>bäst</strong> = lägst för Insats/Sparår/Månkostnad, högst för Kvar</div>",
+    "ki.hushallstyp_v0_individuell_medianinkomst_v1": "- Hushållstyp: <strong>{v0}</strong><br>- Individuell medianinkomst före skatt: <strong>{v1} SEK</strong><br>- Hushållsinkomst (används): <strong>{v2} SEK</strong>{v3}<br>- Styrränta {v8}: <strong>{v4} %</strong><br>- Bankens räntepåslag: <strong>{v5} pp</strong><br>- Bolåneränta (används): <strong>{v6} %</strong><br>- Sparkvot: <strong>{v7} % av bruttoinkomsten</strong><br><br><strong>Antaganden</strong><br>- Alla regelverk räknas med samma pris, inkomst och ränta från {v8}; skillnaderna beror enbart på insatskrav och amorteringsregler<br>- Priset är ett medelvärde för året, inte en median<br>- Räntan är fast hela perioden, och ränteavdrag och skatt ingår inte<br>- Sparandet växer inte med avkastning, och priset står still medan hushållet sparar<br>- Amortering minskar lånet och är ett sparande, inte en kostnad<br><br><strong>Metod</strong><br>Se Metodologi och källor, avsnitt 6 och begränsning F12 och F14.</div>",
+    "ki.sa_laser_du_tabellen_kolumner_visar_skillnad": "<div style='color:{v0};font-size:13px;line-height:1.55;margin-top:8px;'><strong>Så läser du tabellen</strong><br>- Δ-kolumner visar skillnad mot <strong>idag (Lättnad 2026)</strong><br>- Grönt = lägst, rött = högst för insats, sparår och ränta. Månadsbetalning och Kvar markeras inte, eftersom en lägre betalning ofta bara betyder mindre amortering<br>- Kvar = bruttoinkomst minus ränta och amortering per år, före skatt och andra utgifter</div>",
     "mt.fore_2010_inget_formellt_krav_okt_2010": """
     <div style="position:relative;padding:20px 0;margin:16px 0;">
         <div style="position:absolute;top:40px;left:0;right:0;height:3px;background:{v0};"></div>

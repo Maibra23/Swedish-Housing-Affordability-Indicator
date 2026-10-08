@@ -1,4 +1,4 @@
-"""Scenario simulator — Version C only (per DEVIATIONS.md D12).
+"""Scenario simulator — Version C only.
 
 Pure function, no I/O. Used by the Scenariosimulator Streamlit page.
 

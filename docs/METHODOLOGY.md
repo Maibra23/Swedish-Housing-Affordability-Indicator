@@ -3,7 +3,7 @@
 
 **Version:** 2.2
 **App version:** 1.3.0
-**Companion to:** PRD.md, PLAYBOOK.md, DEPLOYMENT.md
+**Companion to:** ENGINE.md, APP_GUIDE.md, DEPLOYMENT.md
 **Status:** Post Day 2 revision + deployment audit fixes + 2026-04-21 session updates
 **Last updated:** 2026-10-05
 
@@ -25,8 +25,7 @@
 ### Changelog v2.2 → v2.3 (2026-09-15)
 - **Normalization convention settled on both axes (§4 rewritten).** Versions A and C are
   now **log-transformed before z-scoring**; Version B is not. Version B's own construction
-  remains **pooled across the panel**, deliberately. Recorded as decisions D5 and D6 in
-  `REVITALIZATION_PLAN.md`.
+  remains **pooled across the panel**, deliberately (decisions D5 and D6).
 - **Why:** A and C are ratios of positive quantities and so are log-normal. Z-scoring them
   raw put the ±0.67σ class boundaries — quartiles *of a normal distribution* — on a variable
   whose normality is rejected at p < 6e-15 in every year 2014–2024. The resulting class split

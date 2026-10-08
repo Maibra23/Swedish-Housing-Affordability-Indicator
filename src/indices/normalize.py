@@ -20,7 +20,7 @@ that afterwards, for all three versions:
 Normalization convention
 ------------------------
 Two independent choices decide how a raw index value becomes a z-score. Both are
-locked decisions in ``docs/REVITALIZATION_PLAN.md`` §1.
+locked decisions, documented in ``docs/METHODOLOGY.md``.
 
 **Window (D5, decision O2) — within year.** Each year's municipalities are
 scored against that year's national distribution. The class is a statement about

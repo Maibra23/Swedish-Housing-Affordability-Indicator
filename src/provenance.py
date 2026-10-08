@@ -18,8 +18,7 @@ Two years are needed and they are not interchangeable:
 
 Before this module those years were hardcoded in three places and the sidebar
 footer printed ``date.today()`` over 2024 data, so a visitor in 2026 read
-"Senast uppdaterad: 2026-09-15" above a two-year-old index. See Findings B, C
-and H in ``docs/REVITALIZATION_PLAN.md``.
+"Senast uppdaterad: 2026-09-15" above a two-year-old index.
 
 A note on income imputation: ``build_panel`` forward-fills ``median_income``
 past its true vintage at +3 %/yr and flags those rows with

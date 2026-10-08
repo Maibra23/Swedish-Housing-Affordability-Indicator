@@ -4,8 +4,7 @@
 hog = least affordable) and writes `affordability_ranked.parquet`. When a page
 re-derives any of those columns it can — and once did — drop the sign inversion
 that A and C require, which rendered the national map with green over Stockholm
-and red over inland Norrland for every year except 2014. See Finding N in
-docs/REVITALIZATION_PLAN.md.
+and red over inland Norrland for every year except 2014.
 
 These are source-level assertions rather than behavioural ones because the
 defect is structural: the moment a page owns a second copy of this logic, the

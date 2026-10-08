@@ -36,14 +36,8 @@ WITHDRAWN = re.compile(
 )
 
 #: Records of what the project used to be. Each must carry a banner marking it as
-#: such, which the test below enforces. `docs/archive/` is exempt wholesale, by the
-#: same convention `test_prose_matches_artifacts.py` already applies to it.
-EXEMPT_RECORDS = {
-    "docs/PRD.md": "Superseded in part",
-    "docs/PLAYBOOK.md": "Superseded in part",
-    "docs/REVITALIZATION_PLAN.md": "Historical work record",
-    "docs/OPTIMIZATION_PLAN.md": "Historical work record",
-}
+#: such, which the test below enforces. None remain.
+EXEMPT_RECORDS: dict[str, str] = {}
 
 
 def _live_surface() -> list[Path]:

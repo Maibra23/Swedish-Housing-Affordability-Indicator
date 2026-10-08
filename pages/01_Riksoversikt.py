@@ -184,8 +184,7 @@ with col_map:
             # The whole year, not `df_ranked`: the map is the national picture and
             # the risk pills filter the lists below it. Passing the filtered frame
             # painted 208 excluded municipalities in the median colour and rescaled
-            # the legend on every pill click. See Decision Q1 in
-            # docs/OPTIMIZATION_PLAN.md, answered No.
+            # the legend on every pill click.
             render_choropleth(mun_year, key="rv_choropleth")
             st.caption(L("rv.fargskala_gron_lag_risk_z_0_67_gul_medel"))
             explanation(L("rv.forklaring_karta"))

@@ -5,8 +5,8 @@ a user reads lives, so it was the right place to start, and it works: it caught
 the Version B panel means the moment the income source changed on 2026-09-21.
 
 **It caught exactly one of six.** The same figures were quoted in
-`src/indices/normalize.py`'s module docstring, in `docs/METHODOLOGY.md`, twice in
-`docs/REVITALIZATION_PLAN.md`, and — least comfortably — twice inside
+`src/indices/normalize.py`'s module docstring, in `docs/METHODOLOGY.md`, in the
+project's build notes, and — least comfortably — twice inside
 `test_copy_matches_artifacts.py`'s own docstring and comments. All five survived
 the refresh, silently, because nothing reads prose outside the label dictionary.
 
@@ -24,8 +24,8 @@ re-derived from `affordability_ranked.parquet`.
 Verified when written: the pattern matches the Version B claims and nothing else
 across every markdown file and Python module in the project.
 
-**Historical entries are exempt by construction.** The session log in
-`docs/REVITALIZATION_PLAN.md` records what was true on a past date, and rewriting
+**Historical entries are exempt by construction.** A dated log row records
+what was true on a past date, and rewriting
 it would destroy the record. Those rows are excluded by their table shape rather
 than by an allowlist, so a new log entry needs no maintenance here.
 """
@@ -53,8 +53,7 @@ PANEL_MEAN_CLAIM = re.compile(
 #: so adding a log entry needs no change here.
 HISTORICAL_ROW = re.compile(r"^\s*\|\s*20\d{2}-\d{2}-\d{2}\s*\|")
 
-#: Where prose lives. `docs/archive/` is excluded for the same reason as the
-#: session log: it is a record of superseded documents.
+#: Where prose lives.
 def _scanned_files() -> list[Path]:
     paths = (
         [ROOT / "README.md"]

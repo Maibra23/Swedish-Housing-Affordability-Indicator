@@ -9,7 +9,7 @@ None of it had a test, because the logic was inlined three times inside function
 that cannot run without `data/raw/`, which is gitignored. D2 extracted it; this
 covers it.
 
-See Task D3 in docs/OPTIMIZATION_PLAN.md and R5 in docs/OPEN_RISKS.md.
+See R5 in docs/OPEN_RISKS.md.
 """
 
 from __future__ import annotations

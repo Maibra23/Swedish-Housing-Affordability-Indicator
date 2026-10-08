@@ -9,7 +9,7 @@ panel.
 So these are property tests. Each asserts a relationship the formula must hold
 for any input, not a value it happens to produce for one.
 
-See Task D1 in docs/OPTIMIZATION_PLAN.md and R5 in docs/OPEN_RISKS.md.
+See R5 in docs/OPEN_RISKS.md.
 """
 
 from __future__ import annotations

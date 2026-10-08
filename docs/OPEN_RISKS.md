@@ -1,7 +1,7 @@
 # Open risks and pending decisions
 
-Things that are **not bugs today** but will cost something later, found while working
-through `docs/REVITALIZATION_PLAN.md`. Each one is either a decision someone has to make
+Things that are **not bugs today** but will cost something later, found while revising
+the project. Each one is either a decision someone has to make
 or a hazard that is currently held shut by a guard rather than fixed at the root.
 
 Kept separate from the plan because the plan is a task list that ends when Phase 4 ends.
@@ -855,7 +855,6 @@ in the label dictionary, and all five survived the refresh silently:
 |---|---|
 | `src/indices/normalize.py` | Module docstring explaining why B stays pooled |
 | `docs/METHODOLOGY.md` | §4, the evidence for decision D5 |
-| `docs/REVITALIZATION_PLAN.md` | The D5 decision row, and again in the O2 analysis |
 | `tests/test_copy_matches_artifacts.py` | Its own docstring, and a comment beside `NOT_A_VINTAGE` |
 
 The last row is the uncomfortable one. The guard against stale quoted figures had two stale
@@ -971,8 +970,7 @@ The first-year sanity check the original recommendation asked for exists as
 `tests/test_projection.py::test_no_projection_is_absurd`, but it now guards a construction
 that cannot fail it rather than a fit that did, 21 times out of 21.
 
-**This also closed the fragile half of R3 and all of R4.** The implementation plan is kept at
-`docs/archive/CONDITIONAL_PROJECTION_PLAN.md`.
+**This also closed the fragile half of R3 and all of R4.**
 
 **What was traded away, stated plainly.** Confidence bands are gone; the spread between
 scenarios is not one. And **someone owns the three scenario values** — 0,5 / last observed /

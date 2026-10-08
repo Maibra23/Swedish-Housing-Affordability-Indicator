@@ -4,8 +4,7 @@
 # pipeline (requests) runs on a developer's
 # machine and writes parquet artifacts that are committed; the server only reads
 # them. The extra once carried packages that compile from source, which bought a
-# slow, fragile cold start and nothing else. See docs/REVITALIZATION_PLAN.md,
-# Finding I / T2.1.
+# slow, fragile cold start and nothing else.
 #
 #   running the app   pip install -r requirements.txt
 #   refreshing data   pip install -e ".[pipeline]"

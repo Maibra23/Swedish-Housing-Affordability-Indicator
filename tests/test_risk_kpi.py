@@ -7,7 +7,7 @@ within a few points of it. A year-on-year delta on that count therefore measures
 sampling wobble around a fixed boundary, not whether Sweden became more or less
 affordable. Rendering it with an arrow told the reader the opposite.
 
-See Finding F and Finding Q in docs/REVITALIZATION_PLAN.md, and task T1.9.
+
 
 These are source-level assertions. The defect is not a wrong number that a
 behavioural test could pin down — the count itself is correct. The defect is

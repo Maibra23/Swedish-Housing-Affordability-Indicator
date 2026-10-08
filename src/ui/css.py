@@ -39,8 +39,7 @@ def inject_css() -> None:
     way. Task C1 tried: `server.enableStaticServing` does serve `./static/`, but
     it returns `.css` as `Content-Type: text/plain` alongside
     `X-Content-Type-Options: nosniff`, so a browser refuses to apply the
-    stylesheet and the app renders unstyled. Measured, not assumed — see C1 in
-    docs/OPTIMIZATION_PLAN.md.
+    stylesheet and the app renders unstyled. Measured, not assumed.
 
     `GLOBAL_CSS` already carries its own `<style>` wrapper, so it is emitted
     verbatim rather than wrapped again.

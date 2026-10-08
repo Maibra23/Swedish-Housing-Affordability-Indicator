@@ -47,6 +47,7 @@ from src.kontantinsats.charts import (
 from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
 from src.kontantinsats.income import EARNERS_BY_HOUSEHOLD_TYPE, household_income
 from src.kontantinsats.assumptions import render_assumptions
+from src.kontantinsats.insight import render_insight
 from src.kontantinsats.sections import (
     Context,
     render_baseline_kpis,
@@ -379,19 +380,7 @@ with st.container(border=True):
             st.caption(spec["caption"])
 
 # ── 7 · Nyckelinsikt ─────────────────────────────────────────────────
-best_key  = min(regime_keys, key=lambda k: results[k]["monthly_total"])
-worst_key = max(regime_keys, key=lambda k: results[k]["monthly_total"])
-cost_diff = results[worst_key]["monthly_total"] - results[best_key]["monthly_total"]
-pct_diff  = cost_diff / results[best_key]["monthly_total"] * 100
-
-_hushall_label = "par" if household_multiplier == 2 else L("ki.singelhushall_2")
-_rate_note = (
-    L("ki.styrranta_v0_2f_paslag_v1_1f_pp_v2_2f", v0=selected_row['policy_rate'], v1=bank_margin_pct, v2=effective_rate_display_pct)
-    if bank_margin_pct > 0
-    else L("ki.styrranta_v0_2f", v0=selected_row['policy_rate'])
-)
-insight_html = T("ki.nyckelinsikt_syntes_for_ett_v2_v3_under", v0=COLORS['accent'], v1=COLORS['text_primary'], v2=_hushall_label, v3=_rate_note, v4=format_sek(baseline['required_cash']), v5=baseline['years_to_save'], v6=int(savings_rate*100), v7=format_sek(baseline['monthly_total']), v8=cost_pct, v9=REGIMES[best_key]['label'], v10=format_sek(cost_diff), v11=pct_diff)
-st.markdown(_compact(insight_html), unsafe_allow_html=True)
+render_insight(_ctx)
 
 render_assumptions(_ctx)
 

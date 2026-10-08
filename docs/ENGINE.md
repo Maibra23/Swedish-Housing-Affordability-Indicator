@@ -363,7 +363,7 @@ against 17.5 %. The first projected year was implausible for 21 of 21 counties.
 The deeper reason is the formula. C is a reciprocal of the real rate, and the real
 rate carries most of the variance in year on year changes of `log C`. Projecting C
 six years out means projecting central bank policy six years out. The full evidence
-is R16 in `docs/OPEN_RISKS.md` and D19 in `docs/DEVIATIONS.md`.
+is R16 in `docs/OPEN_RISKS.md`.
 
 The three scenario values, 0.5 and last observed and 2.0, are the one editorial
 judgement in the whole chain with no artifact behind them.

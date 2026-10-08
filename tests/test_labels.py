@@ -21,7 +21,7 @@ fjärdedel hamnar i varje ytterklass" is the F16 caveat, and the whole reason T1
 removed the KPI delta — so it is checked against the class shares rather than
 trusted, the same way T4.1 treats the D5 statistic.
 
-See task T4.3 and Finding L in docs/REVITALIZATION_PLAN.md.
+
 """
 
 from __future__ import annotations

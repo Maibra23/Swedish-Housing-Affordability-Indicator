@@ -17,7 +17,7 @@ re-basing published numbers for years that are rendered. Version A and C are
 immune — D5 made them within-year — which is why this stayed invisible until the
 component series advanced far enough for an imputed row to survive into the index.
 
-See task T2.4 and decisions D1 and D5 in docs/REVITALIZATION_PLAN.md.
+
 """
 
 from __future__ import annotations

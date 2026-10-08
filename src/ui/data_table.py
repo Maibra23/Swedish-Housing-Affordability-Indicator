@@ -9,7 +9,6 @@ this.
 This module owns the shape. A caller describes its columns; the alignment, the
 rank cell, the name cell and the risk pill are decided here.
 
-See task T3.8 and Finding M in docs/REVITALIZATION_PLAN.md.
 """
 
 from __future__ import annotations

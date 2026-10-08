@@ -11,7 +11,6 @@ means *all* classes, not *no* classes — the opposite reading sends an empty fr
 to a chart, which is how Finding A rendered a fabricated KPI. That decision is
 made here, once.
 
-See task T3.7 and Finding M in docs/REVITALIZATION_PLAN.md.
 """
 
 from __future__ import annotations

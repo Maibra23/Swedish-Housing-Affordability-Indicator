@@ -16,7 +16,6 @@ Values with `{name}` placeholders are `str.format` templates — reach them thro
 the copy itself are doubled: Plotly hover templates (`%{{y:,.2f}}`) and inline CSS
 both contain braces that `format` would otherwise read as fields.
 
-See task T3.1 and Finding M in docs/REVITALIZATION_PLAN.md.
 """
 
 from __future__ import annotations
@@ -396,6 +395,18 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.tolk_lattnad_battre": "Lättnaden 2026 sänker både kontantinsatsen, med {v0} kr, och månadskostnaden, med {v1} kr, jämfört med det tidigare regelverket.",
     "ki.tolk_singel_antagande": "Beräkningen utgår från en inkomst. De flesta bostadsköp i Sverige görs av två personer tillsammans. Välj Par ovan för att se hur siffrorna förändras.",
     # Affordability gap chart (sida 04).
+    "ki.insikt_rubrik": "Nyckelinsikt",
+    "ki.insikt_underrubrik": "Vad dagens regler betyder för hushållet, och vad som ändrades",
+    "ki.insikt_idag": "För ett {v0} i {v1} krävs under dagens regler (Lättnad 2026) **{v2} SEK** i kontantinsats. Det tar **{v3} år** att spara ihop om {v4} % av bruttoinkomsten sparas varje år.",
+    "ki.insikt_betalning": "Månadsbetalningen blir **{v0} SEK**: {v1} SEK i ränta ({v2} %) och {v3} SEK i amortering. Det motsvarar **{v4} % av bruttoinkomsten**.",
+    "ki.insikt_over_inkomst": "**Betalningen är större än hela inkomsten, så köpet går inte att genomföra på den här inkomsten.** Siffrorna visar en uträkning, inte ett möjligt köp.",
+    "ki.insikt_over_riktvarde": "Det ligger över det vanliga riktvärdet på {v0} %, så marginalen till andra utgifter är liten.",
+    "ki.insikt_jamforelse": "Under det föregående regelverket ({v0}, {v1}) hade insatsen varit {v2} SEK ({v3} SEK) och tagit {v4} år längre att spara. Månadsbetalningen hade varit {v5} SEK ({v6} SEK), varav {v7} SEK amortering.",
+    "ki.insikt_forbehall": "Alla regelverk räknas med pris och ränta för {v0}, så skillnaderna beror enbart på reglerna. Amorteringen minskar lånet och är ett sparande, inte en kostnad. Ränteavdrag och skatt ingår inte.",
+    "ki.ranta_man_sek": "Ränta/mån (SEK)",
+    "ki.ranta_man_hjalp": "Räntekostnad per månad, utan ränteavdrag. Den del av betalningen som faktiskt är en kostnad.",
+    "ki.amort_man_sek": "Amort./mån (SEK)",
+    "ki.amort_man_hjalp": "Amortering per månad. Minskar lånet och är ett sparande, inte en kostnad.",
     "ki.syfte_rubrik": "Vad sidan svarar på",
     "ki.syfte_p1": "Övriga sidor visar ett index, alltså en jämförelse. Den här sidan räknar om samma data till det ett hushåll planerar efter: kontantinsats och månadskostnad.",
     "ki.syfte_p2": "Det är också den enda sidan som jämför regelverken sida vid sida, så du ser vad varje regeländring kostar.",
@@ -442,9 +453,9 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.ar_2": "år",
     "ki.antal_ar_for_att_spara_kontantinsatsen_vid": "Antal år för att spara kontantinsatsen vid vald sparkvot.",
     "ki.manadskostnad_idag": "Månadskostnad (idag)",
-    "ki.rante_amorteringskostnad_per_manad_efter_att": "Ränte- + amorteringskostnad per månad efter att ha köpt.",
+    "ki.rante_amorteringskostnad_per_manad_efter_att": "Ränta + amortering per månad efter köpet. Amorteringen minskar lånet och är ett sparande.",
     "ki.sek_ar": "SEK/år",
-    "ki.inkomst_kvar_efter_att_boendekostnaderna_ar": "Inkomst kvar efter att boendekostnaderna är betalda (per år).",
+    "ki.inkomst_kvar_efter_att_boendekostnaderna_ar": "Bruttoinkomst kvar per år efter ränta och amortering, före skatt.",
     "ki.ingen_formell_insatsniva_hog_belaning_var": "Ingen formell insatsnivå; hög belåning var vanligare.",
     "ki.bolanetak_infors_max_85_belaning_hogre": "Bolånetak införs (max 85 % belåning) → högre insats.",
     "ki.amorteringskrav_infors_hogre_manadskostnad": "Amorteringskrav införs → högre månadskostnad vid hög belåning.",
@@ -462,7 +473,7 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.jamforelse": "JÄMFÖRELSE",
     "ki.manadskostnad_sek": "Månadskostnad (SEK)",
     "ki.30_av_manadsink_v0_sek": "30 % av månadsink. · {v0} SEK",
-    "ki.lagre_manadskostnad_innebar_mindre_lopande": "Lägre månadskostnad innebär mindre löpande belastning givet samma pris- och inkomstnivå.",
+    "ki.lagre_manadskostnad_innebar_mindre_lopande": "Staplarna visar ränta plus amortering med samma pris, inkomst och ränta. Amorteringen minskar lånet, så en lägre stapel betyder ofta bara mindre amortering, inte en billigare bostad.",
     "ki.ar_att_spara_kontantinsats": "År att spara kontantinsats",
     "ki.5_ar_tillganglig": "5 år – Tillgänglig",
     "ki.10_ar_otillganglig": "10 år – Otillgänglig",
@@ -471,8 +482,6 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.nollgrans": "Nollgräns",
     "ki.hogre_kvarvarande_inkomst_innebar_mer": "Högre kvarvarande inkomst innebär mer utrymme efter boendekostnader givet antagandena.",
     "ki.singelhushall_2": "singelhushåll",
-    "ki.styrranta_v0_2f_paslag_v1_1f_pp_v2_2f": "styrränta {v0:.2f}% + påslag {v1:.1f} pp = {v2:.2f}%",
-    "ki.styrranta_v0_2f": "styrränta {v0:.2f}%",
     "ki.lan": "Län",
     "ki.sparar": "Sparår",
     "ki.sparar_2": "Δ Sparår",
@@ -486,15 +495,15 @@ SWEDISH_LABELS: dict[str, str] = {
     "ki.sparar_vs_idag": "Δ Sparår vs idag",
     "ki.skillnad_i_sparar_jamfort_med_nuvarande": "Skillnad i sparår jämfört med nuvarande regler.",
     "ki.mankostnad_sek": "Månkostnad (SEK)",
-    "ki.manadskostnad_ranta_amortering_lagre_ar": "Månadskostnad (ränta + amortering). Lägre är bättre.",
+    "ki.manadskostnad_ranta_amortering_lagre_ar": "Månadsbetalning: ränta + amortering. Amorteringen minskar lånet.",
     "ki.mankostnad_vs_idag": "Δ Månkostnad vs idag",
     "ki.skillnad_i_manadskostnad_jamfort_med_idag": "Skillnad i månadskostnad jämfört med idag.",
     "ki.kvar_sek_ar": "Kvar (SEK/år)",
-    "ki.kvarvarande_inkomst_per_ar_efter": "Kvarvarande inkomst per år efter boendekostnad. Högre är bättre.",
+    "ki.kvarvarande_inkomst_per_ar_efter": "Bruttoinkomst minus ränta och amortering per år, före skatt och andra utgifter.",
     "ki.skillnad_i_kvarvarande_inkomst_jamfort_med": "Skillnad i kvarvarande inkomst jämfört med idag.",
     "ki.belaningsgrad_lan_bostadspris": "Belåningsgrad: lån / bostadspris.",
     "ki.skuldkvot_lan_arsinkomst": "Skuldkvot: lån / årsinkomst.",
-    "ki.arlig_amortering_i_av_lanet": "Årlig amortering i % av lånet.",
+    "ki.arlig_amortering_i_av_lanet": "Årlig amortering i procent av lånet.",
 
     # ── Sida 05 — Scenario ────────────────────────────────────────
     "sc.shai_version_c_for_v0": "SHAI Version C för {v0}",

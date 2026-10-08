@@ -11,8 +11,7 @@ Measured: 842 KB -> 428 KB, -49 %, with all 290 features and every property
 intact. Verified by tests/test_geojson_payload.py.
 
 Deliberately *not* topology simplification. That needs shapely or mapshaper, and
-adding a runtime dependency to shrink a committed build artifact is backwards --
-see L1 in docs/OPTIMIZATION_PLAN.md and T2.1 in docs/REVITALIZATION_PLAN.md.
+adding a runtime dependency to shrink a committed build artifact is backwards.
 
 Idempotent: running it twice produces the same bytes.
 """

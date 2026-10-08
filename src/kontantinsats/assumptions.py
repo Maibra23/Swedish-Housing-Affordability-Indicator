@@ -76,7 +76,7 @@ def render_assumptions(ctx: Context) -> None:
                 if _br_price is not None and pd.notna(_br_price) and not use_bostadsratt
                 else ""
             ) +
-            T("ki.hushallstyp_v0_individuell_medianinkomst_v1", v0=household_type, v1=format_sek(_individual_income), v2=format_sek(income), v3=' (2 × individuell)' if household_multiplier == 2 else '', v4=selected_row['policy_rate'], v5=bank_margin_pct, v6=effective_rate_display_pct, v7=int(savings_rate*100)),
+            T("ki.hushallstyp_v0_individuell_medianinkomst_v1", v0=household_type, v1=format_sek(_individual_income), v2=format_sek(income), v3=' (2 × individuell)' if household_multiplier == 2 else '', v4=f"{selected_row['policy_rate']:.2f}".replace('.', ','), v5=f"{bank_margin_pct:.1f}".replace('.', ','), v6=f"{effective_rate_display_pct:.2f}".replace('.', ','), v7=int(savings_rate*100), v8=selected_year),
             unsafe_allow_html=True,
         )
 
@@ -97,13 +97,16 @@ def render_assumptions(ctx: Context) -> None:
                     "Δ Insats": float(res["required_cash"] - baseline["required_cash"]),
                     L("ki.sparar"): float(res["years_to_save"]),
                     L("ki.sparar_2"): float(res["years_to_save"] - baseline["years_to_save"]),
+                    "Ränta/mån": float(res["annual_interest"] / 12),
+                    "Amort./mån": float(res["annual_amort"] / 12),
                     L("ki.mankostnad"): float(res["monthly_total"]),
                     L("ki.mankostnad_2"): float(res["monthly_total"] - baseline["monthly_total"]),
                     "Kvar": float(res["residual_income"]),
                     "Δ Kvar": float(res["residual_income"] - baseline["residual_income"]),
-                    "LTV": float(res["ltv"]),
+                    # Stored as fractions; shown as percentages.
+                    "LTV": float(res["ltv"]) * 100,
                     "LTI": float(res["lti"]),
-                    "Amort.": float(res["amort_pct"]),
+                    "Amort.": float(res["amort_pct"]) * 100,
                 }
             )
 
@@ -117,18 +120,14 @@ def render_assumptions(ctx: Context) -> None:
             best_bg = "background-color: rgba(46,125,91,0.12);"   # low_risk
             worst_bg = "background-color: rgba(185,74,72,0.10);"  # high_risk
 
-            # Lower is better
-            for col in ["Insats", L("ki.sparar"), L("ki.mankostnad")]:
+            # Lower is better. Only real burdens are marked: amortisation repays
+            # the household's own loan, so a low total payment or a high "Kvar"
+            # is not "better" when it comes from amortising less.
+            for col in ["Insats", L("ki.sparar"), "Ränta/mån"]:
                 if col in _df.columns:
                     mn, mx = _df[col].min(), _df[col].max()
                     out.loc[_df[col] == mn, col] += best_bg
                     out.loc[_df[col] == mx, col] += worst_bg
-
-            # Higher is better
-            if "Kvar" in _df.columns:
-                mn, mx = _df["Kvar"].min(), _df["Kvar"].max()
-                out.loc[_df["Kvar"] == mx, "Kvar"] += best_bg
-                out.loc[_df["Kvar"] == mn, "Kvar"] += worst_bg
 
             return out
 
@@ -145,6 +144,8 @@ def render_assumptions(ctx: Context) -> None:
                 "Δ Insats",
                 L("ki.sparar"),
                 L("ki.sparar_2"),
+                "Ränta/mån",
+                "Amort./mån",
                 L("ki.mankostnad"),
                 L("ki.mankostnad_2"),
                 "Kvar",
@@ -160,6 +161,8 @@ def render_assumptions(ctx: Context) -> None:
                 "Δ Insats": st.column_config.NumberColumn("Δ Insats vs idag", format="%+.0f", help=L("ki.skillnad_i_insats_jamfort_med_nuvarande")),
                 L("ki.sparar"): st.column_config.NumberColumn(L("ki.sparar"), format="%.1f", help=L("ki.ar_att_spara_kontantinsatsen_vid_vald")),
                 L("ki.sparar_2"): st.column_config.NumberColumn(L("ki.sparar_vs_idag"), format="%+.1f", help=L("ki.skillnad_i_sparar_jamfort_med_nuvarande")),
+                "Ränta/mån": st.column_config.NumberColumn(L("ki.ranta_man_sek"), format="%.0f", help=L("ki.ranta_man_hjalp")),
+                "Amort./mån": st.column_config.NumberColumn(L("ki.amort_man_sek"), format="%.0f", help=L("ki.amort_man_hjalp")),
                 L("ki.mankostnad"): st.column_config.NumberColumn(L("ki.mankostnad_sek"), format="%.0f", help=L("ki.manadskostnad_ranta_amortering_lagre_ar")),
                 L("ki.mankostnad_2"): st.column_config.NumberColumn(L("ki.mankostnad_vs_idag"), format="%+.0f", help=L("ki.skillnad_i_manadskostnad_jamfort_med_idag")),
                 "Kvar": st.column_config.NumberColumn(L("ki.kvar_sek_ar"), format="%.0f", help=L("ki.kvarvarande_inkomst_per_ar_efter")),

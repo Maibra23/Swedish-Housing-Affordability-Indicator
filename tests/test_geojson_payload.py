@@ -9,7 +9,7 @@ Truncating to 5 decimals (~1.1 m) and minifying costs nothing visible and remove
 49 % of the file. It is a build step, not a request-time one: the output is
 committed, because `data/geo/` exists so the server does no work.
 
-See Task B1 in docs/OPTIMIZATION_PLAN.md.
+
 """
 
 from __future__ import annotations
