@@ -177,6 +177,13 @@ def rate_inflation_surface(
     # the picture rather than of the arithmetic behind it.
     layout["yaxis"]["scaleanchor"] = "x"
     layout["yaxis"]["scaleratio"] = 1
+    # The plane ends where the sliders end. Without a range, the 1:1 scale made
+    # Plotly widen the x axis to fill the figure, to about -21..26, and the data
+    # (-5..10) filled a third of the plot. "domain" shrinks the plot instead.
+    layout["xaxis"]["range"] = [CPI_MIN, CPI_MAX]
+    layout["yaxis"]["range"] = [RATE_MIN, RATE_MAX]
+    layout["xaxis"]["constrain"] = "domain"
+    layout["yaxis"]["constrain"] = "domain"
     layout["margin"] = dict(r=10, t=20, b=40)
     fig.update_layout(**layout)
     return fig
@@ -220,10 +227,12 @@ def _add_floor_boundary(fig: go.Figure, baseline_panel: dict) -> None:
     lo = max(CPI_MIN, RATE_MIN - intercept)
     hi = min(CPI_MAX, RATE_MAX - intercept)
     if lo < hi:
-        mid_x = (lo + hi) / 2
+        # Three quarters along rather than the midpoint: with a baseline near
+        # the floor the midpoint sits on the scenario marker at the origin.
+        label_x = lo + 0.75 * (hi - lo)
         fig.add_annotation(
-            x=mid_x,
-            y=mid_x + intercept,
+            x=label_x,
+            y=label_x + intercept,
             text=L("sc.yta_golv_linje"),
             showarrow=False,
             yshift=-14,

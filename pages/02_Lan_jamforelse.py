@@ -1,4 +1,4 @@
-"""Sida 02 — Län jämförelse.
+"""Sida 02 — Länsjämförelse.
 
 En flik per formel som kan rangordna annorlunda: Realversion (C) och
 Makroversion (B), var och en med trendlinje och rankingtabell. Bankversion (A)
@@ -14,7 +14,7 @@ st.set_page_config(
     page_title=L("lj.shai_lan_jamforelse"),
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
@@ -35,12 +35,14 @@ from src.ui.components import (
     card_header,
     explanation,
     footer_note,
+    format_dec,
     page_title,
     vintage_badge,
 )
 from src.ui.chart_theme import CHART_PALETTE
 from src.ui.data_table import Column, render_table
 from src.lan.charts import county_colours, county_legend_html, county_trend_chart
+from src.lan.ranking import county_ranking_html
 from src.indices.agreement import (
     inflation_adjustment,
     measure_agreement,
@@ -65,6 +67,9 @@ try:
         county_panel = load_artifact("panel_county.parquet")
         # The risk classes live on the ranked artifact, not the municipal one.
         ranked = load_artifact("affordability_ranked.parquet")
+        # County-level values, computed from county income and price. Sida 03
+        # and 05 show these, so the ranking shows them beside the kommun mean.
+        county_level = load_artifact("affordability_county.parquet")
 except Exception as e:
     st.error(L("lj.kunde_inte_hamta_data_forsok_igen_senare"))
     st.caption(f"Detaljer: {e}")
@@ -161,10 +166,12 @@ with st.expander(L("lj.valj_lan")):
         label_visibility="collapsed",
     )
 _selected = [_name_to_code[n] for n in _picked_names]
-if not _selected:
+# An empty selection hides the chart only. It used to st.stop() the page, which
+# also removed the ranking and the Robusthet section, neither of which reads it.
+if _selected:
+    st.caption(L("lj.v0_av_v1_lan_visas", v0=len(_selected), v1=len(_all_codes)))
+else:
     st.info(L("lj.inga_lan_valda"))
-    st.stop()
-st.caption(L("lj.v0_av_v1_lan_visas", v0=len(_selected), v1=len(_all_codes)))
 
 # ── Tabs ─────────────────────────────────────────────────────────────
 tabs = st.tabs(list(FORMULA_INFO.keys()))
@@ -180,58 +187,29 @@ for tab, (tab_name, info) in zip(tabs, FORMULA_INFO.items()):
                 card_header(L("lj.lansutveckling"), f"{tab_name} · {PERIOD}"),
                 unsafe_allow_html=True,
             )
-            st.plotly_chart(
-                county_trend_chart(
-                    county_versions,
-                    value_column=info["col"],
-                    selected=_selected,
-                    colours=_colours,
-                ),
-                width="stretch",
-                config={"displayModeBar": "hover"},
-            )
-            st.markdown(
-                county_legend_html(_selected, _colours, _names_by_code),
-                unsafe_allow_html=True,
-            )
-
-        with st.container(border=True):
-            year_data = county_versions[county_versions["year"] == selected_year].copy()
-            vcol = info["col"]
-
-            if len(year_data) > 0:
-                # Rank 1 = best affordability, in every tab. version_a and
-                # version_c read "higher is better" so they sort descending;
-                # version_b is a risk score, so it sorts ascending. Sorting all
-                # three the same way put the worst county at #1 while the
-                # caption above the table said the opposite.
-                year_data = year_data.sort_values(
-                    vcol, ascending=(vcol == "version_b")
-                )
-                year_data["rank"] = range(1, len(year_data) + 1)
-
-                st.markdown(
-                    render_table(
-                        year_data,
-                        [
-                            Column("#", lambda row: str(row["rank"]), kind="rank"),
-                            Column(
-                                L("lj.lan"),
-                                lambda row: str(row["region_name"]),
-                                kind="name",
-                            ),
-                            Column(
-                                L("lj.varde"),
-                                lambda row, c=vcol: f"{row[c]:.2f}".replace(".", ","),
-                                numeric=True,
-                            ),
-                        ],
-                        title=L("lj.lansranking_v0", v0=selected_year),
-                        subtitle=L("lj.ranking_subtitle_v0", v0=tab_name),
-                        tag=L("lj.ranking"),
+            if _selected:
+                st.plotly_chart(
+                    county_trend_chart(
+                        county_versions,
+                        value_column=info["col"],
+                        selected=_selected,
+                        colours=_colours,
                     ),
+                    width="stretch",
+                    config={"displayModeBar": "hover"},
+                )
+                st.markdown(
+                    county_legend_html(_selected, _colours, _names_by_code),
                     unsafe_allow_html=True,
                 )
+
+        with st.container(border=True):
+            st.markdown(
+                county_ranking_html(
+                    county_versions, county_level, selected_year, info["col"], tab_name
+                ),
+                unsafe_allow_html=True,
+            )
 
         # The formula sits below the chart, collapsed. It is reference material
         # that a reader consults once and then skips past on every later visit,
@@ -296,12 +274,12 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
                 worst = year_data.nsmallest(5, vcol) if ascending else year_data.nlargest(5, vcol)
                 st.markdown(L("lj.samst_overkomlighet"))
                 for _, r in worst.iterrows():
-                    st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
+                    st.markdown(f"- {r['region_name']}: **{format_dec(r[vcol], 2)}**")
 
                 best = year_data.nlargest(5, vcol) if ascending else year_data.nsmallest(5, vcol)
                 st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
-                    st.markdown(f"- {r['region_name']}: **{f'{r[vcol]:.2f}'.replace('.', ',')}**")
+                    st.markdown(f"- {r['region_name']}: **{format_dec(r[vcol], 2)}**")
 
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 

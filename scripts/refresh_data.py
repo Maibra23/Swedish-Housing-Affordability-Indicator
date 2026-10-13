@@ -10,6 +10,8 @@ Steps executed:
      record the data vintage in data/processed/data_provenance.json
   4. Compute the conditional projection (no model fitting; see R16 in
      docs/APP_REFERENCE.md (Part II)) and save projection.parquet
+  5. Fetch SCB's household mortgage rates and record each year's margin over
+     the policy rate in data/processed/mortgage_margin.json (Sida 04's default)
 
 Usage:
     python scripts/refresh_data.py            # full refresh
@@ -177,6 +179,25 @@ def step_projection() -> None:
     )
 
 
+def step_mortgage_margin() -> None:
+    """Record each year's mortgage margin over the policy rate (Sida 04 default)."""
+    logger.info("=" * 60)
+    logger.info("STEP 5 — Mortgage margin over the policy rate")
+    logger.info("=" * 60)
+
+    import pandas as pd
+
+    from src.data import mortgage_margin
+
+    national = pd.read_parquet(PROJECT_ROOT / "data" / "processed" / "panel_national.parquet")
+    policy = {
+        int(year): float(rate)
+        for year, rate in zip(national["year"], national["policy_rate"])
+        if pd.notna(rate)
+    }
+    mortgage_margin.write(mortgage_margin.build(policy, mortgage_margin.fetch_monthly()))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="SHAI — full data refresh pipeline")
     parser.add_argument(
@@ -212,6 +233,11 @@ def main() -> None:
         step_projection()
     else:
         logger.info("Skipping STEP 4 (--no-projection)")
+
+    if not args.no_fetch:
+        step_mortgage_margin()
+    else:
+        logger.info("Skipping STEP 5 (--no-fetch); mortgage_margin.json kept as is")
 
     logger.info("=" * 60)
     logger.info("Refresh complete in %.1f s", time.time() - wall_start)

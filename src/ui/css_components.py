@@ -371,4 +371,15 @@ CSS = """/* ---- Page header (full row) ---- */
     border-radius: 50%;
     background: #2E7D5B;
 }
+
+/* County chips in the Sida 02 selector: BaseWeb caps tag width and cuts the
+   longest name ("Västra Götalands län") with an ellipsis. Let tags fit the name. */
+[data-testid="stMultiSelect"] [data-baseweb="tag"] {
+    max-width: none;
+}
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+}
 """

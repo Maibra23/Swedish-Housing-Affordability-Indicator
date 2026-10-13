@@ -30,9 +30,9 @@ the three pages a visitor meets first.
 | | Page | Section |
 |---|---|---|
 | Sida 01 | Riksöversikt | 1 |
-| Sida 02 | Län jämförelse | 2 |
-| Sida 03 | Kommun djupanalys | 3 |
-| Sida 04 | Kontantinsats analys | 4 |
+| Sida 02 | Länsjämförelse | 2 |
+| Sida 03 | Kommunanalys | 3 |
+| Sida 04 | Kontantinsatsanalys | 4 |
 | Sida 05 | Scenariosimulator | 5 |
 | Sida 06 | Metodologi och källor | documented by `docs/METHODOLOGY.md`, which is its source |
 
@@ -152,7 +152,7 @@ which asserted a trend it cannot have.
 
 ---
 
-## 2. Län jämförelse (Sida 02)
+## 2. Länsjämförelse (Sida 02)
 
 ### What it is
 
@@ -263,7 +263,7 @@ mean would close the gap and change every value on the page.
 
 ---
 
-## 3. Kommun djupanalys (Sida 03)
+## 3. Kommunanalys (Sida 03)
 
 ### What it is
 
@@ -312,7 +312,7 @@ stitched across a geography. That remains true of the projection.
 
 **The three scenarios, for Stockholms län (observed 2024 = 7,7):**
 
-| År | Golvet, 0,5 pp | Dagens nivå, 0,77 pp | Normaliserad, 2,0 pp |
+| År | Golvet, 0,5 pp | Nivå 2024, 0,77 pp | Normaliserad, 2,0 pp |
 |---|---|---|---|
 | 2025 | 12,0 | 7,8 | 3,0 |
 | 2027 | 12,2 | 7,9 | 3,1 |
@@ -351,7 +351,7 @@ is that the page no longer spends them on a fitted model.
 
 ---
 
-## 4. Kontantinsats analys (Sida 04)
+## 4. Kontantinsatsanalys (Sida 04)
 
 ### What it is
 
@@ -415,7 +415,7 @@ The five regimes and what changed at each step:
 
 ### What the numbers actually say, with real figures
 
-Stockholm 2024, one income, 10 % savings rate, 1.7 pp bank margin:
+Stockholm 2024, one income, 10 % savings rate, 1.7 pp bank margin (the fixed default before October 2026; the page now defaults to the year's observed margin):
 
 | | Lättnad 2026 | Amorteringskrav 2.0 |
 |---|---|---|
@@ -639,7 +639,7 @@ the artifact, and never displayed.
 That is not automatically waste. There is a defensible reason to keep them: a
 single-formula indicator invites the question "why this formula", and the ability
 to show that the ranking is broadly robust across three different economic
-framings is a real credibility argument. The Län jämförelse page exists to make
+framings is a real credibility argument. The Länsjämförelse page exists to make
 exactly that argument.
 
 But the current arrangement is the expensive version of that argument. Three
@@ -878,7 +878,7 @@ Yes, and the places to change them are deliberately centralised:
 | Risk class cuts (+/-0.67 sigma) | `src/indices/normalize.py` | Fixed quantiles, so class shares are near constant by construction |
 | Regime deposit and amortisation rules | `src/kontantinsats/engine.py` | The `REGIMES` dict; add a regime by adding an entry |
 | Imputed income growth (3 %/yr) | `src/data/panel_income.py` | Only affects years beyond the index ceiling |
-| Bank margin default (1.7 pp) | Sida 04 slider | User-adjustable at runtime |
+| Bank margin default (SCB-observed margin for the selected year) | `data/processed/mortgage_margin.json`, read by `src/kontantinsats/margin.py` | Written by refresh step 5; user-adjustable at runtime |
 
 Three cautions that are easy to learn the hard way:
 
@@ -1327,7 +1327,7 @@ back from the engine, so the page cannot show −0,50 % while the engine prices 
 | Bank margin | Before | After | Rate used |
 |---|---|---|---|
 | 0,0 pp | 8 641 kr | 11 522 kr | 0,00 % |
-| 1,7 pp (default) | 18 434 kr | 18 434 kr | 1,20 % |
+| 1,7 pp (then the default) | 18 434 kr | 18 434 kr | 1,20 % |
 
 Only years with a negative policy rate (2015 to 2020) change, and only when the
 margin is smaller than the size of that negative rate. The default margin, and

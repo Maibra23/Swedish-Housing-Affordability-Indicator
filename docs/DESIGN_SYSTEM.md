@@ -18,6 +18,7 @@ here is absent from the stylesheet, or a class in the stylesheet is absent here.
 | Module | Holds |
 |--------|-------|
 | `src/ui/tokens.py` | `COLORS`, `DIVERGING_SCALE` |
+| `src/ui/formatting.py` | Swedish number formatting: decimal comma, true minus, `%` and `×` with their spacing |
 | `src/ui/css_layout.py` | Font import, custom properties, Streamlit chrome, sidebar |
 | `src/ui/css_components.py` | Page header, KPI, card, pill, table, explanation, help, vintage |
 | `src/ui/css_landing.py` | Hero, stat strip, weight bars, steps, nav cards, credibility |
@@ -221,7 +222,7 @@ good and therefore reads the same ramp from the other end.
 
 **Colours come from tokens.** `COLORS`, `CHART_PALETTE`, `DIVERGING_SCALE` and
 `COUNTY_PALETTE`, never a literal. `COUNTY_PALETTE` holds one colour per county
-for the Län jämförelse trend chart: 21 generated hues, each darkened until it
+for the Länsjämförelse trend chart: 21 generated hues, each darkened until it
 clears 3:1 against the white card, which is where a 2px line stays legible.
 `tests/test_chart_theme_guard.py` asserts that bound, so lightening one for
 aesthetic reasons fails a test rather than a reader. `chart_theme.py` and `tokens.py` are where the hex values live;

@@ -19,18 +19,32 @@ from src.ui.components import format_sek
 from src.ui.labels import L
 from src.ui.tokens import COLORS
 
-def fmt_delta_sek(delta: float) -> str | None:
-    """Format a SEK delta: hide zeros, round to tkr when >= 10 000."""
+def fmt_delta_sek(delta: float, unit: str = "SEK") -> str | None:
+    """Format a SEK delta for an ``st.metric`` card, in one fixed unit.
+
+    The unit used to switch to tkr at 10 000, so one row of regime cards showed
+    "-9 078 SEK" beside "-15 tkr". The caller now picks the unit per metric:
+    tkr for down payments, SEK for monthly costs.
+
+    The sign stays an ASCII hyphen: ``st.metric`` reads it to choose the arrow.
+
+    Args:
+        delta: Change in SEK.
+        unit: "SEK" or "tkr".
+
+    Returns:
+        The label, or None for a change under one krona.
+    """
     if abs(delta) < 1:
         return None
-    if abs(delta) >= 10_000:
-        tkr = round(delta / 1_000)
-        sign = "+" if tkr > 0 else ""
-        return f"{sign}{tkr}\u00A0tkr"
-    sign = "+" if delta > 0 else ""
-    return f"{sign}{delta:,.0f}\u00A0SEK".replace(",", "\u00A0")
+    value = delta / 1_000 if unit == "tkr" else delta
+    sign = "+" if value > 0 else ""
+    return f"{sign}{value:,.0f}".replace(",", "\u00A0") + "\u00A0" + unit
 
 
+def format_tkr(value: float) -> str:
+    """A down payment in whole tkr: "860 tkr", "1 290 tkr", "0 tkr"."""
+    return f"{value / 1_000:,.0f}".replace(",", "\u00A0") + "\u00A0tkr"
 
 
 def comparison_barchart(

@@ -11,7 +11,7 @@ st.set_page_config(
     page_title=L("rv.shai_riksoversikt"),
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
@@ -31,6 +31,7 @@ from src.ui.components import (
     kpi_card,
     render_kpi_row,
     format_sek,
+    format_dec,
     format_pct,
     risk_pill,
     card,
@@ -42,7 +43,7 @@ from src.ui.components import (
 )
 from src.ui.choropleth import render_choropleth
 from src.ui.data_table import Column, render_table
-from src.ui.filters import by_risk
+from src.ui.filters import RISK_LABELS, by_risk
 from src.ui.chart_theme import get_chart_layout
 
 inject_css()
@@ -93,6 +94,9 @@ page_title(
 # ── KPI cards ────────────────────────────────────────────────────────
 mean_vc = mun_year["version_c"].mean() if len(mun_year) > 0 else 0
 mean_vc_prev = mun_prev["version_c"].mean() if len(mun_prev) > 0 else mean_vc
+# 2014 has no previous year. Falling back to the current value used to print a
+# "+0,0 %" change that was never measured; with no prior year there is no delta.
+HAS_PREV = len(mun_prev) > 0
 delta_vc = mean_vc - mean_vc_prev
 delta_vc_pct = (delta_vc / mean_vc_prev * 100) if mean_vc_prev != 0 else 0
 
@@ -117,9 +121,9 @@ pop_change_pct = ((pop_now / pop_prev - 1) * 100) if pop_prev > 0 else 0
 render_kpi_row([
     kpi_card(
         label="Genomsnittligt SHAI",
-        value=f"{mean_vc:,.1f}".replace(",", "\u00A0").replace(".", ","),
+        value=format_dec(mean_vc),
         unit=L("rv.poang"),
-        delta=f"{delta_vc_pct:+.1f}%".replace(".", ","),
+        delta=format_pct(delta_vc_pct, signed=True) if HAS_PREV else "",
         # Version C is an affordability ratio: higher is better, so a fall is bad.
         **delta_meta(delta_vc, higher_is_better=True),
         variant="default",
@@ -128,7 +132,7 @@ render_kpi_row([
     kpi_card(
         label=L("rv.hogrisk_kommuner"),
         value=str(n_hog),
-        unit=f"av {N_KOMMUNER} · relativ position {selected_year}",
+        unit=L("rv.av_v0_relativ_position_v1", v0=N_KOMMUNER, v1=selected_year),
         variant="danger",
         tooltip=(
             L("rv.antal_kommuner_med_z_poang_0_67")
@@ -136,9 +140,9 @@ render_kpi_row([
     ),
     kpi_card(
         label="K/T-kvot (genomsnitt)",
-        value=f"{mean_kt:.2f}".replace(".", ","),
+        value=format_dec(mean_kt, 2),
         unit="genomsnitt",
-        delta=f"{delta_kt_pct:+.1f}%".replace(".", ","),
+        delta=format_pct(delta_kt_pct, signed=True) if HAS_PREV else "",
         # K/T is price against assessed value: a rise means more expensive.
         **delta_meta(delta_kt_pct, higher_is_better=False),
         variant="accent",
@@ -146,8 +150,9 @@ render_kpi_row([
     ),
     kpi_card(
         label=L("rv.befolkningsforandring"),
-        value=format_pct(pop_change_pct),
-        delta=f"{(pop_now - pop_prev):+,.0f}".replace(",", "\u00A0"),
+        value=format_pct(pop_change_pct) if HAS_PREV else "–",
+        unit="" if HAS_PREV else L("rv.forsta_aret_ingen_jamforelse"),
+        delta=format_dec(pop_now - pop_prev, 0, signed=True) if HAS_PREV else "",
         # Population change is neither good nor bad for affordability. Colouring
         # it asserted a judgement the data does not make.
         **delta_meta(pop_change_pct, higher_is_better=None),
@@ -279,6 +284,15 @@ st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 # ── Table row: Top 15 worst + Top 15 best ────────────────────────────
 
 
+def _table_subtitle() -> str:
+    """Name the risk filter when one is active, so a filtered list cannot pass
+    for the national top 15."""
+    base = f"Version C · {selected_year}"
+    if len(selected_risks) == len(RISK_LABELS):
+        return base
+    return L("rv.tabell_filtrerad_v0_v1", v0=base, v1=", ".join(selected_risks))
+
+
 def _ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
     """Render the top or bottom fifteen municipalities by Version C.
 
@@ -299,12 +313,12 @@ def _ranking_table(df: pd.DataFrame, ascending: bool, title: str) -> str:
         [
             Column("#", lambda row: str(row["_rank"]), kind="rank"),
             Column(L("rv.kommun"), lambda row: str(row.get("region_name", "")), kind="name"),
-            Column(L("rv.z_poang"), lambda row: f"{row.get('z_c', 0):.2f}", numeric=True),
-            Column(L("rv.shai"), lambda row: f"{row.get('version_c', 0):.1f}", numeric=True),
+            Column(L("rv.z_poang"), lambda row: format_dec(row.get("z_c", 0), 2), numeric=True),
+            Column(L("rv.shai"), lambda row: format_dec(row.get("version_c", 0)), numeric=True),
             Column(L("rv.risk"), lambda row: risk_pill(row.get("risk_c", "medel")), kind="pill"),
         ],
         title=title + help_badge("rang", "version_c", "riskklass"),
-        subtitle=f"Version C · {selected_year}",
+        subtitle=_table_subtitle(),
         tag=L("rv.ranking"),
     )
 

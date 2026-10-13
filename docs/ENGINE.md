@@ -387,8 +387,9 @@ Five regimes, every one Sweden has actually had:
 | Amorteringskrav 2.0 | Mar 2018 to Mar 2026 | 15 % | as above, **plus 1 % if loan > 4.5x income** |
 | Lättnad 2026 | Apr 2026 onward | **10 %** | 2 % if LTV > 70 %, 1 % if LTV > 50 % |
 
-Worked all the way through, Stockholm 2024, single income, 10 % savings rate, 1.7 pp
-bank margin, under today's rules:
+Worked all the way through, Stockholm 2024, single income, 10 % savings rate, and the
+page's default bank margin for 2024, which is the margin SCB observed that year (0.76 pp,
+rounded onto the slider's 0.1 grid as 0.8 pp), under today's rules:
 
 ```
 price                      8 597 000 SEK
@@ -399,14 +400,14 @@ LTI                           18.7x         loan / income
 
 years to save    859 700 / (413 600 x 0.10) = 20.8 years
 
-effective rate   3.6285 + 1.7 = 5.3285 %
-annual interest  7 737 300 x 0.053285 = 412 196 SEK
+effective rate   3.6285 + 0.8 = 4.4285 %
+annual interest  7 737 300 x 0.044285 = 342 646 SEK
 amortisation     LTV 90 % > 70 %, so 2 %
 annual amort     7 737 300 x 0.02     = 154 746 SEK
                                         ---------
-annual total                            566 942 SEK
-monthly                                  47 252 SEK
-residual income  413 600 - 566 942    = -153 342 SEK
+annual total                            497 392 SEK
+monthly                                  41 449 SEK
+residual income  413 600 - 497 392    = -83 792 SEK
 ```
 
 The engine reports that negative residual rather than hiding it. On a single median
@@ -501,7 +502,7 @@ Best three by z_c          Åsele, Sorsele, Ragunda
 
 That -36,5 % is the floor effect from section 4, not a collapse.
 
-### Sida 02, Län jämförelse
+### Sida 02, Länsjämförelse
 
 **Reads:** `affordability_municipal.parquet`, then averages kommuner into their län
 with `groupby("lan_code").mean()`, plus `affordability_ranked.parquet` for the
@@ -545,7 +546,7 @@ B disagrees with C for **73 of 290 kommuner**. The sharpest case is Perstorp: me
 under C, hög under B, a gap of 150 rank places. B weighs in unemployment, which C
 ignores entirely.
 
-### Sida 03, Kommun djupanalys
+### Sida 03, Kommunanalys
 
 **Reads:** `affordability_municipal` for the kommun, `affordability_county` for its
 county, and `projection.parquet`. **Engine path:** stages 3 and 5.
@@ -603,7 +604,7 @@ over rate and inflation, and a comparison table.
 
 Eight numbered sections: theory, the ten variables and their sources, the three
 formulas with their LaTeX, normalisation and risk classes, the projection, the
-regime history, the limitations register F1 to F16, validation, and references.
+regime history, the limitations register F1 to F17, validation, and references.
 
 This is where A, B and C are formally defined, which is why the tab strip on Sida 02
 does not need to carry the letters.

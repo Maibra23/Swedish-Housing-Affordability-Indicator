@@ -51,7 +51,8 @@ header[data-testid="stHeader"] {
 /* Desktop (≥ 769px): sidebar permanently open, all toggle buttons hidden */
 @media (min-width: 769px) {
     /* Exterior button: the ">" that reopens a collapsed sidebar */
-    [data-testid="collapsedControl"] {
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"] {
         display: none !important;
     }
     /* Interior buttons: the close/collapse arrow inside the sidebar */
@@ -70,13 +71,26 @@ header[data-testid="stHeader"] {
 
 /* Mobile / tablet (≤ 768px): natural Streamlit overlay toggle */
 @media (max-width: 768px) {
-    [data-testid="collapsedControl"] {
+    /* The reopen button. Streamlit 1.55 renders it as stExpandSidebarButton
+       inside the header, which the chrome rules above hide; collapsedControl
+       is its old id. Without this rule a phone had no way to open the sidebar,
+       which holds the navigation and the year selector. */
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"] {
         display: flex !important;
         visibility: visible !important;
         position: fixed;
         top: 10px;
         left: 10px;
         z-index: 1000;
+        background: #0B1F3F;
+        color: #FFFFFF;
+        border-radius: 6px;
+        padding: 4px;
+        box-shadow: 0 1px 4px rgba(11, 31, 63, 0.25);
+    }
+    [data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] {
+        color: #FFFFFF !important;
     }
     section[data-testid="stSidebar"] {
         width: min(280px, 85vw) !important;

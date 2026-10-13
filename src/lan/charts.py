@@ -110,7 +110,9 @@ def county_trend_chart(
         title=title,
         height=460,
         xaxis_title=L("lj.ar"),
-        yaxis_title=L("lj.indexvarde"),
+        # A log axis says so in its title: ticks at 10, 20, 50 read as linear
+        # otherwise, and the gaps between counties look smaller than they are.
+        yaxis_title=L("lj.indexvarde_log") if value_column in LOG_SCALED else L("lj.indexvarde"),
         showlegend=False,
     )
     layout["xaxis"]["dtick"] = 1
@@ -141,19 +143,17 @@ def county_legend_html(
     Args:
         selected: County codes drawn in colour, in display order.
         colours: From :func:`county_colours`.
-        names: County code to full name; the " län" suffix is dropped, as in
-            the chart's hover-free trace names.
+        names: County code to full name. Shown in full: with " län" dropped
+            the genitive forms ("Dalarnas", "Gotlands") were left dangling.
 
     Returns:
         HTML for a `.shai-legend` row, to render with `unsafe_allow_html`.
     """
     items = []
     for code in selected:
-        name = names[code]
-        short = name[: -len(" län")] if name.endswith(" län") else name
         items.append(
             f'<span class="shai-legend-item">'
             f'<span class="shai-legend-swatch" style="background:{colours[code]}"></span>'
-            f"{escape(short)}</span>"
+            f"{escape(names[code])}</span>"
         )
     return f'<div class="shai-legend">{"".join(items)}</div>'

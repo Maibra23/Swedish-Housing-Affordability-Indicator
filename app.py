@@ -13,7 +13,7 @@ st.set_page_config(
     page_title=L("landing.shai_bostadsekonomisk_hallbarhet"),
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={
         "Get Help": None,
         "Report a bug": None,
@@ -88,7 +88,7 @@ with col1:
     ), unsafe_allow_html=True)
 with col2:
     st.markdown(render_landing_nav_card(
-        "Kommun djupanalys",
+        "Kommunanalys",
         L("landing.kommun_djupanalys_beskrivning"),
         tag="SIDA 03",
     ), unsafe_allow_html=True)

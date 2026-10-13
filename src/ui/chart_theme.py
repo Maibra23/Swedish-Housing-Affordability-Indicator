@@ -47,6 +47,10 @@ def get_chart_layout(
         showlegend: Whether to show the legend.
     """
     layout = {
+        # Decimal comma and a space between thousands, as everywhere else on the
+        # site. Plotly's default printed axis ticks as "0.8" and hover values as
+        # "1,234.5" next to KPI cards reading "0,8".
+        "separators": ", ",
         "font": {
             "family": CHART_FONT,
             "size": 12,

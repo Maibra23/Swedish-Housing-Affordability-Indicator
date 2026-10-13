@@ -5,14 +5,13 @@ Renders brand block, page_link navigation, year pills, risk filter, and footer.
 
 from __future__ import annotations
 
-import tomllib
 from datetime import datetime
-from pathlib import Path
 
 import streamlit as st
 
 from src.provenance import complete_case_max_year, first_year, generated_at
 from src.ui.filters import RISK_LABELS
+from src.ui.version import APP_VERSION  # re-exported for app.py and Sida 06
 
 PAGES = [
     ("app.py", "Startsida"),
@@ -20,9 +19,9 @@ PAGES = [
     # eyebrows but made the rail busy, and the order is already legible without
     # them (national, county, municipality, calculator, scenario, method).
     ("pages/01_Riksoversikt.py", "Riksöversikt"),
-    ("pages/02_Lan_jamforelse.py", "Län jämförelse"),
-    ("pages/03_Kommun_djupanalys.py", "Kommun djupanalys"),
-    ("pages/04_Kontantinsats.py", "Kontantinsats analys"),
+    ("pages/02_Lan_jamforelse.py", "Länsjämförelse"),
+    ("pages/03_Kommun_djupanalys.py", "Kommunanalys"),
+    ("pages/04_Kontantinsats.py", "Kontantinsatsanalys"),
     ("pages/05_Scenario.py", "Scenariosimulator"),
     ("pages/06_Metodologi.py", "Metodologi och källor"),
 ]
@@ -70,19 +69,6 @@ def footer_html() -> str:
     """
 
 
-def _app_version() -> str:
-    """Read the project version from pyproject.toml."""
-    try:
-        _toml = Path(__file__).resolve().parents[2] / "pyproject.toml"
-        with open(_toml, "rb") as f:
-            return tomllib.load(f)["project"]["version"]
-    except Exception:
-        return "1.3.0"
-
-
-APP_VERSION = _app_version()
-
-
 def render_sidebar() -> dict:
     """Render the SHAI sidebar and return user selections.
 
@@ -125,7 +111,10 @@ def render_sidebar() -> dict:
         # A plain (non-widget) session_state entry is not discarded that way, so
         # the selection is mirrored into one and read back as `default` on the
         # next page. That is what carries the year across navigation.
-        if "shai_selected_year" not in st.session_state:
+        # A stored year outside the offered range (a refresh can shorten it while
+        # a session is open) would make st.pills raise on its default. Fall back
+        # to the default year instead of crashing every page.
+        if st.session_state.get("shai_selected_year") not in YEAR_RANGE:
             st.session_state["shai_selected_year"] = default_year()
 
         selected_year = st.pills(
@@ -152,7 +141,7 @@ def render_sidebar() -> dict:
             </div>
             <div class="shai-risk-legend-row">
                 <span class="shai-risk-legend-dot" style="background:#D4A03C;"></span>
-                <span>Medel risk</span>
+                <span>Medelrisk</span>
             </div>
             <div class="shai-risk-legend-row">
                 <span class="shai-risk-legend-dot" style="background:#B94A48;"></span>
@@ -162,8 +151,10 @@ def render_sidebar() -> dict:
         """, unsafe_allow_html=True)
 
         # Same persistence mechanism as the year pills above.
-        if "shai_selected_risks" not in st.session_state:
-            st.session_state["shai_selected_risks"] = []
+        # Same guard as the year: keep only labels the pills still offer.
+        st.session_state["shai_selected_risks"] = [
+            r for r in st.session_state.get("shai_selected_risks") or [] if r in RISK_LABELS
+        ]
 
         selected_risks = st.pills(
             "Riskfilter",

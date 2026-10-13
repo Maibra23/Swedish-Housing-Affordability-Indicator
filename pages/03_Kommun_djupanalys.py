@@ -1,4 +1,4 @@
-"""Sida 03 — Kommun djupanalys.
+"""Sida 03 — Kommunanalys.
 
 Detaljanalys per kommun: historisk SHAI över indexets hela period, följd av en
 villkorad projektion sex år framåt under tre uttalade antaganden om realräntan.
@@ -11,10 +11,10 @@ from src.ui.labels import L
 from src.ui.templates import T
 
 st.set_page_config(
-    page_title="SHAI · Kommun djupanalys",
+    page_title="SHAI · " + L("kd.titel"),
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
@@ -30,6 +30,7 @@ from src.ui.components import (
     card_header,
     explanation,
     footer_note,
+    format_dec,
     format_pct,
     delta_meta,
     kpi_card,
@@ -67,8 +68,8 @@ selected_year = selections["selected_year"]
 
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
-    eyebrow="Sida 03 · Kommunanalys",
-    title="Kommun djupanalys",
+    eyebrow=L("kd.eyebrow"),
+    title=L("kd.titel"),
     subtitle=L("kd.undertitel"),
     year=selected_year,
 )
@@ -105,9 +106,9 @@ if len(latest) > 0:
     render_kpi_row([
         kpi_card(
             label="SHAI (Version C)",
-            value=f"{lat['version_c']:.1f}".replace(".", ","),
+            value=format_dec(lat["version_c"]),
             unit=L("kd.poang"),
-            delta=f"{vc_delta_pct:+.1f}%".replace(".", ",") if len(prev) > 0 else "",
+            delta=format_pct(vc_delta_pct, signed=True) if len(prev) > 0 else "",
             # Was deliberately inverted to force a red colour, which made the
             # arrow point the opposite way to the number it labelled.
             **delta_meta(vc_delta, higher_is_better=True),
@@ -116,20 +117,20 @@ if len(latest) > 0:
         ),
         kpi_card(
             label="Medianinkomst",
-            value=f"{lat['median_income']:,.0f}".replace(",", "\u00A0"),
+            value=format_dec(lat["median_income"], 0),
             unit="SEK",
             variant="default",
             tooltip=L("kd.sammanraknad_forvarvsinkomst_medelvarde_per"),
         ),
         kpi_card(
             label="K/T-kvot",
-            value=f"{lat['kt_ratio']:.2f}".replace(".", ","),
+            value=format_dec(lat["kt_ratio"], 2),
             variant="default",
             tooltip=L("kd.kopeskillingskoefficient_kopeskilling"),
         ),
         kpi_card(
             label=L("kd.styrranta"),
-            value=f"{lat['policy_rate']:.2f}%".replace(".", ","),
+            value=format_pct(lat["policy_rate"], 2),
             variant="default",
             tooltip=L("kd.riksbankens_styrranta_arsgenomsnitt"),
         ),
@@ -231,6 +232,8 @@ def _build_projection_chart(
 
 
 # ── Conditional projection ───────────────────────────────────────────
+_anchor_year = int(_county_hist["year"].iloc[-1])
+_county_name = str(_county_hist["region_name"].iloc[-1])
 _observed_real = max(
     float(_county_hist["policy_rate"].iloc[-1]) - float(_county_hist["cpi_yoy_pct"].iloc[-1]),
     REAL_RATE_FLOOR,
@@ -249,14 +252,17 @@ _LEGEND_PAD = "\u00a0" * 20
 
 _scenario_labels = {
     "floor": L("kd.scenario_golvet") + _LEGEND_PAD,
-    "current": L("kd.scenario_dagens", v0=f"{_observed_real:.2f}".replace(".", ",")) + _LEGEND_PAD,
+    # Labelled with the year its rate comes from. "Dagens nivå" called the 2024
+    # rate today's while the panel already held 2025 rates.
+    "current": L("kd.scenario_dagens", v0=format_dec(_observed_real, 2), v1=_anchor_year) + _LEGEND_PAD,
     "normalised": L("kd.scenario_normaliserad") + _LEGEND_PAD,
 }
 
 with st.container(border=True):
     st.markdown(
         card_header(
-            L("kd.projektion_rubrik", v0=selected_kommun),
+            # The lines are the county's, so the title names the county.
+            L("kd.projektion_rubrik", v0=_county_name),
             L("kd.projektion_underrubrik"),
             L("kd.projektion_tagg"),
         ),
@@ -271,7 +277,7 @@ with st.container(border=True):
     )
     st.caption(
         L("kd.projektion_antaganden",
-          v0=f"{INCOME_GROWTH * 100:.0f}", v1=f"{PRICE_GROWTH * 100:.0f}")
+          v0=f"{INCOME_GROWTH * 100:.0f}", v1=f"{PRICE_GROWTH * 100:.0f}", v2=_anchor_year)
     )
     explanation(L("kd.projektion_forklaring"))
     with st.expander(L("kd.projektion_mer_rubrik")):
@@ -323,6 +329,9 @@ with st.container(border=True):
                 showlegend=False,
             )
             layout["xaxis"]["dtick"] = 2
+            # Whole kronor with spaces ("400 000"), not Plotly's SI "400k".
+            if unit == "SEK":
+                layout["yaxis"]["tickformat"] = ",.0f"
             layout["margin"] = {"l": 50, "r": 10, "t": 40, "b": 40}
             fig.update_layout(**layout)
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": "hover"})

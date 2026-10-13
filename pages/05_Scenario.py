@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="SHAI · Scenariosimulator",
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
@@ -24,12 +24,13 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
     vintage_badge,
-    page_title, delta_meta, kpi_card, render_kpi_row, format_sek, format_pct,
+    page_title, delta_meta, kpi_card, render_kpi_row, format_sek, format_pct, format_dec,
     card_header, footer_note,
 )
 from src.ui.chart_theme import MONO_FONT, get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
 from src.scenario.charts import rate_inflation_surface
+from src.scenario.controls import render_shock_sliders
 from src.scenario.presets import RIKSBANKEN_2022
 from src.scenario.simulator import simulate
 from src.scenario.sections import render_national_outcome, render_purpose
@@ -77,6 +78,7 @@ st.info(
 )
 
 # ── Controls ─────────────────────────────────────────────────────────
+DEFAULT_COUNTY = L("sc.standardlan")
 county_names = county_year[["lan_code", "region_name"]].sort_values("region_name")
 county_options = dict(zip(county_names["region_name"], county_names["lan_code"]))
 
@@ -85,7 +87,11 @@ with col_county:
     selected_county_name = st.selectbox(
         L("sc.valj_lan"),
         list(county_options.keys()),
-        index=0,
+        # Stockholms län, like the Stockholm default on Sida 03 and 04.
+        index=(
+            list(county_options).index(DEFAULT_COUNTY)
+            if DEFAULT_COUNTY in county_options else 0
+        ),
         key="sc_county_select",
     )
 selected_county_code = county_options[selected_county_name]
@@ -140,53 +146,7 @@ with preset_col4:
 
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-col_rate, col_income, col_price, col_cpi = st.columns(4)
-
-with col_rate:
-    rate_shock = st.slider(
-        L("sc.rantechock_pp"),
-        min_value=-2.0,
-        max_value=5.0,
-        value=float(st.session_state.get("sc_rate_slider", 0.0)),
-        step=0.25,
-        format="%.2f",
-        key="sc_rate_slider",
-        help=L("sc.4_pp_riksbankens_hojningscykel_20222023"),
-    )
-
-with col_income:
-    income_shock_pct = st.slider(
-        L("sc.inkomsttillvaxt"),
-        min_value=-10,
-        max_value=10,
-        value=int(st.session_state.get("sc_income_slider", 0)),
-        step=1,
-        key="sc_income_slider",
-        help=L("sc.34_ett_ars_normal_loneutveckling_i_sverige_5"),
-    )
-
-with col_price:
-    price_shock_pct = st.slider(
-        "Prischock (%)",
-        min_value=-25,
-        max_value=25,
-        value=int(st.session_state.get("sc_price_slider", 0)),
-        step=5,
-        key="sc_price_slider",
-        help=L("sc.prischock_hjalp"),
-    )
-
-with col_cpi:
-    cpi_shock = st.slider(
-        "KPI-chock (pp)",
-        min_value=-5.0,
-        max_value=10.0,
-        value=float(st.session_state.get("sc_cpi_slider", 0.0)),
-        step=0.5,
-        format="%.1f",
-        key="sc_cpi_slider",
-        help=L("sc.8_pp_svensk_inflationstopp_2022_paverkar"),
-    )
+rate_shock, income_shock_pct, price_shock_pct, cpi_shock = render_shock_sliders()
 
 # ── Run simulation ───────────────────────────────────────────────────
 county_row = county_year[county_year["lan_code"] == selected_county_code]
@@ -235,23 +195,23 @@ else:
 render_kpi_row([
     kpi_card(
         label="Basfall SHAI",
-        value=f"{result['baseline_v_c']:.1f}".replace(".", ","),
-        unit="Version C",
+        value=format_dec(result["baseline_v_c"]),
+        unit=L("sc.version_c_lansniva"),
         variant="default",
         tooltip=L("sc.basfall_beraknat_fran_faktiska_data_for_valt"),
     ),
     kpi_card(
         label="Scenario SHAI",
-        value=f"{result['scenario_v_c']:.1f}".replace(".", ","),
-        unit="Version C",
+        value=format_dec(result["scenario_v_c"]),
+        unit=L("sc.version_c_lansniva"),
         variant="accent",
         tooltip=L("sc.scenario_beraknat_med_justerade_parametrar"),
     ),
     kpi_card(
         label=L("sc.forandring"),
-        value=f"{result['delta']:+.1f}".replace(".", ","),
+        value=format_dec(result["delta"], signed=True),
         unit=L("sc.poang"),
-        delta=f"{result['delta_pct']:+.1f}%".replace(".", ","),
+        delta=format_pct(result["delta_pct"], signed=True),
         **delta_meta(result["delta"], higher_is_better=True),
         variant=change_variant,
         tooltip=L("sc.skillnad_mellan_scenario_och_basfall"),
@@ -333,8 +293,8 @@ with col_chart:
             marker_color=[COLORS["primary"], COLORS["accent"]],
             marker_line_width=0,
             text=[
-                f"{result['baseline_v_c']:.1f}".replace(".", ","),
-                f"{result['scenario_v_c']:.1f}".replace(".", ","),
+                format_dec(result["baseline_v_c"]),
+                format_dec(result["scenario_v_c"]),
             ],
             textposition="outside",
             textfont=dict(family=MONO_FONT, size=14, color=COLORS["text_primary"]),
@@ -365,18 +325,18 @@ with col_table:
             "Basfall": [
                 format_sek(result["baseline_income"]),
                 format_sek(result["baseline_price"]),
-                f"{result['baseline_rate']:.2f}%".replace(".", ","),
-                f"{result['baseline_cpi']:.2f}%".replace(".", ","),
-                f"{result['real_rate_base']:.2f}%".replace(".", ","),
-                f"{result['baseline_v_c']:.1f}".replace(".", ","),
+                format_pct(result["baseline_rate"], 2),
+                format_pct(result["baseline_cpi"], 2),
+                format_pct(result["real_rate_base"], 2),
+                format_dec(result["baseline_v_c"]),
             ],
             "Scenario": [
                 format_sek(result["scenario_income"]),
                 format_sek(result["scenario_price"]),
-                f"{result['scenario_rate']:.2f}%".replace(".", ","),
-                f"{result['scenario_cpi']:.2f}%".replace(".", ","),
-                f"{result['real_rate_scen']:.2f}%".replace(".", ","),
-                f"{result['scenario_v_c']:.1f}".replace(".", ","),
+                format_pct(result["scenario_rate"], 2),
+                format_pct(result["scenario_cpi"], 2),
+                format_pct(result["real_rate_scen"], 2),
+                format_dec(result["scenario_v_c"]),
             ],
         }
         st.dataframe(

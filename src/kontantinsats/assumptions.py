@@ -1,4 +1,4 @@
-"""The "Detaljer & antaganden" expander.
+"""The "Detaljer och antaganden" expander.
 
 Split from `sections.py` in T3.11 for the same reason the page was split: at 109
 lines this one section, with its inputs table and caveat list, was most of that
@@ -40,7 +40,7 @@ from src.kontantinsats.sections import Context
 
 
 def render_assumptions(ctx: Context) -> None:
-    """The 'Detaljer & antaganden' expander: inputs, table and caveats."""
+    """The 'Detaljer och antaganden' expander: inputs, table and caveats."""
     _br_price = ctx._br_price
     _individual_income = ctx._individual_income
     _lan_name = ctx._lan_name
@@ -61,8 +61,8 @@ def render_assumptions(ctx: Context) -> None:
     selected_year = ctx.selected_year
     use_bostadsratt = ctx.use_bostadsratt
 
-    # ── 8 · Detaljer & antaganden ─────────────────────────────────────────
-    with st.expander("Detaljer & antaganden"):
+    # ── 8 · Detaljer och antaganden ─────────────────────────────────────────
+    with st.expander(L("ki.detaljer_och_antaganden")):
         _region_label = L("ki.lan") if use_bostadsratt else "Kommun"
         st.markdown(
             T("ki.indata_v1_v2_analysar_v3_pristyp_v4_pris", v0=COLORS['text_secondary'], v1=_region_label, v2=selected_name, v3=selected_year, v4=price_source_label, v5=format_sek(price))

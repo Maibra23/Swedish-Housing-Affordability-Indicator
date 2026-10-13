@@ -18,6 +18,7 @@ from src.scenario.panel_scenario import PanelShockOutcome, shock_panel
 from src.ui.components import (
     card_header,
     delta_meta,
+    format_dec,
     kpi_card,
     purpose_panel,
     render_kpi_row,
@@ -82,7 +83,7 @@ def render_national_outcome(
                 label=label,
                 value=str(after),
                 unit=L("sc.riket_kommuner"),
-                delta=(f"{after - before:+d}" if after != before else ""),
+                delta=(format_dec(after - before, 0, signed=True) if after != before else ""),
                 # More municipalities in hög risk is bad; more in låg risk is
                 # good; the middle class carries no direction of its own.
                 **delta_meta(after - before, higher_is_better=better),
@@ -90,9 +91,11 @@ def render_national_outcome(
                 tooltip=L("sc.riket_tooltip_v0", v0=str(before)),
             )
             for label, before, after, variant, better in (
-                (L("sc.riket_hog"), outcome.before["hog"], outcome.after["hog"], "accent", False),
-                (L("sc.riket_medel"), outcome.before["medel"], outcome.after["medel"], "default", None),
-                (L("sc.riket_lag"), outcome.before["lag"], outcome.after["lag"], "default", True),
+                # The stripe follows the risk palette: red hög, amber medel, green
+                # låg. Hög used to carry the amber that means medel elsewhere.
+                (L("sc.riket_hog"), outcome.before["hog"], outcome.after["hog"], "danger", False),
+                (L("sc.riket_medel"), outcome.before["medel"], outcome.after["medel"], "accent", None),
+                (L("sc.riket_lag"), outcome.before["lag"], outcome.after["lag"], "success", True),
             )
         ])
 

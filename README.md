@@ -14,8 +14,8 @@ The answer is an index, not a price. In 2024 Åsele scored 75 and Lidingö 4,6.
 | If you want to | Start on |
 |---|---|
 | See which parts of Sweden are most strained | **Riksöversikt**, a map of all 290 kommuner |
-| Test whether a ranking survives a change of formula | **Län jämförelse**, the 21 län under both formulas that can disagree |
-| Follow one kommun and see where it could go | **Kommun djupanalys**, its history plus a projection to 2030 |
+| Test whether a ranking survives a change of formula | **Länsjämförelse**, the 21 län under both formulas that can disagree |
+| Follow one kommun and see where it could go | **Kommunanalys**, its history plus a projection to 2030 |
 | Work out the cash and the years needed to buy | **Kontantinsats**, all five Swedish mortgage regimes |
 | Test a rate, income or price shock | **Scenariosimulator**, one län under assumptions you set |
 | Check a formula, a source or a limitation | **Metodologi** |
@@ -30,11 +30,11 @@ every page should show exactly this. Use it to check your install.
 | Page | In 2024 |
 |---|---|
 | **Riksöversikt** | Mean index **23,0** points, **84 of 290** kommuner at hög risk, mean K/T **1,40**. Least affordable: Lidingö, Danderyd, Solna. Most affordable: Åsele, Sorsele, Ragunda |
-| **Län jämförelse** | Two tabs. The Robusthet panel at the foot shows C classing **84** kommuner hög and B classing **57**; B disagrees with C for **73 of 290**. The comparison expander puts the inflation adjustment at **4,71×** |
-| **Kommun djupanalys** | Select Stockholm: index **6,2**, income **413 600 SEK**, K/T **1,23**. Its county projects to **12,0 / 7,8 / 3,0** in 2025 under the floor, current and normalised rate scenarios |
-| **Kontantinsats** | Stockholm, one income, 10 % sparkvot, 1,7 pp margin: **859 700 SEK** down, **20,8 years** to save, **47 252 SEK** a month. Switch to Bostadsrätt and it moves to län level: **421 400 SEK** and **10,5 years** |
-| **Scenariosimulator** | Stockholms län baseline **7,71**. Push the rate slider **+2 pp** and it falls to **2,14**, down 72 % |
-| **Metodologi** | The three formulas, the F1 to F16 limitation register, no interactive data |
+| **Länsjämförelse** | Two tabs. The Robusthet panel at the foot shows C classing **84** kommuner hög and B classing **57**; B disagrees with C for **73 of 290**. The comparison expander puts the inflation adjustment at **4,71×** |
+| **Kommunanalys** | Select Stockholm: index **6,2**, income **413 600 SEK**, K/T **1,23**. Its county projects to **12,0 / 7,8 / 3,0** in 2025 under the floor, current and normalised rate scenarios |
+| **Kontantinsats** | Stockholm, one income, 10 % sparkvot, and the bank margin SCB observed that year (0,8 pp): **859 700 SEK** down, **20,8 years** to save, **41 449 SEK** a month. Switch to Bostadsrätt and it moves to län level: **421 400 SEK** and **10,5 years** |
+| **Scenariosimulator** | Opens on Stockholms län: baseline **7,71**. Push the rate slider **+2 pp** and it falls to **2,14**, down 72 % |
+| **Metodologi** | The three formulas, the F1 to F17 limitation register, no interactive data |
 
 Those figures are re-derived from the shipped artifacts by
 `tests/test_readme_figures.py`, so they cannot quietly go stale.
@@ -123,7 +123,10 @@ python scripts/refresh_data.py --no-projection   # skip the projection step
 ```
 
 Commit the regenerated files in `data/processed/`. Run `python scripts/audit.py` to check
-the shipped artifacts independently, and `pytest -q` for the suite.
+the shipped artifacts independently, and `pytest -q` for the suite. The suite includes a
+browser pass (`tests/test_browser_render.py`) that opens every page in Chromium at desktop
+and phone width; install it with `pip install -e ".[dev]"` and
+`python -m playwright install chromium`, or skip it with `SHAI_SKIP_BROWSER=1`.
 
 ## Contributing
 

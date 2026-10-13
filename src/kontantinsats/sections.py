@@ -19,7 +19,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart, fmt_delta_sek
+from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart, fmt_delta_sek, format_tkr
 from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
 from src.kontantinsats.regions import (
     _LAN_NAMES,
@@ -33,7 +33,7 @@ from src.ui.components import (
     card_header,
     format_pct,
     format_sek,
-    format_sek_compact,
+    format_dec,
     kpi_card,
     page_title,
     render_kpi_row,
@@ -116,14 +116,14 @@ def render_snapshot(ctx: Context) -> None:
         [
             kpi_card(
                 label="Pris/Inkomst-kvot",
-                value=f"{pi_ratio:.1f}".replace(".", ","),
-                unit="x",
+                value=format_dec(pi_ratio),
+                unit="×",
                 variant="default",
                 tooltip=L("ki.under_5x_normalt_510x_anstrangt_over_10x"),
             ),
             kpi_card(
                 label=L("ki.kontantinsatsborda"),
-                value=f"{insats_yrs:.1f}".replace(".", ","),
+                value=format_dec(insats_yrs),
                 unit=L("ki.x_arsinkomst"),
                 variant="default",
                 tooltip=L("ki.hur_manga_arsinkomster_kontantinsatsen"),
@@ -336,8 +336,9 @@ def render_regime_cards(ctx: Context) -> None:
 
                     st.metric(
                         "Kontantinsats",
-                        format_sek_compact(res["required_cash"]),
-                        delta=fmt_delta_sek(delta_cash) if key != BASELINE_REGIME else None,
+                        # Whole tkr in every card, so the row compares like with like.
+                        format_tkr(res["required_cash"]),
+                        delta=fmt_delta_sek(delta_cash, "tkr") if key != BASELINE_REGIME else None,
                         delta_color="inverse",
                         help=L("ki.kontantinsats_ar_eget_kapital_insats_som"),
                     )

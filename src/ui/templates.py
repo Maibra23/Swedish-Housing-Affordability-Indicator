@@ -75,7 +75,7 @@ TEMPLATES: dict[str, str] = {
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v3};margin:32px auto 8px;"></div>
                 <div style="font-size:11px;font-weight:700;">Okt 2010</div>
-                <div style="font-size:10px;color:{v4};">Bolånetak 85%</div>
+                <div style="font-size:10px;color:{v4};">Bolånetak 85 %</div>
             </div>
             <div style="text-align:center;z-index:1;">
                 <div style="width:16px;height:16px;border-radius:50%;background:{v5};margin:32px auto 8px;"></div>

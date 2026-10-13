@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 
 from src.indices.agreement import inflation_adjustment, measure_agreement
+from src.kontantinsats.margin import default_margin_pp
 from src.kontantinsats.engine import apply_regime
 from src.scenario.simulator import simulate
 
@@ -152,7 +153,8 @@ def _kontantinsats(price: float, income: float) -> dict:
         rate=float(national["policy_rate"]) / 100.0,
         regime_key="latt_2026",
         savings_rate=0.10,
-        bank_margin=0.017,
+        # The page's own default for the year: the margin SCB observed.
+        bank_margin=default_margin_pp(DEMO_YEAR) / 100.0,
     )
 
 

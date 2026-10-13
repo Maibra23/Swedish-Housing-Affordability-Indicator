@@ -1,4 +1,4 @@
-"""Sida 04 — Kontantinsats analys.
+"""Sida 04 — Kontantinsatsanalys.
 
 Jämförelse av kontantinsatskrav under fem regelverk (pre-2010, bolånetak, amort 1, amort 2, lättnad 2026).
 
@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="SHAI · Kontantinsats",
     page_icon=None,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None},
 )
 
@@ -47,6 +47,7 @@ from src.kontantinsats.charts import (
 from src.kontantinsats.engine import BASELINE_REGIME, REGIMES, compare_regimes
 from src.kontantinsats.income import EARNERS_BY_HOUSEHOLD_TYPE, household_income
 from src.kontantinsats.assumptions import render_assumptions
+from src.kontantinsats.margin_control import render_margin_control
 from src.kontantinsats.insight import render_insight
 from src.kontantinsats.sections import (
     Context,
@@ -95,7 +96,7 @@ if len(mun_year) == 0:
 # ── Page title ───────────────────────────────────────────────────────
 page_title(
     eyebrow="Sida 04 · Kontantinsats",
-    title="Kontantinsats analys",
+    title=L("ki.titel"),
     subtitle="Historiska och nuvarande regelverk och insatskrav",
     year=selected_year,
 )
@@ -210,21 +211,9 @@ with st.container(border=True):
         ) / 100.0
         _sparkvot_caption = st.empty()
 
-    # Advanced settings (bank margin)
-    with st.expander(L("ki.avancerade_installningar_rantepaslag")):
-        st.caption(
-            L("ki.riksbankens_styrranta_anvands_som_bas")
-        )
-        bank_margin_pct = st.slider(
-            L("ki.bankens_rantepaslag_pp_ovan_styrrantan"),
-            min_value=0.0,
-            max_value=3.0,
-            value=1.7,
-            step=0.1,
-            key="ki_bank_margin_slider",
-            help=L("ki.faktisk_bolaneranta_styrranta_rantepaslag_0"),
-        )
-        bank_margin = bank_margin_pct / 100.0
+    # Advanced settings: the bank margin, defaulting to the year's observed one.
+    bank_margin_pct = render_margin_control(selected_year)
+    bank_margin = bank_margin_pct / 100.0
 
 # ── Get data row ─────────────────────────────────────────────────────
 if use_bostadsratt:

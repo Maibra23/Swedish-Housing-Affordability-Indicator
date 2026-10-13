@@ -180,6 +180,10 @@ def test_nan_values_are_ignored():
 
 def test_missing_geojson_warns_instead_of_crashing(ranked, monkeypatch):
     """An absent GeoJSON must not take the page down with it."""
+    # `_map_html` is st.cache_data. A map cached by an earlier test in the same
+    # process (any AppTest render of Sida 01) would be served without ever
+    # calling the patched loader, so start from a cold cache.
+    choropleth._map_html.clear()
     monkeypatch.setattr(choropleth, "_load_geojson", lambda: None)
     warnings: list[str] = []
     monkeypatch.setattr(choropleth.st, "warning", lambda msg, *a, **k: warnings.append(msg))

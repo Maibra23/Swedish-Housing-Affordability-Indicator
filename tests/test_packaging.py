@@ -111,13 +111,16 @@ def test_requires_python_admits_the_running_interpreter() -> None:
 
 
 def test_requires_python_still_excludes_interpreters_without_tomllib() -> None:
-    """`src/ui/sidebar.py` imports tomllib, which arrived in 3.11."""
+    """`src/ui/version.py` imports tomllib, which arrived in 3.11.
+
+    The import moved there from `sidebar.py` when the version string got one
+    owner (audit A-14); the constraint it imposes is unchanged."""
     from packaging.specifiers import SpecifierSet
     from packaging.version import Version
 
     spec = SpecifierSet(_config()["project"]["requires-python"])
     assert Version("3.10.0") not in spec
-    assert "tomllib" in (ROOT / "src" / "ui" / "sidebar.py").read_text(encoding="utf-8")
+    assert "tomllib" in (ROOT / "src" / "ui" / "version.py").read_text(encoding="utf-8")
 
 
 # ── The suite must collect however pytest is invoked ─────────────────

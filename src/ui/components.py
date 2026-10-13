@@ -14,6 +14,16 @@ from src.provenance import complete_case_max_year, first_year, n_kommuner
 from src.provenance import generated_at
 from src.ui.labels import L
 from src.ui.tokens import COLORS
+# Re-exported: pages import the formatters from here. They live in formatting.py.
+from src.ui.formatting import (  # noqa: F401
+    format_dec,
+    format_pct,
+    format_ratio,
+    format_sek,
+    format_sek_compact,
+    format_swedish_int,
+)
+from src.ui.version import APP_VERSION
 
 
 def _panel_facts(
@@ -41,43 +51,6 @@ def _compact(html: str) -> str:
     parser from splitting HTML blocks at blank lines, which causes subsequent
     indented tags to be rendered as code blocks (raw text on screen)."""
     return re.sub(r'\n[ \t]*\n', '\n', html)
-
-
-# ── Formatting utilities ──────────────────────────────────────────────
-
-
-def format_sek(value: float, decimals: int = 0) -> str:
-    """Format a SEK value with non-breaking space thousand separators."""
-    if decimals == 0:
-        formatted = f"{value:,.0f}"
-    else:
-        formatted = f"{value:,.{decimals}f}"
-    return formatted.replace(",", "\u00A0").replace(".", ",")
-
-
-def format_sek_compact(value: float) -> str:
-    """Format a SEK value short: "Mkr" from 1 000 000, "tkr" from 10 000.
-
-    For places where the grouped form ("2 041 350 SEK") is wider than its
-    container, such as the five-across regime cards on sida 04. The CSS lets a
-    long value wrap rather than clip; this keeps it from needing to.
-    """
-    magnitude = abs(value)
-    if magnitude >= 1_000_000:
-        return f"{value / 1_000_000:.2f}".replace(".", ",") + " Mkr"
-    if magnitude >= 10_000:
-        return f"{value / 1_000:.0f}".replace(".", ",") + " tkr"
-    return format_sek(value) + " SEK"
-
-
-def format_pct(value: float, decimals: int = 1) -> str:
-    """Format a percentage value Swedish style."""
-    return f"{value:,.{decimals}f}".replace(".", ",") + "%"
-
-
-def format_swedish_int(value: int) -> str:
-    """Format integer with non-breaking space thousands separator."""
-    return f"{value:,}".replace(",", "\u00A0")
 
 
 # ── Page header ───────────────────────────────────────────────────────
@@ -265,7 +238,7 @@ def risk_pill(level: str) -> str:
 
 def footer_note(
     source: str | None = None,
-    version: str = "SHAI v1.3",
+    version: str | None = None,
     updated: str | None = None,
 ) -> None:
     """Render the standard page footer.
@@ -274,20 +247,35 @@ def footer_note(
         source: Attribution line. Only Sida 06 passes one: sources are cited
             on the methodology page and nowhere else, so the other pages do not
             repeat them.
-        version: App version.
+        version: Version label. Defaults to "SHAI v" plus the pyproject version,
+            the same string the sidebar shows.
         updated: ISO timestamp of the data build. Defaults to the provenance
             artifact; pass a value only to override it in a test.
     """
-    stamp = (updated or generated_at())[:10]
-    source_span = f"<span><strong>KÄLLA:</strong> {source}</span>" if source else ""
-    html = f"""
-    <div class="shai-footer-note">
-        {source_span}
-        <span>{L("ui.data_uppdaterad_v0", v0=stamp)}</span>
-        <span><code>{version}</code></span>
-    </div>
+    st.markdown(footer_html(source, version, updated), unsafe_allow_html=True)
+
+
+def footer_html(
+    source: str | None = None,
+    version: str | None = None,
+    updated: str | None = None,
+) -> str:
+    """The footer markup, on one line.
+
+    It used to be an indented multi-line string with ``{source_span}`` on a line
+    of its own. With no source that line was blank, Markdown ended the HTML block
+    there, and the indented spans after it became a code block: six of seven
+    pages printed ``<span>Data uppdaterad …</span>`` as literal text. Joining the
+    parts leaves no line for Markdown to break on.
     """
-    st.markdown(html, unsafe_allow_html=True)
+    stamp = (updated or generated_at())[:10]
+    label = version or f"SHAI v{APP_VERSION}"
+    parts = [
+        f"<span><strong>KÄLLA:</strong> {source}</span>" if source else "",
+        f"<span>{L('ui.data_uppdaterad_v0', v0=stamp)}</span>",
+        f"<span><code>{label}</code></span>",
+    ]
+    return '<div class="shai-footer-note">' + "".join(p for p in parts if p) + "</div>"
 
 
 # ── Explanation, glossary and vintage ─────────────────────────────────
