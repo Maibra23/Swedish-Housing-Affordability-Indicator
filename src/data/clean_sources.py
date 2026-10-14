@@ -265,3 +265,24 @@ def _clean_policy_rate() -> pd.DataFrame:
     annual.rename(columns={"rate": "policy_rate"}, inplace=True)
     return annual
 
+
+def forward_fill_flagged(panel: pd.DataFrame, by: str | None) -> pd.DataFrame:
+    """Forward-fill ``bostadsratt_price_sek`` and mark the rows that were filled.
+
+    SCB publishes apartment prices a year ahead of income, and the panel carries
+    the last value into later years like it does income. Without a flag the
+    filled rows looked observed, and provenance reported BO0501C through 2026
+    when SCB stopped at 2025 (audit finding N-4). ``is_filled_bostadsratt_price``
+    lets provenance skip them, as ``is_imputed_income`` does for income.
+
+    Args:
+        panel: Sorted by ``by`` and year, with ``bostadsratt_price_sek``.
+        by: Region column to fill within, or None for a single series.
+
+    Returns:
+        A new frame with the filled column and the flag.
+    """
+    column = "bostadsratt_price_sek"
+    observed = panel[column].notna()
+    filled = panel.groupby(by)[column].ffill() if by else panel[column].ffill()
+    return panel.assign(**{column: filled, "is_filled_bostadsratt_price": filled.notna() & ~observed})

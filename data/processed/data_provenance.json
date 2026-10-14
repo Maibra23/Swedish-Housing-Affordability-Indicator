@@ -28,7 +28,7 @@
     },
     "bostadsratt_price_sek": {
       "min_year": 2011,
-      "max_year": 2026,
+      "max_year": 2025,
       "n_regions": 290
     },
     "price_index": {

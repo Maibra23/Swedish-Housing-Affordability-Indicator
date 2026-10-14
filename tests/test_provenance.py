@@ -122,10 +122,11 @@ def test_source_coverage_matches_the_panel(panel: pd.DataFrame):
             mismatches.append(f"{name}: not a panel column")
             continue
         present = panel[panel[name].notna()]
-        if name == "median_income":
-            # Income is forward-filled past its true vintage; the honest max is
-            # the last year SCB actually published.
-            present = present[~present["is_imputed_income"].astype(bool)]
+        flag = provenance._IMPUTATION_FLAGS.get(name)
+        if flag:
+            # Income and apartment prices are forward-filled past their true
+            # vintage; the honest max is the last year SCB actually published.
+            present = present[~present[flag].astype(bool)]
         if present.empty:
             mismatches.append(f"{name}: no non-null rows")
             continue
@@ -186,3 +187,29 @@ def test_missing_key_raises_keyerror(tmp_path: Path):
     partial.write_text(json.dumps({"generated_at": "2026-01-01T00:00:00+00:00"}))
     with pytest.raises(KeyError):
         provenance.complete_case_max_year(partial)
+
+
+# ── N-4 · forward-filled apartment prices are not coverage ───────────
+
+
+def test_apartment_price_coverage_stops_where_scb_does(panel: pd.DataFrame):
+    """The panel carries the last apartment price into later years; provenance
+    must not count those rows. It reported BO0501C through 2026 while SCB had
+    published through 2025 (October 2026 audit, N-4)."""
+    flag = "is_filled_bostadsratt_price"
+    assert flag in panel.columns, "the panel no longer marks forward-filled apartment prices"
+    observed = panel.loc[panel["bostadsratt_price_sek"].notna() & ~panel[flag], "year"]
+    reported = provenance.source_coverage()["bostadsratt_price_sek"]["max_year"]
+    assert reported == int(observed.max())
+    assert reported < int(panel.loc[panel["bostadsratt_price_sek"].notna(), "year"].max())
+
+
+def test_forward_fill_flags_only_the_filled_rows():
+    from src.data.clean_sources import forward_fill_flagged
+
+    frame = pd.DataFrame({"r": ["a"] * 3, "year": [2024, 2025, 2026],
+                          "bostadsratt_price_sek": [1.0, 2.0, None]})
+    out = forward_fill_flagged(frame, "r")
+    assert list(out["bostadsratt_price_sek"]) == [1.0, 2.0, 2.0]
+    assert list(out["is_filled_bostadsratt_price"]) == [False, False, True]
+    assert frame["bostadsratt_price_sek"].isna().sum() == 1, "input was mutated"

@@ -38,6 +38,7 @@ from src.data.panel_income import (  # noqa: E402
 from src.data.clean_sources import (  # noqa: E402
     RAW_DIR,
     _clean_bostadsratt_price,
+    forward_fill_flagged,
     _clean_construction,
     _clean_cpi,
     _clean_income,
@@ -165,12 +166,9 @@ def build_municipal_panel() -> pd.DataFrame:
             on=["lan_code", "year"], how="left",
         )
         # Forward-fill BR prices into imputed years (data lags like income)
-        panel = panel.sort_values(["region_code", "year"])
-        panel["bostadsratt_price_sek"] = (
-            panel.groupby("region_code")["bostadsratt_price_sek"].ffill()
-        )
+        panel = forward_fill_flagged(panel.sort_values(["region_code", "year"]), "region_code")
     else:
-        panel["bostadsratt_price_sek"] = np.nan
+        panel = panel.assign(bostadsratt_price_sek=np.nan, is_filled_bostadsratt_price=False)
 
     # --- Merge unemployment ---
     unemp_for_join = muni_unemp[["region_code", "year", "unemployment_rate"]]
@@ -195,7 +193,7 @@ def build_municipal_panel() -> pd.DataFrame:
         "median_income", "median_income_tkr", "is_imputed_income",
         "price_index", "kt_ratio", "has_native_kt",
         "transaction_price_sek", "has_native_price",
-        "bostadsratt_price_sek",
+        "bostadsratt_price_sek", "is_filled_bostadsratt_price",
         "unemployment_rate", "population", "completions",
         "cpi_index", "cpi_yoy_pct", "policy_rate",
     ]
@@ -253,12 +251,9 @@ def build_county_panel() -> pd.DataFrame:
         panel = panel.merge(county_br[["lan_code", "year", "bostadsratt_price_sek"]],
                             on=["lan_code", "year"], how="left")
         # Forward-fill BR prices into imputed years (data lags like income)
-        panel = panel.sort_values(["lan_code", "year"])
-        panel["bostadsratt_price_sek"] = (
-            panel.groupby("lan_code")["bostadsratt_price_sek"].ffill()
-        )
+        panel = forward_fill_flagged(panel.sort_values(["lan_code", "year"]), "lan_code")
     else:
-        panel["bostadsratt_price_sek"] = np.nan
+        panel = panel.assign(bostadsratt_price_sek=np.nan, is_filled_bostadsratt_price=False)
 
     # Unemployment at county level (Kolada uses 4-digit codes: "0001" for county "01")
     # Read full Kolada dataset including county aggregates
@@ -331,10 +326,9 @@ def build_national_panel() -> pd.DataFrame:
         nat_br = br_price[br_price["region_code"] == "00"][["year", "bostadsratt_price_sek"]]
         panel = panel.merge(nat_br, on="year", how="left")
         # Forward-fill BR prices into imputed years (data lags like income)
-        panel = panel.sort_values("year")
-        panel["bostadsratt_price_sek"] = panel["bostadsratt_price_sek"].ffill()
+        panel = forward_fill_flagged(panel.sort_values("year"), None)
     else:
-        panel["bostadsratt_price_sek"] = np.nan
+        panel = panel.assign(bostadsratt_price_sek=np.nan, is_filled_bostadsratt_price=False)
 
     # National unemployment (Kolada code "0000")
     nat_unemp = unemp_all[unemp_all["municipality_code"] == "0000"][["year", "unemployment_rate"]].copy()

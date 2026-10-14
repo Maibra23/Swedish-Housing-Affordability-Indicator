@@ -28,6 +28,7 @@ import pytest
 
 pytest.importorskip("playwright.sync_api", reason="Playwright is not installed")
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout  # noqa: E402
 from playwright.sync_api import sync_playwright  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,7 @@ WIDTHS = (1280, 768, 390, 320)
 
 #: Time for Plotly and the page's CSS to settle after a resize.
 _SETTLE_MS = 1200
+_CHART_TIMEOUT_MS = 60_000
 
 #: Glyph extents, not element boxes: a label's trailing padding may be clipped,
 #: its characters may not. One pixel of tolerance for sub-pixel rounding.
@@ -125,6 +127,14 @@ def _cut_text_by_width(browser, url: str) -> tuple[int, dict[int, list[str]]]:
         page.wait_for_selector(
             '[data-testid="stApp"][data-test-script-state="notRunning"]', timeout=90_000
         )
+        # Wait for a chart to exist rather than for a fixed delay. Plotly draws
+        # after the script finishes, and on a busy machine 1,2 s was not always
+        # enough: the count came back 0 and the test failed on a page that does
+        # draw charts. A page that truly draws none still fails the assert below.
+        try:
+            page.wait_for_selector("div.js-plotly-plot", timeout=_CHART_TIMEOUT_MS)
+        except PlaywrightTimeout:
+            pass
         page.wait_for_timeout(_SETTLE_MS)
         charts = page.locator("div.js-plotly-plot").count()
         cut = {}

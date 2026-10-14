@@ -71,7 +71,11 @@ _TRACKED_SOURCES: tuple[str, ...] = (
 
 #: Columns carrying a companion boolean marking forward-filled rows. Such rows
 #: are excluded when deciding a source's real max year.
-_IMPUTATION_FLAGS: dict[str, str] = {"median_income": "is_imputed_income"}
+_IMPUTATION_FLAGS: dict[str, str] = {
+    "median_income": "is_imputed_income",
+    # Forward-filled apartment prices are not observations (audit finding N-4).
+    "bostadsratt_price_sek": "is_filled_bostadsratt_price",
+}
 
 _NOTE = (
     "The panel is ragged at the top end: sources end in different years. "
