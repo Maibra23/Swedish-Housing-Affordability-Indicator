@@ -138,7 +138,7 @@ def test_only_one_module_turns_an_individual_income_into_a_household_one() -> No
     """
     offenders: list[str] = []
     for path in sorted(ROOT.glob("pages/*.py")) + sorted(ROOT.glob("src/**/*.py")):
-        rel = str(path.relative_to(ROOT))
+        rel = path.relative_to(ROOT).as_posix()
         if rel in INCOME_SCALING_ALLOWED:
             continue
         for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
