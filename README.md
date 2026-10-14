@@ -126,7 +126,9 @@ Commit the regenerated files in `data/processed/`. Run `python scripts/audit.py`
 the shipped artifacts independently, and `pytest -q` for the suite. The suite includes a
 browser pass (`tests/test_browser_render.py`) that opens every page in Chromium at desktop
 and phone width; install it with `pip install -e ".[dev]"` and
-`python -m playwright install chromium`, or skip it with `SHAI_SKIP_BROWSER=1`.
+`python -m playwright install chromium`, or skip it with `SHAI_SKIP_BROWSER=1`. For a quick rerun
+while working, `pytest -m "not browser and not network"` skips the browser and live-API
+tests and takes about a minute; run the full suite before deploying.
 
 ## Contributing
 

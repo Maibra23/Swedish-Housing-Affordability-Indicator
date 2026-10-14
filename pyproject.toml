@@ -68,3 +68,7 @@ testpaths = ["tests"]
 # under `python -m pytest`, which injects the working directory — bare `pytest`,
 # which editors and CI runners call, failed on six files.
 pythonpath = [".", "src"]
+markers = [
+    "browser: starts the app or Chromium; skip with -m \"not browser\" (see tests/conftest.py)",
+    "network: calls a live API; skip with -m \"not network\"",
+]

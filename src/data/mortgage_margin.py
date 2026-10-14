@@ -72,7 +72,9 @@ def fetch_monthly() -> dict[str, float]:  # pragma: no cover - network
     """Download the monthly series from SCB."""
     import requests
 
-    response = requests.post(API_URL, json=QUERY, timeout=60)
+    from src.data.pxweb import SCB_TIMEOUT
+
+    response = requests.post(API_URL, json=QUERY, timeout=SCB_TIMEOUT)
     response.raise_for_status()
     return parse_response(response.json())
 

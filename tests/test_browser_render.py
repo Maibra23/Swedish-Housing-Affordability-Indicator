@@ -8,7 +8,7 @@ renderer. This module starts the app, opens every page in Chromium at desktop
 and phone width, and asserts on the rendered DOM.
 
 Skipped when Playwright or its Chromium build is not installed, or when
-``SHAI_SKIP_BROWSER=1``. About 90 seconds.
+``SHAI_SKIP_BROWSER=1``. About a minute and a half.
 """
 
 from __future__ import annotations
@@ -40,7 +40,11 @@ PAGES = {
 }
 DESKTOP = {"width": 1440, "height": 900}
 PHONE = {"width": 390, "height": 844}
-SETTLE_MS = 6000
+#: Short pause after the page reports it has finished, for Plotly and Leaflet to
+#: lay out. Readiness itself is waited for, not slept for: the suite used to
+#: sleep a fixed 6 s per page load, 90 s of a three-minute module.
+SETTLE_MS = 1500
+READY_TIMEOUT_MS = 90_000
 
 # Leaf elements whose text is wider than their box and cut off.
 CLIPPED_JS = """
@@ -103,8 +107,13 @@ def browser():
 
 def _open(browser, base_url: str, path: str, viewport: dict):
     page = browser.new_page(viewport=viewport)
-    page.goto(base_url + path, wait_until="networkidle")
-    page.wait_for_selector('[data-testid="stMain"]', timeout=60_000)
+    page.goto(base_url + path, wait_until="networkidle", timeout=READY_TIMEOUT_MS)
+    # The script has run to the end, and the footer, which every page draws
+    # last, is in the DOM.
+    page.wait_for_selector(
+        '[data-testid="stApp"][data-test-script-state="notRunning"]', timeout=READY_TIMEOUT_MS
+    )
+    page.wait_for_selector(".shai-footer-note", state="attached", timeout=READY_TIMEOUT_MS)
     page.wait_for_timeout(SETTLE_MS)
     return page
 

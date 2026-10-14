@@ -33,6 +33,14 @@ BASE_URL = "https://api.scb.se/OV0104/v1/doris/sv/ssd"
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
 CACHE_MAX_AGE_HOURS = 24
 
+# (connect, read) in seconds. api.scb.se publishes an IPv6 address first, and on
+# networks without working IPv6 the connection to it never completes. requests
+# tries addresses in order, so a single 30 s timeout spent the whole 30 s on the
+# dead address before reaching IPv4, on every call. A short connect timeout
+# abandons it within seconds; the read timeout still allows a slow response.
+CONNECT_TIMEOUT_S = 5
+SCB_TIMEOUT = (CONNECT_TIMEOUT_S, 60)
+
 # ---------------------------------------------------------------------------
 # Rate-limiter state
 # ---------------------------------------------------------------------------
@@ -62,7 +70,7 @@ def _post_scb(table_path: str, query_body: dict, max_retries: int = 5) -> dict:
     for attempt in range(max_retries):
         _rate_limit()
         try:
-            resp = requests.post(url, json=query_body, timeout=60)
+            resp = requests.post(url, json=query_body, timeout=SCB_TIMEOUT)
         except (requests.ConnectionError, requests.Timeout) as exc:
             wait = 2 ** attempt
             logger.warning("Connection error, backing off %d s (attempt %d): %s", wait, attempt + 1, exc)
@@ -83,7 +91,7 @@ def _get_table_metadata(table_path: str) -> dict:
     """GET table metadata (variables + value lists)."""
     url = f"{BASE_URL}/{table_path}"
     _rate_limit()
-    resp = requests.get(url, timeout=30)
+    resp = requests.get(url, timeout=SCB_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 

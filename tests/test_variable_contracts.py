@@ -168,6 +168,7 @@ def test_the_accessor_refuses_a_scaling_that_is_not_a_household() -> None:
 # Against the live source
 # ---------------------------------------------------------------------------
 
+@pytest.mark.network
 @pytest.mark.parametrize("contract", list(CONTRACTS.values()), ids=lambda c: c.name)
 def test_the_live_scb_table_still_matches_its_contract(contract) -> None:
     """The check that would have caught the original defect at fetch time.
