@@ -235,64 +235,52 @@ section[data-testid="stSidebar"] .shai-risk-legend-row span:not(.shai-risk-legen
 }
 
 /* ---- Sidebar pills/chips ---- */
-/* Broad selectors to cover st.pills across Streamlit versions */
-section[data-testid="stSidebar"] [data-testid="stPills"] button,
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button,
-section[data-testid="stSidebar"] [role="tablist"] button,
-section[data-testid="stSidebar"] button[role="tab"],
-section[data-testid="stSidebar"] button[kind="pills"],
-section[data-testid="stSidebar"] button[kind="pillsActive"],
-section[data-testid="stSidebar"] button[data-baseweb="tab"] {
+/* st.pills markup differs by Streamlit version, and Streamlit Cloud installs the
+   newest release the requirement allows, so every rule names both shapes:
+     1.55:  <button kind="pills|pillsActive">, selection only in `kind`
+     1.66+: <button data-variant="pills" data-selected="true">, React Aria
+            state in data-hovered / data-pressed / data-focus-visible
+   Matching only the 1.55 shape left 1.66 on Streamlit's defaults: white pills
+   (the sidebar's secondary background) under the white sidebar text rule, so
+   the years were invisible. Descendant span/p are listed because the sidebar
+   forces those white with !important. */
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button,
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button :is(span, p) {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 11px !important;
+    color: rgba(255,255,255,0.85) !important;
+}
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button {
     background: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.25) !important;
-    color: rgba(255,255,255,0.85) !important;
     border-radius: 4px !important;
     padding: 5px 10px !important;
     transition: background 0.15s !important;
 }
-section[data-testid="stSidebar"] [data-testid="stPills"] button:hover,
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button:hover,
-section[data-testid="stSidebar"] [role="tablist"] button:hover,
-section[data-testid="stSidebar"] button[role="tab"]:hover,
-section[data-testid="stSidebar"] button[kind="pills"]:hover,
-section[data-testid="stSidebar"] button[data-baseweb="tab"]:hover {
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is(:hover, [data-hovered="true"], :focus-visible, [data-focus-visible="true"]) {
     background: rgba(255,255,255,0.18) !important;
+}
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is(:hover, [data-hovered="true"], :focus-visible, [data-focus-visible="true"]),
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is(:hover, [data-hovered="true"], :focus-visible, [data-focus-visible="true"]) :is(span, p) {
     color: #FFFFFF !important;
 }
-section[data-testid="stSidebar"] button[kind="pills"]:active {
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is(:active, [data-pressed="true"]) {
     background: rgba(196, 163, 90, 0.35) !important;
     border-color: #C4A35A !important;
-    color: #FFFFFF !important;
 }
-section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"],
-section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-selected="true"],
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-pressed="true"],
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-selected="true"],
-section[data-testid="stSidebar"] [role="tablist"] button[aria-pressed="true"],
-section[data-testid="stSidebar"] [role="tablist"] button[aria-selected="true"],
-section[data-testid="stSidebar"] [role="tablist"] button[aria-checked="true"],
-section[data-testid="stSidebar"] button[role="tab"][aria-pressed="true"],
-section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"],
-section[data-testid="stSidebar"] button[data-baseweb="tab"][aria-selected="true"],
-/* Streamlit 1.55 marks the selected pill only by kind="pillsActive" (no aria
-   state), so the rules above never matched it and the chosen year fell back to
-   a 10% gold tint on navy. The interaction states are listed so pressing or
-   hovering a selected pill keeps it gold instead of the white hover fill. */
-section[data-testid="stSidebar"] button[kind="pillsActive"],
-section[data-testid="stSidebar"] button[kind="pillsActive"]:hover,
-section[data-testid="stSidebar"] button[kind="pillsActive"]:focus,
-section[data-testid="stSidebar"] button[kind="pillsActive"]:focus-visible,
-section[data-testid="stSidebar"] button[kind="pillsActive"]:active {
+/* Selected, in every interaction state: solid gold with navy text. */
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is([kind="pillsActive"], [data-selected="true"]),
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is([kind="pillsActive"], [data-selected="true"]):is(:hover, [data-hovered="true"], :focus, :focus-visible, :active, [data-pressed="true"]) {
     background: #C4A35A !important;
     border-color: #C4A35A !important;
+}
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is([kind="pillsActive"], [data-selected="true"]),
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:is([kind="pillsActive"], [data-selected="true"]) :is(span, p) {
     color: #0B1F3F !important;
     font-weight: 500 !important;
 }
-/* Catch-all: force any remaining button-like elements in the sidebar to dark theme */
-section[data-testid="stSidebar"] [data-testid="stPills"] [role="tablist"],
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="tablist"] {
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] [role="radiogroup"],
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] [role="tablist"] {
     background: transparent !important;
     border: none !important;
     gap: 4px !important;
