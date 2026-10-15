@@ -241,6 +241,7 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button,
 section[data-testid="stSidebar"] [role="tablist"] button,
 section[data-testid="stSidebar"] button[role="tab"],
 section[data-testid="stSidebar"] button[kind="pills"],
+section[data-testid="stSidebar"] button[kind="pillsActive"],
 section[data-testid="stSidebar"] button[data-baseweb="tab"] {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 11px !important;
@@ -260,6 +261,11 @@ section[data-testid="stSidebar"] button[data-baseweb="tab"]:hover {
     background: rgba(255,255,255,0.18) !important;
     color: #FFFFFF !important;
 }
+section[data-testid="stSidebar"] button[kind="pills"]:active {
+    background: rgba(196, 163, 90, 0.35) !important;
+    border-color: #C4A35A !important;
+    color: #FFFFFF !important;
+}
 section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"],
 section[data-testid="stSidebar"] [data-testid="stPills"] button[aria-selected="true"],
 section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-pressed="true"],
@@ -269,7 +275,16 @@ section[data-testid="stSidebar"] [role="tablist"] button[aria-selected="true"],
 section[data-testid="stSidebar"] [role="tablist"] button[aria-checked="true"],
 section[data-testid="stSidebar"] button[role="tab"][aria-pressed="true"],
 section[data-testid="stSidebar"] button[role="tab"][aria-selected="true"],
-section[data-testid="stSidebar"] button[data-baseweb="tab"][aria-selected="true"] {
+section[data-testid="stSidebar"] button[data-baseweb="tab"][aria-selected="true"],
+/* Streamlit 1.55 marks the selected pill only by kind="pillsActive" (no aria
+   state), so the rules above never matched it and the chosen year fell back to
+   a 10% gold tint on navy. The interaction states are listed so pressing or
+   hovering a selected pill keeps it gold instead of the white hover fill. */
+section[data-testid="stSidebar"] button[kind="pillsActive"],
+section[data-testid="stSidebar"] button[kind="pillsActive"]:hover,
+section[data-testid="stSidebar"] button[kind="pillsActive"]:focus,
+section[data-testid="stSidebar"] button[kind="pillsActive"]:focus-visible,
+section[data-testid="stSidebar"] button[kind="pillsActive"]:active {
     background: #C4A35A !important;
     border-color: #C4A35A !important;
     color: #0B1F3F !important;
