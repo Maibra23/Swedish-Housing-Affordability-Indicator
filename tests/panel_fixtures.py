@@ -169,6 +169,29 @@ def _cpi_raw() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _kpif_raw() -> pd.DataFrame:
+    """Monthly KPIF, year-on-year only. Held apart from KPI's 2,0 so a swap shows."""
+    rows = []
+    for year in YEARS:
+        for month in range(1, 13):
+            rows.append({"Tid_code": f"{year}M{month:02d}", "ContentsCode_code": "000007ZM", "value": 1.5})
+    return pd.DataFrame(rows)
+
+
+def _mortgage_rate_raw() -> pd.DataFrame:
+    """Monthly rate on new household mortgages, all fixation periods together.
+
+    Half the months sit a point above the rest, so an annual mean is the only
+    reading that lands on the value the tests expect.
+    """
+    rows = []
+    for year in YEARS:
+        for month in range(1, 13):
+            bump = 1.0 if month > 6 else 0.0
+            rows.append({"Tid_code": f"{year}M{month:02d}", "value": 2.5 + (year - 2022) + bump})
+    return pd.DataFrame(rows)
+
+
 def _policy_rate_raw() -> pd.DataFrame:
     rows = []
     for year in YEARS:
@@ -189,4 +212,6 @@ RAW = {
     "BO0101_construction": _construction_raw,
     "PR0101_cpi": _cpi_raw,
     "policy_rate": _policy_rate_raw,
+    "PR0101_kpif": _kpif_raw,
+    "FM5001_mortgage_rate": _mortgage_rate_raw,
 }

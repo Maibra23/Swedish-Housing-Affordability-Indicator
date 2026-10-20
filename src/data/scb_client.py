@@ -294,12 +294,56 @@ def fetch_cpi(force: bool = False) -> pd.DataFrame:
     return _save_and_return(df, "PR0101_cpi")
 
 
+def fetch_kpif(force: bool = False) -> pd.DataFrame:
+    """KPIF (CPI with a fixed mortgage rate), national, monthly, 12-month change.
+
+    Source: SCB PR0101 — KPIF2020. The Riksbank's target variable since 2017.
+    KPI prices the interest cost of owner-occupied housing, so a rate rise lifts
+    KPI by itself; KPIF does not, which is why Version B reads it.
+    """
+    cache = _cache_path("PR0101_kpif")
+    if not force and _cache_is_fresh(cache):
+        logger.info("Using cached %s", cache)
+        return pd.read_parquet(cache)
+
+    table_path = "PR/PR0101/PR0101G/KPIF2020"
+    meta = _get_table_metadata(table_path)
+    overrides: dict[str, list[str]] = {"ContentsCode": ["000007ZM"]}  # 12-month change
+    df = _chunked_fetch(table_path, meta["variables"], overrides)
+    return _save_and_return(df, "PR0101_kpif")
+
+
+def fetch_mortgage_rate(force: bool = False) -> pd.DataFrame:
+    """Rate on new household mortgages, all fixation periods, national, monthly.
+
+    Source: SCB FM5001 — RantaT04N. "Samtliga lån" is SCB's volume-weighted
+    mean over every fixation period, so it follows the mix households actually
+    chose. The floating-only series is fetched separately by
+    `src.data.mortgage_margin` for Sida 04, which models a floating loan.
+    """
+    cache = _cache_path("FM5001_mortgage_rate")
+    if not force and _cache_is_fresh(cache):
+        logger.info("Using cached %s", cache)
+        return pd.read_parquet(cache)
+
+    table_path = "FM/FM5001/FM5001C/RantaT04N"
+    meta = _get_table_metadata(table_path)
+    overrides: dict[str, list[str]] = {
+        "Referenssektor": ["1"],      # MFI, bostadskreditinstitut and AIF: all lenders
+        "Motpartssektor": ["2c"],     # households
+        "Avtal": ["0100"],            # new and renegotiated contracts
+        "Rantebindningstid": ["1"],   # all fixation periods together
+    }
+    df = _chunked_fetch(table_path, meta["variables"], overrides)
+    return _save_and_return(df, "FM5001_mortgage_rate")
+
+
 # ---------------------------------------------------------------------------
 # Convenience
 # ---------------------------------------------------------------------------
 
 def fetch_all(force: bool = False) -> dict[str, pd.DataFrame]:
-    """Execute all 7 SCB extraction functions and return results."""
+    """Execute every SCB extraction function and return results."""
     results = {}
     funcs = [
         ("income", fetch_income),
@@ -311,6 +355,8 @@ def fetch_all(force: bool = False) -> dict[str, pd.DataFrame]:
         ("population", fetch_population),
         ("construction", fetch_construction),
         ("cpi", fetch_cpi),
+        ("kpif", fetch_kpif),
+        ("mortgage_rate", fetch_mortgage_rate),
     ]
     for name, func in funcs:
         logger.info("Fetching %s ...", name)

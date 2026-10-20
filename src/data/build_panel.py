@@ -42,6 +42,8 @@ from src.data.clean_sources import (  # noqa: E402
     _clean_construction,
     _clean_cpi,
     _clean_income,
+    _clean_kpif,
+    _clean_mortgage_rate,
     _clean_kt_ratio,
     _clean_policy_rate,
     _clean_population,
@@ -89,6 +91,8 @@ def build_municipal_panel() -> pd.DataFrame:
     constr = _clean_construction()
     cpi = _clean_cpi()
     rate = _clean_policy_rate()
+    kpif = _clean_kpif()
+    mortgage = _clean_mortgage_rate()
 
     _, counties, municipalities = _identify_regions(income)
     logger.info("Found %d municipalities, %d counties", len(municipalities), len(counties))
@@ -185,6 +189,8 @@ def build_municipal_panel() -> pd.DataFrame:
     # --- Merge national-level variables: CPI, policy rate (F2 mitigation) ---
     panel = panel.merge(cpi, on="year", how="left")
     panel = panel.merge(rate, on="year", how="left")
+    panel = panel.merge(kpif, on="year", how="left")
+    panel = panel.merge(mortgage, on="year", how="left")
 
     # --- Sort and reorder ---
     panel = panel.sort_values(["region_code", "year"]).reset_index(drop=True)
@@ -195,7 +201,7 @@ def build_municipal_panel() -> pd.DataFrame:
         "transaction_price_sek", "has_native_price",
         "bostadsratt_price_sek", "is_filled_bostadsratt_price",
         "unemployment_rate", "population", "completions",
-        "cpi_index", "cpi_yoy_pct", "policy_rate",
+        "cpi_index", "cpi_yoy_pct", "kpif_yoy_pct", "policy_rate", "mortgage_rate",
     ]
     panel = panel[[c for c in col_order if c in panel.columns]]
 
@@ -214,6 +220,8 @@ def build_county_panel() -> pd.DataFrame:
     constr = _clean_construction()
     cpi = _clean_cpi()
     rate = _clean_policy_rate()
+    kpif = _clean_kpif()
+    mortgage = _clean_mortgage_rate()
 
     _, counties, _ = _identify_regions(income)
 
@@ -279,6 +287,8 @@ def build_county_panel() -> pd.DataFrame:
     # National-level variables
     panel = panel.merge(cpi, on="year", how="left")
     panel = panel.merge(rate, on="year", how="left")
+    panel = panel.merge(kpif, on="year", how="left")
+    panel = panel.merge(mortgage, on="year", how="left")
 
     panel = panel.sort_values(["lan_code", "year"]).reset_index(drop=True)
     return panel
@@ -296,6 +306,8 @@ def build_national_panel() -> pd.DataFrame:
     constr = _clean_construction()
     cpi = _clean_cpi()
     rate = _clean_policy_rate()
+    kpif = _clean_kpif()
+    mortgage = _clean_mortgage_rate()
 
     # National income
     nat_income = income[income["region_code"] == "00"][["year", "median_income", "median_income_tkr"]].copy()
@@ -346,6 +358,8 @@ def build_national_panel() -> pd.DataFrame:
     # CPI and rate
     panel = panel.merge(cpi, on="year", how="left")
     panel = panel.merge(rate, on="year", how="left")
+    panel = panel.merge(kpif, on="year", how="left")
+    panel = panel.merge(mortgage, on="year", how="left")
 
     panel = panel.sort_values("year").reset_index(drop=True)
     return panel

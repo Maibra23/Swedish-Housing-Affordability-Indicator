@@ -77,7 +77,8 @@ def municipal(fake_raw) -> pd.DataFrame:
 def test_build_panel_still_re_exports_the_cleaners() -> None:
     """The split kept one import surface. Anything importing a cleaner from
     `build_panel` — `build_all`, and these tests — must keep working."""
-    for name in ("_read", "_clean_income", "_clean_cpi", "_parse_month_tid"):
+    for name in ("_read", "_clean_income", "_clean_cpi", "_clean_kpif",
+                 "_clean_mortgage_rate", "_parse_month_tid"):
         assert getattr(bp, name) is getattr(cs, name), f"{name} is not re-exported"
 
 
@@ -196,6 +197,30 @@ def test_the_county_price_index_reaches_every_municipality(
     for code, expected in (("0180", 200.0), ("0181", 200.0), ("0880", 150.0)):
         values = observed[observed["region_code"] == code]["price_index"]
         assert (values == expected).all(), f"{code} has price index {set(values)}"
+
+
+def test_monthly_kpif_becomes_an_annual_average(fake_raw) -> None:
+    """KPIF, not KPI, is the inflation the index reads: KPI carries mortgage
+    interest, so a rate rise would raise measured inflation by itself."""
+    kpif = bp._clean_kpif()
+    assert set(kpif["year"]) == set(YEARS)
+    assert float(kpif[kpif["year"] == 2023]["kpif_yoy_pct"].iloc[0]) == pytest.approx(1.5)
+
+
+def test_the_mortgage_rate_becomes_an_annual_average(fake_raw) -> None:
+    """2023 runs 3,5 % for six months and 4,5 % for six, so the mean is 4,0."""
+    rate = bp._clean_mortgage_rate()
+    assert float(rate[rate["year"] == 2023]["mortgage_rate"].iloc[0]) == pytest.approx(4.0)
+
+
+@pytest.mark.parametrize("level", ["municipal", "county", "national"])
+def test_every_panel_carries_the_mortgage_rate_and_kpif(fake_raw, level: str) -> None:
+    """The formulas read both at all three levels, so all three must carry them."""
+    panel = getattr(bp, f"build_{level}_panel")()
+    rows = panel[panel["year"] == 2023]
+    assert not rows.empty
+    assert rows["mortgage_rate"].tolist() == pytest.approx([4.0] * len(rows))
+    assert rows["kpif_yoy_pct"].tolist() == pytest.approx([1.5] * len(rows))
 
 
 def test_the_national_rate_and_cpi_reach_every_municipality(

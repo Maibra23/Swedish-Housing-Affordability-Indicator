@@ -255,6 +255,33 @@ def _clean_cpi() -> pd.DataFrame:
     return annual
 
 
+def _clean_kpif() -> pd.DataFrame:
+    """KPIF year-on-year change per year (annual average of monthly).
+
+    KPIF holds mortgage rates fixed, which is why the Riksbank targets it: KPI
+    rises mechanically when rates rise, because it prices the interest cost of
+    owner-occupied housing. Version B reads this series, not `cpi_yoy_pct`.
+    """
+    df = _read("PR0101_kpif")
+    yoy = df[df["ContentsCode_code"] == "000007ZM"][["Tid_code", "value"]].copy()
+    yoy["year"] = [_parse_month_tid(tid)[0] for tid in yoy["Tid_code"]]
+    annual = yoy.groupby("year", as_index=False)["value"].mean()
+    return annual.rename(columns={"value": "kpif_yoy_pct"})
+
+
+def _clean_mortgage_rate() -> pd.DataFrame:
+    """Rate on new household mortgages, all fixation periods, annual mean.
+
+    SCB RantaT04N, "Samtliga lån": the volume-weighted rate across every
+    fixation period, so it is the rate new borrowers actually agreed to that
+    year rather than the floating rate alone. See METHODOLOGY section 3.
+    """
+    df = _read("FM5001_mortgage_rate")
+    df = df.assign(year=[_parse_month_tid(tid)[0] for tid in df["Tid_code"]])
+    annual = df.groupby("year", as_index=False)["value"].mean()
+    return annual.rename(columns={"value": "mortgage_rate"})
+
+
 def _clean_policy_rate() -> pd.DataFrame:
     """Policy rate — annual average from daily data."""
     df = _read("policy_rate")
