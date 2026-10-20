@@ -79,7 +79,9 @@ def render_landing_what_is_block(kommun_count: int | None = None) -> None:
             <div class="shai-body">
                 SHAI (Swedish Housing Affordability Indicator) mäter strukturell
                 bostadsekonomisk hållbarhet genom tre indexformler som
-                kombinerar inkomst, bostadspriser, räntor och inflation.
+                räknar på vad ett typiskt bolån kostar hushållet: inkomst,
+                bostadspris, bolåneränta och amorteringskrav. Makroversionen (B)
+                väger dessutom in arbetslöshet och inflation (KPIF).
             </div>
             <div class="shai-body-secondary">
                 Indikatorn analyserar Sveriges {kommuner} kommuner och 21 län med
@@ -97,9 +99,9 @@ def render_index_visual_block() -> None:
     """Render the index overview block with weight bars and flow diagram."""
     weights = [
         ("Pris i förhållande till inkomst", 35, COLORS["secondary"]),
-        ("Styrränta", 25, COLORS["accent"]),
+        ("Bolåneränta", 25, COLORS["accent"]),
         ("Arbetslöshet", 20, "#7B68A8"),
-        ("Inflation (KPI)", 20, "#D4785A"),
+        ("Inflation (KPIF)", 20, "#D4785A"),
     ]
 
     bars_html = ""
@@ -140,7 +142,7 @@ def render_index_visual_block() -> None:
             <text x="55" y="59" text-anchor="middle" fill="#3D8B6E" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Bostadspris</text>
 
             <rect x="0" y="76" width="110" height="26" rx="4" fill="rgba(196,163,90,0.1)" stroke="#C4A35A" stroke-width="1"/>
-            <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Ränta och inflation</text>
+            <text x="55" y="93" text-anchor="middle" fill="#C4A35A" font-size="10" font-family="'Source Sans 3', sans-serif" font-weight="600">Ränta och amortering</text>
 
             <!-- Arrows to center -->
             <line x1="115" y1="21" x2="210" y2="55" stroke="#C4A35A" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -202,7 +204,7 @@ def render_landing_steps(
             "01",
             "Datainsamling",
             "Officiell statistik om kommunal inkomst, bostadspriser, "
-            "styrränta, inflation och arbetslöshet.",
+            "bolåneräntor, inflation (KPIF) och arbetslöshet.",
         ),
         (
             "02",

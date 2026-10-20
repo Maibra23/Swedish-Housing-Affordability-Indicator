@@ -28,6 +28,7 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import card_header, footer_note, page_title, vintage_badge
 from src.ui.data import load as load_artifact
+from src.ui import formulas
 from src.ui.cost_panel import render_cost_history
 
 inject_css()
@@ -107,18 +108,18 @@ with st.container(border=True):
     st.markdown(L("mt.beteckningar"))
 
     st.markdown(L("mt.version_a_rubrik"))
-    st.latex(r"A(i,t) = \frac{I(i,t)}{P(i,t) \times \max(R(t),\; 0{,}001)}")
+    st.latex(formulas.VERSION_A)
     st.markdown(L("mt.mater_flodesoverkomlighet_hushallets_inkomst"))
 
     st.markdown(L("mt.version_b_makrokomposit_tryckmatt"))
-    st.latex(r"B(i,t) = 0{,}35 \cdot z\!\left(\frac{P}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)")
+    st.latex(formulas.VERSION_B)
     st.markdown(L("mt.sammansatt_riskindikator_som_viktar_pris"))
 
     st.markdown(L("mt.version_c_rubrik"))
-    st.latex(r"C(i,t) = \frac{I(i,t)}{P(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}")
+    st.latex(formulas.VERSION_C)
     st.markdown(L("mt.kassaflode_version_c_text"))
 
-    # F17, with the data rather than a description of it. A documentation page
+    # The year-by-year cost history, with the data rather than a description of it. A documentation page
     # must not die for a missing artifact, so the panel is skipped with a reason
     # rather than allowed to raise through the rest of the methodology.
     try:

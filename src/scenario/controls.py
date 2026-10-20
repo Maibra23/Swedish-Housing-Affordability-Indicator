@@ -29,6 +29,17 @@ def _signed(decimals: int) -> Callable[[float], str]:
     return lambda v: format_dec(v, decimals, signed=v != 0)
 
 
+def _initial(key: str, default) -> dict:
+    """`value=` only for a slider the session has not set yet.
+
+    A preset writes straight to the widget's session-state key. Passing a
+    default as well makes Streamlit warn on screen that the widget "was created
+    with a default value but also had its value set via the Session State API",
+    so the default is given only the first time.
+    """
+    return {} if key in st.session_state else {"value": default}
+
+
 def render_shock_sliders() -> tuple[float, int, int]:
     """Draw the sliders and return (mortgage rate pp, income %, price %).
 
@@ -42,7 +53,7 @@ def render_shock_sliders() -> tuple[float, int, int]:
         rate = st.select_slider(
             L("sc.rantechock_pp"),
             options=shock_options(RATE_MIN, RATE_MAX, 0.25),
-            value=float(st.session_state.get("sc_rate_slider", 0.0)),
+            **_initial("sc_rate_slider", 0.0),
             format_func=_signed(2),
             key="sc_rate_slider",
             help=L("sc.rantechock_hjalp"),
@@ -51,7 +62,7 @@ def render_shock_sliders() -> tuple[float, int, int]:
         income = st.select_slider(
             L("sc.inkomsttillvaxt"),
             options=shock_options(-10, 10, 1, int),
-            value=int(st.session_state.get("sc_income_slider", 0)),
+            **_initial("sc_income_slider", 0),
             format_func=_signed(0),
             key="sc_income_slider",
             help=L("sc.34_ett_ars_normal_loneutveckling_i_sverige_5"),
@@ -60,7 +71,7 @@ def render_shock_sliders() -> tuple[float, int, int]:
         price = st.select_slider(
             L("sc.prischock_pct"),
             options=shock_options(PRICE_MIN, PRICE_MAX, PRICE_STEP, int),
-            value=int(st.session_state.get("sc_price_slider", 0)),
+            **_initial("sc_price_slider", 0),
             format_func=_signed(0),
             key="sc_price_slider",
             help=L("sc.prischock_hjalp"),

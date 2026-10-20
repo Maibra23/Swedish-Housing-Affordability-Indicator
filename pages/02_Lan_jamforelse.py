@@ -49,6 +49,7 @@ from src.indices.agreement import (
     where_b_and_c_disagree,
 )
 from src.ui.interpret import explain_cost_adjustment
+from src.ui import formulas
 from src.ui.cost_panel import render_cost_history
 
 inject_css()
@@ -116,7 +117,7 @@ page_title(
 # comparison expander below.
 FORMULA_INFO = {
     L("lj.flik_c"): {
-        "formula": r"C(i,t) = 100 \cdot \frac{0{,}85 \cdot P_{\text{SEK}}(i,t) \cdot \big(r(t) \cdot (1 - 0{,}30) + a(t)\big)}{2 \cdot I(i,t)}",
+        "formula": formulas.VERSION_C,
         "desc": (
             L("lj.den_rekommenderade_versionen_justerar_for")
         ),
@@ -128,7 +129,7 @@ FORMULA_INFO = {
         ),
     },
     L("lj.flik_b"): {
-        "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(r) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi_{\text{KPIF}})",
+        "formula": formulas.VERSION_B,
         "desc": (
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
         ),
@@ -143,7 +144,7 @@ FORMULA_INFO = {
 
 #: Version A's formula, kept for the comparison expander. It is not a tab; see
 #: the note on FORMULA_INFO above.
-VERSION_A_FORMULA = r"A(i,t) = 100 \cdot \frac{0{,}85 \cdot P_{\text{SEK}}(i,t) \cdot r(t)}{2 \cdot I(i,t)}"
+VERSION_A_FORMULA = formulas.VERSION_A
 
 # ── County colours and selection ─────────────────────────────────────
 # Every county gets its own colour, keyed by code so it survives a filter change
