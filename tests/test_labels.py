@@ -122,7 +122,7 @@ def test_the_register_heading_matches_the_ids_it_contains() -> None:
     [
         # Each caveat names the thing it is warning about, not merely an id.
         ("mt.sammansatt_riskindikator_som_viktar_pris", ["F13", "nationella"]),
-        ("mt.kassaflode_version_c_text", ["F17", "golvet"]),
+        ("mt.kassaflode_version_c_text", ["F18", "amortering"]),
         ("mt.formlerna_ger_ett_nivavarde_per_kommun_och", ["F16", "kvantiler"]),
         ("ki.inkomsten_ar_individuell_bruttoinkomst_scb", ["F14"]),
         ("sc.version_c_kassaflode_beraknas_som_text", ["F15", "alla kommuner"]),

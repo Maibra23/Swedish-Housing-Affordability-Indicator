@@ -115,7 +115,7 @@ page_title(
 # sits from the bank's gross interest, derived from the selected year in the
 # comparison expander below.
 FORMULA_INFO = {
-    "Kassaflödesversion": {
+    L("lj.flik_c"): {
         "formula": r"C(i,t) = 100 \cdot \frac{0{,}85 \cdot P_{\text{SEK}}(i,t) \cdot \big(r(t) \cdot (1 - 0{,}30) + a(t)\big)}{2 \cdot I(i,t)}",
         "desc": (
             L("lj.den_rekommenderade_versionen_justerar_for")
@@ -127,7 +127,7 @@ FORMULA_INFO = {
             L("lj.att_olika_formler_rangordnar_lanen_olika_ar")
         ),
     },
-    "Makroversion": {
+    L("lj.flik_b"): {
         "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(r) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi_{\text{KPIF}})",
         "desc": (
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")

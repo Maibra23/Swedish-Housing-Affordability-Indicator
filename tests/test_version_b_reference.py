@@ -194,7 +194,9 @@ def test_the_committed_reference_matches_the_committed_panel(level: str) -> None
 def test_the_artifact_records_what_it_was_derived_from() -> None:
     """A frozen reference is only auditable if it says which panel froze it."""
     payload = json.loads(bref.REFERENCE_PATH.read_text(encoding="utf-8"))
-    assert payload["version"] == 1
+    from src.indices.b_reference import REFERENCE_VERSION
+
+    assert payload["version"] == REFERENCE_VERSION
     for level in bref.LEVELS:
         derived = payload["levels"][level]["derived_from"]
         assert derived["rows"] > 0

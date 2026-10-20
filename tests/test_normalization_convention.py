@@ -9,7 +9,7 @@ they produce.
 quantities, so they are log-normal. Z-scoring them raw put a ±0.67σ cut on a
 variable whose normality is rejected at p < 6e-15 in every year, and produced a
 ≈19/51/30 class split that nobody chose. They are log-transformed first.
-`version_b` is a weighted *sum* of z-scores, negative in 1919 of 3190 rows, so a
+`version_b` is a weighted *sum* of z-scores, negative in 1877 of 3190 rows, so a
 log is undefined for it — it is z-scored raw.
 
 **Window (decision O2).** `z_*` is computed within year: it answers "where does
@@ -60,7 +60,8 @@ def test_z_is_computed_on_the_log(ranked: pd.DataFrame, version: str):
     for year, group in ranked.groupby("year"):
         raw = group[f"version_{version}"].astype(float)
         logged = np.log(raw)
-        expected = -((logged - logged.mean()) / logged.std())
+        # A and C are cost shares: higher is worse, so z is not inverted.
+        expected = (logged - logged.mean()) / logged.std()
         actual = group[f"z_{version}"].astype(float)
         assert np.allclose(actual, expected), f"z_{version} is not log-based in {year}"
 
@@ -105,7 +106,8 @@ def test_class_split_is_close_to_the_quartiles(ranked: pd.DataFrame):
 @pytest.mark.parametrize("version", VERSIONS)
 def test_rank_still_agrees_with_the_raw_value(ranked: pd.DataFrame, version: str):
     """A log is monotonic, so ranks must match the raw ordering exactly."""
-    higher_is_better = version in ("a", "c")
+    # Every version runs higher = worse, so rank 1 holds the lowest raw value.
+    higher_is_better = False
     for year, group in ranked.groupby("year"):
         raw = group[f"version_{version}"].astype(float)
         expected = raw.rank(method="min", ascending=not higher_is_better).astype(int)

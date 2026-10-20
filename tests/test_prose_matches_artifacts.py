@@ -41,8 +41,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT = ROOT / "data" / "processed" / "affordability_ranked.parquet"
 
-#: A signed decimal bound to a year: "-0.31 (2015)", "+0,78 (2023)",
-#: "-0.31 in 2015". In this repository that shape is always a claim about
+#: A signed decimal bound to a year: "-0.27 (2019)", "+0,72 (2023)",
+#: "-0.27 in 2019". In this repository that shape is always a claim about
 #: Version B's panel mean for that year.
 PANEL_MEAN_CLAIM = re.compile(
     r"([−+\-]\d+[.,]\d+)\s*(?:\((\d{4})\)|in\s+(\d{4}))"
@@ -69,7 +69,7 @@ def _prose(path: Path) -> str:
     """File text with history dropped and wrapped lines rejoined.
 
     Rejoining matters: `labels.py` wraps the D5 sentence mid-claim, so a
-    line-by-line scan saw "-0,31 (2015)" and missed "+0,78 (2023)" entirely. A
+    line-by-line scan saw "-0,27 (2019)" and missed "+0,72 (2023)" entirely. A
     guard that reads half a sentence is worse than none, because it looks like
     coverage.
     """

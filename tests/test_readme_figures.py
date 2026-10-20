@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from src.indices.agreement import inflation_adjustment, measure_agreement
+from src.indices.agreement import cost_adjustment, measure_agreement
 from src.kontantinsats.margin import default_margin_pp
 from src.kontantinsats.engine import apply_regime
 from src.scenario.simulator import simulate
@@ -93,27 +93,14 @@ def test_formula_agreement_counts() -> None:
     )
 
 
-def test_the_inflation_adjustment_the_comparison_expander_states() -> None:
-    """The factor replacing Version A's class-table row, re-derived.
-
-    The README calls it the inflation adjustment, which is only what it is while
-    neither rate floor binds — true for 2024, false for 2015 to 2023. If the demo
-    year ever moves to a floored year, the wording has to move with it.
-    """
-    adjustment = inflation_adjustment(
-        _artifact("affordability_municipal.parquet"), DEMO_YEAR
-    )
-
+def test_the_cost_adjustment_the_comparison_expander_states() -> None:
+    """The factor replacing Version A's class-table row, re-derived."""
+    adjustment = cost_adjustment(_artifact("affordability_municipal.parquet"), DEMO_YEAR)
     assert adjustment.is_national_constant, (
         "the C/A ratio is no longer one factor for the whole country, so neither "
         "the README nor Sida 02 may state it as a single number"
     )
-    assert adjustment.is_an_inflation_adjustment, (
-        f"in {DEMO_YEAR} a rate floor binds (R={adjustment.nominal_rate:.2f}, "
-        f"real={adjustment.real_rate:.2f}), so C/A is a quotient of constants and "
-        f"the README must stop calling it the inflation adjustment."
-    )
-    _assert_in_readme(f"{_sv(adjustment.factor, 2)}×", "the inflation adjustment")
+    _assert_in_readme(f"{_sv(adjustment.factor, 2)}×", "the C/A factor")
 
 
 # ── Sida 03, one kommun and its county projection ────────────────────
@@ -137,7 +124,7 @@ def test_the_three_projection_scenarios_for_stockholms_lan() -> None:
     ]
     rendered = " / ".join(
         _sv(float(stockholm[stockholm["scenario"] == scenario]["version_c"].iloc[0]), 1)
-        for scenario in ("floor", "current", "normalised")
+        for scenario in ("low", "current", "high")
     )
     _assert_in_readme(rendered, f"the three {first} projection scenarios")
 
@@ -207,10 +194,11 @@ def test_the_two_percentage_point_rate_shock() -> None:
         baseline_panel={
             "income": float(county["median_income"]),
             "transaction_price_sek": float(county["transaction_price_sek"]),
-            "policy_rate": float(county["policy_rate"]),
-            "cpi_yoy_pct": float(county["cpi_yoy_pct"]),
+            "mortgage_rate": float(county["mortgage_rate"]),
+            "year": DEMO_YEAR,
         },
     )
 
-    _assert_in_readme(_sv(result["baseline_v_c"], 2), "the simulator baseline")
-    _assert_in_readme(_sv(result["scenario_v_c"], 2), "the shocked value")
+    _assert_in_readme(_sv(result["baseline_v_c"], 1), "the simulator baseline")
+    _assert_in_readme(_sv(result["scenario_v_c"], 1), "the shocked value")
+    _assert_in_readme(f"up {result['delta_pct']:.0f} %", "the shock's size")

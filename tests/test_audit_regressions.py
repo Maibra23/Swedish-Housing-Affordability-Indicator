@@ -121,7 +121,7 @@ def test_stale_year_in_session_falls_back_to_default() -> None:
 def test_riksoversikt_kpis_match_recomputation(year: int) -> None:
     rows = RANKED[RANKED["year"] == year]
     text = visible_text(render(PAGE["rv"], year))
-    assert find(r"Genomsnittligt SHAI\s*([\d ]+,\d)\s*poäng", text) == sv(rows["version_c"].mean())
+    assert find(r"Genomsnittligt SHAI\s*([\d ]+,\d)\s*% av inkomsten", text) == sv(rows["version_c"].mean())
     assert find(r"Högriskkommuner\s*(\d+)\s*av", text) == str(int((rows["risk_c"] == "hog").sum()))
     assert find(r"K/T-kvot \(genomsnitt\)\s*([\d,]+)\s*genomsnitt", text) == sv(rows["kt_ratio"].mean(), 2)
 
@@ -157,7 +157,8 @@ def test_lan_ranking_and_disagreement_match_recomputation(year: int) -> None:
     means = rows.groupby("lan_code")["version_c"].mean()
     names = COUNTY[COUNTY["year"] == year].set_index("lan_code")["region_name"]
     text = visible_text(render(PAGE["lj"], year))
-    assert find(rf"Länsranking {year}.*?\n1 \| ([^|]+?) \|", text) == names[means.idxmax()]
+    # A cost share: #1 is the cheapest county.
+    assert find(rf"Länsranking {year}.*?\n1 \| ([^|]+?) \|", text) == names[means.idxmin()]
     disagree = int((rows["risk_b"] != rows["risk_c"]).sum())
     assert find(r"den är det för (\d+) av", text) == str(disagree)
 
@@ -194,7 +195,7 @@ def test_kommun_kpis_match_artifact(kommun: str, year: int) -> None:
     row = RANKED[(RANKED["region_name"] == kommun) & (RANKED["year"] == year)].iloc[0]
     at = render(PAGE["kd"], year, actions=[lambda a: a.selectbox(key="kd_kommun_select").set_value(kommun)])
     text = visible_text(at)
-    assert find(r"SHAI \(Version C\)\s*([\d,]+)\s*poäng", text) == sv(row["version_c"])
+    assert find(r"SHAI \(Version C\)\s*([\d,]+)\s*% av inkomsten", text) == sv(row["version_c"])
     assert find(r"Medianinkomst\s*([\d ]+)\s*SEK", text) == sv(row["median_income"], 0)
 
 
@@ -208,14 +209,22 @@ def test_projection_title_and_scenario_label_name_county_and_year() -> None:
     assert not any("Dagens nivå" in n for n in names)
 
 
+def _cost_share(income: float, price: float, rate_pct: float, year: int) -> float:
+    """Version C written out: 85 % loan, 30 % deduction, 2 % amortisation from
+    June 2016, two earners."""
+    amort = 0.0 if year < 2016 else 0.02 * 7 / 12 if year == 2016 else 0.02
+    return 100 * 0.85 * price * (rate_pct / 100 * 0.7 + amort) / (2 * income)
+
+
 def test_projection_first_year_matches_formula() -> None:
     hist = COUNTY[COUNTY["lan_code"] == "01"].sort_values("year").iloc[-1]
-    real = max(hist["policy_rate"] - hist["cpi_yoy_pct"], 0.5)
+    rates = COUNTY.groupby("year")["mortgage_rate"].median()
     at = render(PAGE["kd"])
-    lines = {t["name"].split(",")[0]: t["y"][1] for s in plotly_specs(at) for t in s["data"] if " pp" in t.get("name", "")}
-    growth = 1.03 / 1.02
-    for label, rate in (("Golvet", 0.5), (f"Nivå {LAST_YEAR}", real), ("Normaliserad", 2.0)):
-        assert lines[label] == pytest.approx(hist["version_c"] * real / rate * growth, rel=1e-6)
+    lines = {t["name"].split(",")[0]: t["y"][1] for s in plotly_specs(at) for t in s["data"] if " %" in t.get("name", "")}
+    income, price = hist["median_income"] * 1.03, hist["transaction_price_sek"] * 1.02
+    year = LAST_YEAR + 1
+    for label, rate in (("Lägsta nivån", rates.min()), (f"Nivå {LAST_YEAR}", hist["mortgage_rate"]), ("Stress", 6.0)):
+        assert lines[label] == pytest.approx(_cost_share(income, price, rate, year), rel=1e-6)
 
 
 # ── Sida 04 Kontantinsats ────────────────────────────────────────────
@@ -266,18 +275,22 @@ def test_kontantinsats_uses_one_currency_and_times_sign() -> None:
 # ── Sida 05 Scenariosimulator ────────────────────────────────────────
 
 
-def _scenario_value(row: pd.Series, rate=0.0, income=0, price=0, cpi=0.0) -> float:
-    real = max(row["policy_rate"] + rate - row["cpi_yoy_pct"] - cpi, 0.5)
-    return row["median_income"] * (1 + income / 100) / (row["transaction_price_sek"] * (1 + price / 100) * real / 100)
+def _scenario_value(row: pd.Series, rate=0.0, income=0, price=0) -> float:
+    return _cost_share(
+        row["median_income"] * (1 + income / 100),
+        row["transaction_price_sek"] * (1 + price / 100),
+        max(row["mortgage_rate"] + rate, 0.5),
+        int(row["year"]),
+    )
 
 
 @pytest.mark.parametrize(
     "shocks",
-    [{}, {"rate": 2.0}, {"rate": -2.0, "cpi": 10.0}, {"rate": 5.0, "income": -10, "price": -25, "cpi": -5.0}],
-    ids=["base", "plus2", "floor", "extremes"],
+    [{}, {"rate": 2.0}, {"rate": -2.0, "price": 25}, {"rate": 5.0, "income": -10, "price": -25}],
+    ids=["base", "plus2", "cut", "extremes"],
 )
 def test_scenario_matches_formula(shocks: dict) -> None:
-    keys = {"rate": "sc_rate_slider", "income": "sc_income_slider", "price": "sc_price_slider", "cpi": "sc_cpi_slider"}
+    keys = {"rate": "sc_rate_slider", "income": "sc_income_slider", "price": "sc_price_slider"}
     acts = [lambda a, k=keys[n], v=v: a.select_slider(key=k).set_value(v) for n, v in shocks.items()]
     row = PANEL_COUNTY[(PANEL_COUNTY["region_name"] == "Stockholms län") & (PANEL_COUNTY["year"] == LAST_YEAR)].iloc[0]
     text = visible_text(render(PAGE["sc"], actions=acts))
@@ -289,8 +302,8 @@ def test_scenario_defaults_to_stockholm_and_presets_reset() -> None:
     """A-12, plus the preset round trip."""
     at = render(PAGE["sc"])
     assert at.selectbox(key="sc_county_select").value == "Stockholms län"
-    at.button(key="sc_preset_2022").click().run()
-    assert at.select_slider(key="sc_rate_slider").value == 4.0
+    at.button(key="sc_preset_cycle").click().run()
+    assert at.select_slider(key="sc_rate_slider").value == 3.0
     at.button(key="sc_preset_reset").click().run()
     assert at.select_slider(key="sc_rate_slider").value == 0.0
 
@@ -298,7 +311,7 @@ def test_scenario_defaults_to_stockholm_and_presets_reset() -> None:
 def test_surface_axes_end_where_the_sliders_end() -> None:
     """A-07."""
     surface = next(s for s in plotly_specs(render(PAGE["sc"])) if any(t["type"] == "contour" for t in s["data"]))
-    assert surface["layout"]["xaxis"]["range"] == [-5.0, 10.0]
+    assert surface["layout"]["xaxis"]["range"] == [-25, 25]
     assert surface["layout"]["yaxis"]["range"] == [-2.0, 5.0]
 
 
@@ -316,7 +329,7 @@ def test_scenario_copy_fixes() -> None:
 def test_methodology_lists_every_limitation(year: int) -> None:
     text = visible_text(render(PAGE["mt"], year))
     found = sorted({int(n) for n in re.findall(r"\*\*F(\d+)\*\*", text)})
-    assert found == list(range(1, 18))
+    assert found == list(range(1, 19))
 
 
 # ── Copy that must not come back (A-10, A-15) ────────────────────────

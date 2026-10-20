@@ -8,6 +8,16 @@ Three documents merged into one, unchanged in substance:
 
 Section numbers (§1–§12) refer to Part I; risk IDs (R1–R16) to Part II.
 
+> **2026-10-20: the index became a cash-flow share.** Version C is now net interest after
+> the 30 % deduction plus required amortisation on an 85 % loan, as a percentage of two
+> median incomes, at SCB's all-fixation mean rate on new mortgages; Version A is the
+> gross interest on the same loan; Version B reads the mortgage rate and KPIF. **Higher is
+> now worse for every version**, and no rate floor remains. Ranks and risk classes did not
+> change. §1–§3, §5 and §6 describe the current formula. §7–§12 and Part II are dated
+> records: where they quote the real-rate floor, the "inflation adjustment", the CPI
+> slider or index levels such as 23,0 and 7,71, they describe the formula as it was on the
+> date they carry. METHODOLOGY §3 has the comparison.
+
 
 ---
 
@@ -80,17 +90,17 @@ Sweden's affordability over time.
 - Locating one municipality against the national distribution.
 - Reading the *shape* of that distribution, which the histogram shows and the map
   cannot.
-- Comparing the spread between years, as distinct from the level.
+- Comparing the level between years through the mean index and its split.
 
 ### What the numbers actually say, with real figures
 
-2024, Version C:
+2024, Version C (percent of two median incomes):
 
 | | Value |
 |---|---|
 | Låg / Medel / Hög risk | 70 / 136 / 84 |
-| z range | −2,39 (Åsele, C = 74,9) to +2,62 (Lidingö, C = 4,6) |
-| Genomsnittligt SHAI | 23,0, against 36,3 in 2023 |
+| z range | −2,39 (Åsele, C = 3,7 %) to +2,62 (Lidingö, C = 60,5 %) |
+| Genomsnittligt SHAI | 16,3 %, against 16,9 % in 2023 |
 
 **The page carries two kinds of number side by side, and only one of them can
 trend.** This is the thing most likely to be misread here.
@@ -103,51 +113,48 @@ and a rate shock. Reading "84 municipalities at high risk, up from 83" as
 deterioration is reading noise in a definition. That is limitation F16, and the
 KPI card labels itself "relativ position" for this reason.
 
-The *average SHAI* can trend, because it is a mean of raw Version C rather than
-of z-scores — but it cannot be read straight across years either, and the
-2023-to-2024 fall is the case in point. 36,3 to 23,0 is a 36 % drop in which no
-municipality's income or price did anything unusual. What changed is the
-denominator: 2024 is the first year since 2014 in which the real rate cleared
-the 0,5 pp floor, so Version C stopped dividing by a constant and started
-dividing by a rate. The page now says so, and carries the table.
+The *average SHAI* can trend, because it is a mean of raw Version C, a cost share in
+percent. Until 2026-10-20 it could not be read across years: the old Version C divided by
+a real rate floored at 0,5 pp, and the mean fell 36 % in 2024 when the floor released.
+The cash-flow share has no floor, but its level still bundles three things — the rate,
+the amortisation rule and prices — so the page carries the split.
 
 <details>
-<summary><b>Which rate each formula actually divided by, year by year</b></summary>
+<summary><b>Rate, amortisation and price, year by year</b></summary>
 
-Rendered on Sida 01, 02 and 06 by `src/ui/floor_panel.py`, collapsed, from
-`agreement.floor_history()`. Rates in percentage points.
+Rendered on Sida 01, 02 and 06 by `src/ui/cost_panel.py`, collapsed, from
+`agreement.cost_history()`. Rates and amortisation in percent of the loan per year;
+Pris/inkomst in years of median income.
 
-| Year | Styrränta | Inflation | Realränta | Golv binder för | C/A | Snitt-SHAI | Inkomst/pris |
-|---|---|---|---|---|---|---|---|
-| 2014 | 0,46 | −0,17 | 0,63 | inget | 0,74× | 36,3 | 22,9 % |
-| 2015 | −0,25 | −0,03 | −0,23 | A och C | 0,20× | 43,1 | 21,5 % |
-| 2016 | −0,48 | 0,98 | −1,46 | A och C | 0,20× | 41,9 | 20,9 % |
-| 2017 | −0,50 | 1,81 | −2,31 | A och C | 0,20× | 39,1 | 19,6 % |
-| 2018 | −0,50 | 1,95 | −2,45 | A och C | 0,20× | 38,1 | 19,1 % |
-| 2019 | −0,26 | 1,80 | −2,06 | A och C | 0,20× | 37,6 | 18,8 % |
-| 2020 | 0,00 | 0,49 | −0,49 | A och C | 0,20× | 36,5 | 18,2 % |
-| 2021 | 0,00 | 2,17 | −2,17 | A och C | 0,20× | 32,4 | 16,2 % |
-| 2022 | 0,77 | 8,35 | −7,58 | C | 1,54× | 32,0 | 16,0 % |
-| 2023 | 3,46 | 8,65 | −5,19 | C | 6,93× | 36,3 | 18,1 % |
-| 2024 | 3,63 | 2,86 | 0,77 | inget | 4,71× | 23,0 | 17,7 % |
+| Year | Bolåneränta | Amortering | Kostnad per lånad krona | C/A | Snitt-SHAI | Pris/inkomst |
+|---|---|---|---|---|---|---|
+| 2014 | 2,47 | 0,00 | 1,73 | 0,70× | 4,7 % | 6,4 |
+| 2015 | 1,85 | 0,00 | 1,30 | 0,70× | 3,7 % | 6,8 |
+| 2016 | 1,76 | 1,17 | 2,40 | 1,36× | 7,3 % | 7,1 |
+| 2017 | 1,74 | 2,00 | 3,22 | 1,85× | 10,3 % | 7,5 |
+| 2018 | 1,68 | 2,00 | 3,18 | 1,89× | 10,0 % | 7,4 |
+| 2019 | 1,66 | 2,00 | 3,16 | 1,91× | 10,0 % | 7,5 |
+| 2020 | 1,64 | 2,00 | 3,15 | 1,92× | 10,4 % | 7,8 |
+| 2021 | 1,53 | 2,00 | 3,07 | 2,01× | 11,4 % | 8,8 |
+| 2022 | 2,57 | 2,00 | 3,80 | 1,48× | 14,2 % | 8,8 |
+| 2023 | 4,53 | 2,00 | 5,17 | 1,14× | 16,9 % | 7,7 |
+| 2024 | 4,30 | 2,00 | 5,01 | 1,17× | 16,3 % | 7,7 |
 
-Read the Snitt-SHAI column against the Golv column, not on its own. The three
-years where the floor state changes — 2014→2015, 2021→2022, 2023→2024 — are the
-three places the level moves for a reason that is not affordability.
+Read Snitt-SHAI against the two columns before it. The 2016–2017 jump is the
+amortisation requirement (cost per krona 1,30 → 3,22 at a flat rate); 2019–2021 is prices
+outrunning incomes at a flat rate; 2022–2023 is the rate cycle, partly offset by prices.
 
-**Inkomst/pris is the column that answers the question.** It is the mean index
-with the rate divided out, which works exactly because the rate is national:
-`mean C = (100/r) · mean(I/P)`. It contains no floor and compares across every
-year — 22,9 % in 2014 to 17,7 % in 2024, so a median income went from buying
-22,9 % of a house to 17,7 %. The panel also shows the split for the year on
-screen against the one before it: 2023 to 2024 is −36,5 % in total, of which the
-rate is −35,1 % and income against price −2,2 %, multiplied rather than added.
-See `src/indices/decompose.py` and METHODOLOGY §3.
+**Pris/inkomst answers "did houses get dearer against incomes?".** It is the mean index
+with the rate and the rules divided out, which works exactly because both are national:
+`mean C = 0,425 · q · mean(P/I)`. It rose from 6,4 to 7,7 median incomes between 2014 and
+2024, +19,8 %; over the same years the cost per krona rose 189 %, so most of the rise in
+the level is financing and regulation, not prices. See `src/indices/decompose.py` and
+METHODOLOGY §3.
 
 </details>
 
 Both numbers sit in the same KPI strip. The card labels and the explanation line
-beneath now distinguish them; before T1.9 the count carried a year-on-year delta,
+beneath distinguish them; before T1.9 the count carried a year-on-year delta,
 which asserted a trend it cannot have.
 
 ---
@@ -172,11 +179,10 @@ one ranking with great confidence. This page exists to test it.
 agreement panel. Stages 3 and 4, aggregated. See `docs/ENGINE.md`.
 
 Municipal scores are averaged into counties — `municipal.groupby("lan_code")`
-— and ranked within the selected year. Versions A and C are plotted on a
-logarithmic axis, which is the same treatment decision D6 applies to them for
-z-scoring and for the same reason: they are ratios with the policy rate in the
-denominator, so when the rate approached zero they ran to 400+ and squashed
-recent years flat against a linear axis.
+— and ranked within the selected year, cheapest first. Versions A and C are plotted on
+a logarithmic axis, which is the same treatment decision D6 applies to them for
+z-scoring and for the same reason: they are log-normal cost shares, and county levels
+span a factor of ten, from about 3 to 36 % of income.
 
 Each county carries its own colour from `COUNTY_PALETTE` and its own legend
 entry, and a selector cuts the 21 lines down to a chosen few; the rest stay on
@@ -186,28 +192,25 @@ spread while making each line anonymous.
 
 **Version A has no tab, deliberately.** Measured on this page's own county
 figures, A and C produce the identical ordering in every year — rank correlation
-1,0000 — and C reads exactly 4,71x A in 2024 for all 21 counties. A third tab
+1,0000 — and C reads exactly 1,17× A in 2024 for all 21 counties. A third tab
 would show the same ranking with different numbers, which is the appearance of
 corroboration rather than corroboration. A's formula and description moved into
 the comparison expander, where that reason is stated.
 
-The page also carries the rate-floor panel between the comparison expander and
-Robusthet, collapsed, for the same reason Sida 01 does: the county trend chart
-plots levels across years, and those levels move when the floor releases. The
-"Om länsjämförelsen" text used to say the curves could be compared between years
-because they are level values. They can, between years where the floor bound the
-same way, which is what the copy now says.
+The page also carries the rate-and-price panel between the comparison expander and
+Robusthet, collapsed, so a reader looking at the county trend lines can see how much of
+a move came from financing and how much from prices.
 
 **It no longer has a row in the Robusthet class table either, as of
 2026-10-02.** That row was `risk_c`'s counts under another name, in the one table
 on the site whose job is to show that the ranking survives a change of formula.
-What replaced it is the thing only A can say: the size of the inflation
-adjustment, derived from the selected year rather than quoted. The factor is
-4,71 in 2024 and 0,20 in every year from 2015 to 2021, where both formulas are
-dividing by their rate floors and it means nothing about inflation at all — so
-the sentence around the figure changes with the year. See
-`explain_inflation_adjustment` in `src/ui/interpret.py`, and METHODOLOGY
-section 3 for the per-year table.
+What replaced it is the thing only A can say: how far the household's cash flow sits
+from the bank's gross interest, derived from the selected year. The factor is
+`(r · 0,7 + 100 · a) / r`: 0,70 before amortisation, 1,8 to 2,0 in 2017–2021, 1,17 in
+2024, and the sentence around it names the rate, the net interest and the amortisation
+that produce it. See `explain_cost_adjustment` in `src/ui/interpret.py`. (Until
+2026-10-20 this was the "inflation adjustment", which meant four different things
+depending on which rate floor bound.)
 
 ### When to use it
 
@@ -218,9 +221,9 @@ section 3 for the per-year table.
 ### What the numbers actually say, with real figures
 
 **Two of the three formulas cannot disagree.** Version A and Version C rank
-identically, in every year, by construction: within a year the rate and inflation
-are national constants, so A and C differ by a single constant factor that a
-within-year z-score on logs removes exactly. `z_a` equals `z_c` on all 3 190
+identically, in every year, by construction: within a year the mortgage rate and the
+amortisation rule are national constants, so A and C differ by a single constant factor
+that a within-year z-score on logs removes exactly. `z_a` equals `z_c` on all 3 190
 rows. Version B is the only one that can rank differently, and it does — for 73
 of 290 municipalities in 2024.
 
@@ -229,11 +232,9 @@ So the honest form of this page's argument is not "three methods agree". It is
 country, and here is where". The Robusthet section at the foot of the page states
 that and shows the class counts for C and B.
 
-Where A and C genuinely differ is in **level**: C reads 4,71 times A at 2024's
-real rate. That is the inflation correction, and it is why C is the one the site
-reports. In 2015 to 2023 the same quotient is an artefact of the two rate
-floors rather than a correction for anything, which is why the page derives it
-per year and labels what it is.
+Where A and C genuinely differ is in **level**: C reads 1,17 times A in 2024. That is
+the deduction and amortisation, and it is why C is the one the site reports: it is
+what the household pays out.
 
 **A divergence this page does not announce.** The county figures here are means
 of municipalities. The county figures on Sida 05 come from
@@ -243,15 +244,15 @@ ratio of means, so the two disagree:
 
 | Län, 2024 | Sida 02 (mean of kommuner) | Sida 05 (county aggregate) |
 |---|---|---|
-| Västerbottens län | 44,62 | 16,85 |
-| Norrbottens län | 37,73 | 22,62 |
-| Stockholms län | 8,45 | 7,71 |
-| Gotlands län | 10,63 | 10,63 |
+| Västerbottens län | 8,35 | 16,40 |
+| Norrbottens län | 8,72 | 12,22 |
+| Stockholms län | 35,19 | 35,86 |
+| Gotlands län | 25,99 | 25,99 |
 
-The ratio between them runs 1,00 to **2,65**, median 1,42, and the rank
-correlation is 0,806 — so the two do not even order the counties the same way.
-Sparse northern counties diverge most, because a handful of very cheap
-municipalities pull an unweighted mean upward while the aggregate is dominated by
+The county aggregate runs 1,00 to **1,96** times the mean of kommuner, median 1,23, and
+the rank correlation is 0,865 — so the two do not even order the counties the same way.
+Sparse northern counties diverge most, because many very cheap inland municipalities
+pull an unweighted mean of cost shares down while the aggregate is dominated by
 where people actually live. Gotland agrees exactly, being one municipality.
 
 Neither figure is wrong. They answer different questions: "what does the typical
@@ -268,8 +269,8 @@ mean would close the gap and change every value on the page.
 ### What it is
 
 One municipality at a time: its Version C history, a component KPI row, and a
-six-year **conditional projection** under three stated assumptions about the real
-interest rate.
+six-year **conditional projection** under three stated assumptions about the mortgage
+rate.
 
 ### Why it exists
 
@@ -286,8 +287,8 @@ and 5. See `docs/ENGINE.md`.
 
 History is municipal. **The projection is not.** `src/projection.py` carries the
 county's last observed income and price forward at 3 % and 2 % a year, then
-divides by each of three assumed real rates. SCB publishes nothing that would
-support a municipal projection.
+prices the loan at each of three assumed mortgage rates. SCB publishes nothing that
+would support a municipal projection.
 
 Nothing is fitted. Statistical model fitting was evaluated here and withdrawn
 rather than repaired; the measurements are recorded as R16 and summarised below.
@@ -295,43 +296,37 @@ rather than repaired; the measurements are recorded as R16 and summarised below.
 ### When to use it
 
 - Reading one municipality's trajectory rather than its rank.
-- Seeing which component moved: the KPI row carries income, K/T and the rate
-  beside the index.
-- Asking what the index would be *if* the real rate settles at a given level.
-  That is the only forward question this page now answers.
+- Seeing which component moved: the breakdown splits the change exactly into income,
+  price and the cost per krona borrowed.
+- Asking what the index would be *if* the mortgage rate settles at a given level.
+  That is the only forward question this page answers.
 
 ### What the numbers actually say, with real figures
 
 **The projection is the county's, and the chart used to hide that.** It once began
-at the *municipality's* last value, so Stockholm's line ran at
-6,2 and then jumped to the county's 2025 value, which reads as a predicted
-improvement and is in fact a seam between two geographies. Stockholm kommun
-closed 2024 at 6,2; Stockholms län at 7,7. The chart draws the county history as
-a separate series, labelled *Länet*, and anchors the projection to it. Nothing is
-stitched across a geography. That remains true of the projection.
+at the *municipality's* last value, which reads as a predicted change and is in fact a
+seam between two geographies. Stockholm kommun closed 2024 at 44,2 % of income;
+Stockholms län at 35,9 %. The chart draws the county history as a separate series,
+labelled *Länet*, and anchors the projection to it. Nothing is stitched across a
+geography.
 
-**The three scenarios, for Stockholms län (observed 2024 = 7,7):**
+**The three scenarios, for Stockholms län (observed 2024 = 35,9 %):**
 
-| År | Golvet, 0,5 pp | Nivå 2024, 0,77 pp | Normaliserad, 2,0 pp |
+| År | Lägsta nivån, 1,53 % | Nivå 2024, 4,30 % | Stress, 6,0 % |
 |---|---|---|---|
-| 2025 | 12,0 | 7,8 | 3,0 |
-| 2027 | 12,2 | 7,9 | 3,1 |
-| 2030 | 12,6 | 8,2 | 3,1 |
+| 2025 | 21,8 | 35,5 | 44,0 |
+| 2027 | 21,4 | 34,8 | 43,1 |
+| 2030 | 20,7 | 33,8 | 41,9 |
 
-**The first year moves by exactly 1,56× / 1,01× / 0,39× in all 21 counties.**
-That uniformity is the point, not a defect: the real rate is national, so the
-spread between the lines is a statement about monetary policy and not about any
-municipality. A reader who sees the same fan over Norrbotten as over Stockholm
-has learned the right thing.
+**The first year moves by exactly 0,61× / 0,99× / 1,23× in all 21 counties.**
+That uniformity is the point, not a defect: the rate is national, so the spread between
+the lines is a statement about rates and not about any municipality. A reader who sees
+the same fan over Norrbotten as over Stockholm has learned the right thing.
 
-**Why the floor is the whole story.** Version C is a reciprocal of
-`max(R − π, 0,5)`. Stockholm's real rate ran 0,63, then 0,50 for nine years, then
-0,77 — **at the floor in 9 of 11 years**. While it binds, Version C is *exactly*
-200 × (inkomst / pris) and the rate contributes nothing; the identity holds to
-four decimal places in the committed artifact. Yet the real rate carries **most**
-of the variance in year-on-year changes of `log C`. A variable that is clamped
-82 % of the time and still explains most of the movement is what makes an
-extrapolated denominator unusable.
+**Why the rate is a scenario.** It explains about 60 % of the year-on-year variance in
+`log C` since 2017 (price about 40 %), and it is set by policy and bank pricing rather
+than by anything eleven annual observations can estimate. C is linear in it, so a stated
+rate gives an exact answer.
 
 **Why nothing is fitted, in one line.** A fitted model's first year was
 implausible for all 21 counties, each collapsing to roughly a quarter of its last
@@ -339,12 +334,11 @@ observed value before rebounding, and it lost to a naive carry-forward on every
 component of the index. Closed by removal rather than by a better model; the full
 measurements are in R16.
 
-**What is checked now.** `tests/test_projection.py` asserts the floor identity,
-the reciprocal sensitivity, that a rate below the floor is refused, and that no
-county's first projected year falls outside 0,25× to 4× of its last observed
-value. The earlier guard checked only that confidence bands widened, which they
-did, while nothing checked the central path was plausible. There are no bands
-now, and the spread between scenarios is **not** a confidence interval.
+**What is checked now.** `tests/test_projection.py` asserts that a projected year is the
+cost model applied to carried-forward inputs, that C is linear in the rate, that a
+non-positive rate is refused, that the scenarios order low < current < high, and that no
+county's first projected year falls outside 0,25× to 4× of its last observed value.
+There are no bands, and the spread between scenarios is **not** a confidence interval.
 
 Beyond that, the honest bound is still eleven annual observations. The difference
 is that the page no longer spends them on a fitted model.
@@ -498,15 +492,14 @@ Changing the default is one line; the honest alternative is to show both.
 ### What it is
 
 A stress test. It takes one län's actual figures for the selected year and asks
-what Version C would be if rates, incomes, prices or inflation moved.
+what Version C would be if the mortgage rate, incomes or prices moved.
 
 ### Why it exists
 
 Every other page is backward looking and stops at 2024, because that is the last
 year SCB has published municipal income. This is the only page that can answer a
-forward question at all. It is also the only place where the behaviour of the
-real interest rate becomes visible, and that behaviour is genuinely
-counterintuitive.
+forward question at all, and the only one where the trade-off between a rate rise
+and a price fall is visible.
 
 ### How it works
 
@@ -514,78 +507,58 @@ counterintuitive.
 live on every slider move. Version C only. See `docs/ENGINE.md`.
 
 ```
-real_rate  = max(R - pi, 0.5)          # percentage points, floored
-Version C  = Income / (Price * real_rate/100)
+cost per krona = mortgage_rate x 0.7 + amortisation          # percent of the loan
+Version C      = 100 x 0.85 x Price x cost per krona / (2 x Income)
 ```
 
-Four sliders shift the inputs: rate shock and CPI shock are added in percentage
-points, income and price shocks are applied as relative changes. The floor at
-0.5 pp stops the formula dividing by zero or by a negative number when inflation
-exceeds the policy rate.
+Three sliders shift the inputs: the rate shock is added to the mean new-mortgage rate
+in percentage points, income and price shocks are applied as relative changes. The
+scenario rate is held at no less than 0,5 %, below anything observed.
+
+**The rate slider is the mortgage rate, not the policy rate, on purpose (F12).** How much
+of a policy move reaches households in a year depends on how many loans are fixed: a
+floating loan follows within three months, a fixed one only when it is refixed. In
+2021–2023 the policy rate rose 3,5 pp on annual means and the all-fixation new-mortgage
+rate 3,0 pp. The interpretation panel says this whenever the rate moves.
+
+**There is no inflation slider.** Version C is a cash-flow share in kronor of the same
+year, so inflation reaches it only through what it does to incomes, prices and the rate.
+Until 2026-10-20 the page had a CPI slider, because the old formula divided by the real
+rate; see the dated records in §7–§12.
 
 ### When to use it
 
-- Testing sensitivity: which input actually moves affordability in this län.
-- Understanding a historical episode, which the presets are built for.
-- Sanity-checking an intuition about rate rises before acting on it.
+- Testing sensitivity: which input actually moves the cost in this län.
+- Replaying a historical episode, which the presets are built for.
+- Checking how large a price fall or pay rise would offset a rate rise.
 
-### The central lesson, with real figures
+### What the numbers say, with real figures
 
-Stockholms län 2024. Baseline: R = 3.63 %, inflation = 2.86 %, so the real rate
-is 0.77 %. Version C is 10.6.
+Stockholms län 2024. Baseline: mortgage rate 4,30 %, so the household pays
+4,30 × 0,7 + 2,00 = 5,01 % of the loan a year. Version C is 35,9 % of income.
 
-| Scenario | Real rate | Version C | Change |
-|---|---|---|---|
-| Rate +4 pp only | 4.77 % | 1.7 | **-83.9 %** |
-| Rate +4 pp with CPI +8 pp | 0.50 % | 16.3 | **+54.0 %** |
-| Price -15 % only | 0.77 % | 12.5 | +17.6 % |
+| Scenario | Version C | Change |
+|---|---|---|
+| Rate +4 pp only | 55,9 | **+55,9 %** |
+| Price −15 % only | 30,5 | −15,0 % |
+| Rate +4 pp and price −15 % | 47,5 | +32,5 % |
+| Räntecykeln 2021–23 (+3,0 pp, +9 % income, −5 % price) | 44,4 | +23,7 % |
 
-The same nominal rate rise is catastrophic in one case and beneficial in the
-other. The only difference is whether inflation moved with it. This is not a
-quirk of the model; it is what actually happened in Sweden in 2022, when nominal
-mortgage rates tripled while real rates stayed low.
+A rate rise raises the cost; a price fall cuts it in exact proportion; the rate surface
+beside the result shows every combination at once, and a contour on it is a price change
+that exactly offsets a rate change. The 2021–23 preset replays the panel's annual means
+and raises the cost, which is what households experienced. Under the old real-rate
+formula the same history *improved* affordability, because inflation outran the rate.
 
-A user who moves only the rate slider, which is the obvious thing to do, gets
-the -83.9 % result and will reasonably conclude that rate rises destroy
-affordability. That conclusion is an artefact of holding inflation fixed. The
-page documents this as limitation F15 in an expander at the bottom. Almost
-nobody will read it before drawing the wrong conclusion.
+**The number is not the map's number.** The simulator shows Version C as a cost share for
+the county aggregate. The map shows a within-year z-score of the municipal values. The
+caption under the result says so.
 
-### Optimisation: what to change and how
-
-**1. Move the F15 caveat to the point of use.** It currently sits in the
-"Förklaring" expander below the results. It belongs next to the rate slider,
-where the misreading happens.
-
-*Implementation:* in `pages/05_Scenario.py`, when `rate_shock != 0` and
-`cpi_shock == 0`, render an inline caption under the slider row:
-
-```python
-if rate_shock != 0 and cpi_shock == 0:
-    st.caption(L("sc.rate_without_cpi_hint"))
-```
-
-with text saying that holding inflation fixed treats the whole nominal move as a
-real move, and pointing at the CPI slider. This is the single highest-value
-change on the page: it intercepts the specific wrong conclusion at the moment it
-would be formed.
-
-**2. Label the presets with what they teach, not just what they are.** The
-"Riksbanken 2022" preset produces an *improvement*, which looks like a bug to
-anyone who lived through 2022. A one-line result caption explaining that the
-real rate fell because inflation outran the policy rate turns a confusing output
-into the page's best lesson.
-
-**3. State that the number is not the map's number.** The simulator shows raw
-Version C (10.6 for Stockholms län). The Riksöversikt map shows a z-scored,
-percentile-ranked transform of the same quantity. They are different scales and
-must not be compared. A caption under the KPI row saying so costs one label.
-
-**4. Consider widening the scope beyond one län.** The simulator answers "what
-happens to this län". The more useful policy question is "how many kommuner
-cross into hög risk under this scenario". That is a larger change, requiring the
-shock to be applied across the municipal panel and re-ranked, and it is worth
-scoping separately. Recorded here as a direction, not a quick win.
+**The whole country, too.** Below the county result the same shock is applied to all 290
+municipalities against the baseline year's fixed class boundaries
+(`src/scenario/panel_scenario.py`), which answers "how many kommuner cross into hög risk".
+Re-normalising instead would report no movement for any uniform shock; the module and its
+tests explain why.
 
 ---
 
@@ -595,23 +568,24 @@ scoping separately. Recorded here as a direction, not a quick win.
 
 | Version | Formula | Reads as |
 |---|---|---|
-| **Bankversion (A)** | `I / (P * R)` | Can a household carry this at today's nominal rate? A traditional bank view. |
-| **Makroversion (B)** | `0.35*z(P/I) + 0.25*z(R) + 0.20*z(U) + 0.20*z(pi)` | How much macro pressure is this market under, relative to the panel's history? A supervisor's view. |
-| **Realversion (C)** | `I / (P * max(R - pi, 0.5))` | Bankversion corrected for inflation, using the real rate. The floor is 0,5 **percentage points**, which `docs/METHODOLOGY.md` writes in decimal as 0.005. |
+| **Bankversion (A)** | `100 * 0.85 * P * r / (2 * I)` | Gross interest on a typical loan as a share of household income. A bank's view. |
+| **Makroversion (B)** | `0.35*z(P/I) + 0.25*z(r) + 0.20*z(U) + 0.20*z(pi_KPIF)` | How much macro pressure is this market under, relative to the panel's history? A supervisor's view. |
+| **Kassaflödesversion (C)** | `100 * 0.85 * P * (0.7 r + a) / (2 * I)` | What the household pays out: interest after the deduction, plus required amortisation, as a share of income. |
 
-A and C are ratios where **higher is better**. B is a weighted sum of z-scores
-where **higher is worse**. That sign difference is the single most error-prone
-thing in the codebase and has produced real defects more than once.
+`r` is SCB's mean rate on new mortgages across all fixation periods, `a` the amortisation
+requirement (0 before June 2016, 2 % after). **Higher is worse for all three.** Until
+2026-10-20 A and C were ratios where higher was better and B ran the other way; that sign
+difference was the most error-prone thing in the codebase and produced real defects more
+than once.
 
 ### Why three rather than one
 
-Because they disagree, and the disagreement is informative. A and C diverge
-exactly when inflation is far from zero, which is precisely when a nominal
-reading misleads. B can carry a time trend that A and C cannot, because its
-z-scores are pooled across the whole panel rather than computed within each year.
-Its panel mean runs from -0.31 in 2015 to +0.78 in 2023, tracking the rate cycle,
-now measured against a frozen reference so the figures stop moving on a refresh
-(R1).
+Because they answer different questions. A and C differ in level by the deduction and
+amortisation, so A shows the interest burden alone and C the cash flow. B carries a
+different kind of time trend, because its z-scores are pooled across the whole panel
+rather than computed within each year. Its panel mean runs from -0.27 in 2019 to +0.72 in
+2023, tracking the rate cycle, measured against a frozen reference so the figures stop
+moving on a refresh (R1).
 A and C, normalised within year, are silent about whether Sweden as a whole got
 better or worse.
 
@@ -654,10 +628,13 @@ recommendations, in order of confidence:
    Displaying them on the comparison page is the better fix; dropping them is the
    cheaper one. Do not leave them as they are indefinitely.
 3. **Never present B on the same axis as A and C** without restating its
-   direction. Higher B is worse. Everything else on the site is the other way
-   round.
+   units. (When this was written, higher B was worse and everything else the other way
+   round; since 2026-10-20 all three run higher = worse.)
 
 ### Correction, 2026-09-21: A and C are not two framings. They are one.
+
+*Written against the real-rate formulas; the identity holds unchanged for the cash-flow
+formulas, where `C / A = (0,7 r + 100 a) / r`.*
 
 Reading the six unused columns before displaying them, per recommendation 2,
 overturned part of the paragraph above.
@@ -900,6 +877,15 @@ Both pages now carry a panel that reads the user's own numbers and says what the
 mean. It lives in `src/ui/interpret.py`; all copy is in `SWEDISH_LABELS` and
 every figure it quotes is interpolated from the computed result, never written
 into the sentence.
+
+> **Sida 05's rules since 2026-10-20.** With the cash-flow formula, `interpret_scenario`
+> states the direction of the change in cost (a rise is a warning, a fall is good), notes
+> when the rate is held at its 0,5 % minimum, says where the 2021–23 preset's numbers come
+> from, explains the fixation limit whenever the rate moves (F12), and restates that the
+> number is not the map's. The real-rate, floor-absorption, CPI-without-rate and
+> near-floor-fragility rules described below were removed with the formula they guarded;
+> the matrix and examples below are the 2026-10-05 record. `tests/test_scenario_interpretation.py`
+> pins the current rules.
 
 ### How it is built
 
@@ -2301,7 +2287,7 @@ The income switch moved all of them at once, and only the guarded copy noticed.
 A general prose checker is not possible. Most numbers in a docstring are parameters,
 thresholds or worked examples with no artifact behind them, and asserting against them would
 be noise. What *is* checkable is a shape that only ever means one thing here: a signed
-decimal bound to a year, as in "−0,31 (2015)". Every occurrence of that shape anywhere in
+decimal bound to a year, as in "−0,27 (2019)". Every occurrence of that shape anywhere in
 the repository is now re-derived from `affordability_ranked.parquet`.
 
 Three details that decide whether it works:

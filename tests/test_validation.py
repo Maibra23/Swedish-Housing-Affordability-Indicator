@@ -87,7 +87,7 @@ def test_stockholm_worst_v_c(ranked):
     affordable counties.
     """
     county_vc = ranked.groupby("lan_code")["version_c"].median()
-    worst_5 = county_vc.nsmallest(5).index.tolist()
+    worst_5 = county_vc.nlargest(5).index.tolist()  # a cost share: highest is worst
     assert "01" in worst_5, (
         f"Stockholm county (01) not in top 5 worst Version C. "
         f"Worst 5 counties: {worst_5}. "
@@ -105,13 +105,14 @@ def test_skane_among_least_affordable_v_c(ranked):
     monotonic and this compares medians of the raw version_c.
 
     The expectation was simply drawn too tight. Skane is the **6th** least
-    affordable of 21 counties, 0.7 index points behind Uppsala (36.5 vs 35.8) in
-    a distribution that spans 20.8 to 102.8. Rank 5 versus rank 6 at that margin
+    affordable of 21 counties, 0.4 points of income behind Uppsala (11.6 vs 11.2
+    under the cash-flow Version C) in a distribution of county medians that
+    spans 3.6 to 21.9. Rank 5 versus rank 6 at that margin
     is noise, not a claim about Swedish housing. The substantive claim worth
     defending is that Skane — with Malmo and the Oresund commuter belt — sits in
     the least affordable third, and that it is nowhere near the affordable end.
     """
-    county_vc = ranked.groupby("lan_code")["version_c"].median().sort_values()
+    county_vc = ranked.groupby("lan_code")["version_c"].median().sort_values(ascending=False)
     ranking = county_vc.index.tolist()
     position = ranking.index("12") + 1
     least_affordable_third = max(1, len(ranking) // 3)
@@ -129,7 +130,7 @@ def test_skane_among_least_affordable_v_c(ranked):
 def test_norrbotten_best_v_a(ranked):
     """Norrbotten county (lan_code '25') should be in top 5 best under V.A."""
     county_va = ranked.groupby("lan_code")["version_a"].median()
-    best_5 = county_va.nlargest(5).index.tolist()
+    best_5 = county_va.nsmallest(5).index.tolist()  # a cost share: lowest is best
     assert "25" in best_5, (
         f"Norrbotten county (25) not in top 5 best Version A. "
         f"Best 5 counties: {best_5}"

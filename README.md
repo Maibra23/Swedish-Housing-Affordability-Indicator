@@ -2,12 +2,14 @@
 
 A Streamlit dashboard measuring how affordable housing is across Sweden's 290 kommuner
 and 21 län, built from open SCB, Riksbanken and Kolada data. It answers one question:
-**how much housing can a normal income buy here, in this year, compared with everywhere
-else in Sweden?**
+**how much of a normal household's income does it take to carry a typical house loan
+here, in this year, compared with everywhere else in Sweden?**
 
 Version 1.3.0. Python 3.11. Index period 2014 to 2024.
 
-The answer is an index, not a price. In 2024 Åsele scored 75 and Lidingö 4,6.
+The answer is a share of income. In 2024 a two-earner household on Lidingö's median
+income would pay 60,5 % of it a year to carry an 85 % loan on the mean house there; in
+Åsele, 3,7 %.
 
 ## When to use it
 
@@ -29,12 +31,12 @@ every page should show exactly this. Use it to check your install.
 
 | Page | In 2024 |
 |---|---|
-| **Riksöversikt** | Mean index **23,0** points, **84 of 290** kommuner at hög risk, mean K/T **1,40**. Least affordable: Lidingö, Danderyd, Solna. Most affordable: Åsele, Sorsele, Ragunda |
-| **Länsjämförelse** | Two tabs. The Robusthet panel at the foot shows C classing **84** kommuner hög and B classing **57**; B disagrees with C for **73 of 290**. The comparison expander puts the inflation adjustment at **4,71×** |
-| **Kommunanalys** | Select Stockholm: index **6,2**, income **413 600 SEK**, K/T **1,23**. Its county projects to **12,0 / 7,8 / 3,0** in 2025 under the floor, current and normalised rate scenarios |
+| **Riksöversikt** | Mean index **16,3** % of income, **84 of 290** kommuner at hög risk, mean K/T **1,40**. Least affordable: Lidingö, Danderyd, Solna. Most affordable: Åsele, Sorsele, Ragunda |
+| **Länsjämförelse** | Two tabs. The Robusthet panel at the foot shows C classing **84** kommuner hög and B classing **57**; B disagrees with C for **73 of 290**. The comparison expander puts Version C at **1,17×** Version A |
+| **Kommunanalys** | Select Stockholm: index **44,2** % of income, income **413 600 SEK**, K/T **1,23**. Its county projects to **21,8 / 35,5 / 44,0** in 2025 at the low, current and stress mortgage rates |
 | **Kontantinsats** | Stockholm, one income, 10 % sparkvot, and the bank margin SCB observed that year (0,8 pp): **859 700 SEK** down, **20,8 years** to save, **41 449 SEK** a month. Switch to Bostadsrätt and it moves to län level: **421 400 SEK** and **10,5 years** |
-| **Scenariosimulator** | Opens on Stockholms län: baseline **7,71**. Push the rate slider **+2 pp** and it falls to **2,14**, down 72 % |
-| **Metodologi** | The three formulas, the F1 to F17 limitation register, no interactive data |
+| **Scenariosimulator** | Opens on Stockholms län: baseline **35,9** % of income. Push the rate slider **+2 pp** and it rises to **45,9**, up 28 % |
+| **Metodologi** | The three formulas, the F1 to F18 limitation register, no interactive data |
 
 Those figures are re-derived from the shipped artifacts by
 `tests/test_readme_figures.py`, so they cannot quietly go stale.
@@ -43,55 +45,56 @@ Those figures are re-derived from the shipped artifacts by
 
 | | Question it answers |
 |---|---|
-| **Bankversion (A)** | Can a household carry the monthly cost at today's nominal rate? |
+| **Bankversion (A)** | What does the loan cost in gross interest, as a share of income? |
 | **Makroversion (B)** | How much pressure is the market under, relative to its own history? |
-| **Realversion (C)** | Bankversion adjusted for inflation, using the real rate. Recommended. |
+| **Kassaflödesversion (C)** | What does the household actually pay out: interest after the 30 % deduction, plus required amortisation? Recommended. |
 
-**Realversion (C) runs the site.** The map, the risk classes, the KPI row, the projection
-and the simulator all read C. Makroversion (B) is the only formula that can rank the
-country differently. Bankversion (A) ranks identically to C by construction, so it shows
-the size of the inflation adjustment rather than a second opinion — C divided by A is
-**4,71×** in 2024, and that is the whole difference between them.
+Versions A and C price the same loan: 85 % of the kommun's mean small-house price, at
+SCB's mean rate on new household mortgages across all fixation periods, carried by two
+earners on the kommun's median income. Both are a percentage of that income, so **higher
+is worse**, the same direction as B.
 
-That reading does not hold in every year. Both formulas floor their rate, and in 2015 to
-2023 at least one floor binds, which makes the same quotient an artefact rather than a
-correction — 0,20× for seven straight years, being 0,1 divided by 0,5. Sida 02 derives
-the factor from the year you select and says which of the two it is looking at.
+**Kassaflödesversion (C) runs the site.** The map, the risk classes, the KPI row, the
+projection and the simulator all read C. Makroversion (B) is the only formula that can
+rank the country differently. Bankversion (A) ranks identically to C by construction,
+because the rate and the amortisation rule are national, so it shows the size of the
+deduction and amortisation rather than a second opinion: C is **1,17×** A in 2024.
 
 <details>
-<summary><b>Why this also means index levels do not compare straight across years</b></summary>
+<summary><b>Why the formula changed in October 2026</b></summary>
 
-Version C divides by the real rate, floored at 0,5 pp. That floor bound in nine of the
-eleven observed years. When it releases, the denominator changes character and the level
-moves without anybody's income or price moving: the national mean index fell **36 %**
-between 2023 and 2024 for that reason alone.
+Until October 2026 Version C was `income / (price × max(policy rate − KPI, 0,5))`. It had
+three problems an economist would name at once. Households pay the mortgage rate, not the
+policy rate, and a negative policy rate never meant a negative mortgage rate. KPI prices
+mortgage interest, so a rate rise lifted measured inflation by itself; the Riksbank
+targets KPIF for that reason. And because the real rate sat at or below zero for most of
+2015 to 2023, the 0,5 pp floor bound in nine of eleven years, which made a +2 pp shock cut
+the index by 72 % and the national mean fall 36 % in the one year the floor released.
 
-So a cross-year comparison of the index level is partly a comparison of whether the floor
-was active. Rankings within a year are unaffected, because the rate is national and
-identical for every kommun.
+Switching to the mortgage rate and KPIF inside the same formula would not have fixed it:
+mortgage rate minus KPIF is still under 0,5 pp in seven of the eleven years. The cure was
+the structure. A cash-flow share multiplies by the rate instead of dividing by it, so it
+needs no floor, and the same +2 pp shock now raises Stockholms län's cost by 28 %.
 
-**The rate can be divided back out, and then the comparison works.** Because the rate is
-national it factors out of the national mean exactly — `mean C = (100/r) × mean(income/price)`
-— so the mean ratio of income to price is the index with the interest rate removed. That
-series carries no floor and compares across all eleven years: a median income bought
-**22,9 %** of a house in 2014 and **17,7 %** in 2024. The 2023-to-2024 fall in the index
-splits into **−35,1 %** from the rate and **−2,2 %** from income against price.
-
-The app says this where it matters rather than only here: sidorna 01, 02 and 06 carry a
-collapsed **Räntegolvet** panel showing which rate each formula actually divided by in
-each year, derived from the artifacts by `agreement.floor_history()`. The same table is
-in `docs/METHODOLOGY.md` §3, and the limitation is registered as **F17**.
+Within each year nothing on the map moved: every municipality-year kept its rank and risk
+class under all three versions, because the old and new values are reciprocals up to a
+national constant. Levels, the projection and the simulator changed. METHODOLOGY section 3
+has the full comparison.
 
 </details>
 
 ## What it does not do
 
-**It does not predict.** Sida 03 projects six years ahead under three stated real rate
-assumptions. The spread between them is the distance between assumptions, not a
-confidence interval. The evidence behind that choice is R16 in `docs/APP_REFERENCE.md` (Part II).
+**It does not predict.** Sida 03 projects six years ahead under three stated mortgage
+rates. The spread between them is the distance between assumptions, not a confidence
+interval. The evidence behind that choice is R16 in `docs/APP_REFERENCE.md` (Part II).
 
 **It is not mortgage advice.** Prices are kommun means, never your income or a specific
-property.
+property. The rate is the market average for new loans; a household on a fixed rate
+meets a new one only when it refixes (F12).
+
+**It does not separate saving from spending.** Amortisation is cash paid out, but it
+builds the household's equity. Version A shows the interest burden without it (F18).
 
 **It does not rank absolute cost.** Risk classes are relative to the year you selected,
 so "hög risk" means strained against this year's peers, never worse than 2014.
@@ -99,8 +102,9 @@ so "hög risk" means strained against this year's peers, never worse than 2014.
 ## Data
 
 SCB supplies income, transaction and apartment prices, the K/T ratio, population,
-construction and CPI. Riksbanken supplies the policy rate and Kolada unemployment.
-Everything is read from committed Parquet files, so the app makes no API calls at startup.
+construction, KPI, KPIF and household mortgage rates. Riksbanken supplies the policy rate,
+used only on Sida 04, and Kolada unemployment. Everything is read from committed Parquet
+files, so the app makes no API calls at startup.
 
 **The index stops at 2024** because every formula divides by median inkomst, and 2024 is
 the last year SCB has published it. Prices and unemployment already reach 2025 and are
@@ -139,7 +143,7 @@ region, and say what you expected.
 
 Pull requests branch off `main` and keep the suite green. Anything touching a formula, a
 normalisation rule or a regime needs a test, because these carry an orientation contract,
-rank 1 = best and higher z = worse, that is easy to invert by accident. User-facing copy
+rank 1 = best and higher = worse for every version, that is easy to invert by accident. User-facing copy
 lives in `src/ui/labels.py`, and methodology changes need a matching edit to
 `docs/METHODOLOGY.md`.
 

@@ -33,7 +33,7 @@ country's affordability over time.
 Note this applies to ``z_*`` only. Version B's own construction in
 ``affordability.py`` stays **pooled across the whole panel**, deliberately: B is
 a macro-pressure measure and the pooling is what lets its level carry a time
-trend (its panel mean runs −0.31 in 2015 to +0.78 in 2023, tracking the rate
+trend (its panel mean runs −0.27 in 2019 to +0.72 in 2023, tracking the rate
 shock). Normalising B within year would pin that at zero every year and delete
 the signal B exists to measure.
 
@@ -52,7 +52,7 @@ variable whose normality is rejected at p < 6e-15 in every year, and produced a
 normal in all eleven years independently (p = 0.34 … 0.83) and moves the split to
 ≈23 / 48 / 28.
 
-Version B is a weighted *sum* of z-scores, not a ratio: it is negative in 1919 of
+Version B is a weighted *sum* of z-scores, not a ratio: it is negative in 1877 of
 3190 rows, so a log is undefined for it. B is z-scored raw.
 
 Because a log is monotonic, the transform leaves every ``rank_*`` untouched — it

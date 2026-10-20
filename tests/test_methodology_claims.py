@@ -3,7 +3,7 @@
 The methodology page is the one place a reader goes to check the others, so it
 cannot carry a sentence that was true on the day it was written. A review on
 2026-10-07 found six that no longer were: a K/T coverage share, a "99 %" variance
-figure, normality p-values, the years the real-rate floor bound, a limitation
+figure, normality p-values, the years the (since withdrawn) real-rate floor bound, a limitation
 saying the simulator held inflation constant after a CPI slider was added, and
 a reference link that had started returning 404. Each claim below is re-derived
 rather than restated.
@@ -25,7 +25,6 @@ from src.ui.labels import SWEDISH_LABELS
 
 ROOT = Path(__file__).resolve().parents[1]
 RANKED = ROOT / "data" / "processed" / "affordability_ranked.parquet"
-FLOOR_PP = 0.5
 
 
 @pytest.fixture(scope="module")
@@ -33,14 +32,14 @@ def ranked() -> pd.DataFrame:
     return pd.read_parquet(RANKED)
 
 
-def test_the_floor_years_quoted_for_version_c_are_the_floored_years(ranked: pd.DataFrame) -> None:
+def test_the_cash_flow_formula_has_no_floor_to_quote(ranked: pd.DataFrame) -> None:
+    """The page says the mortgage rate stayed between 1,5 and 4,5 %; that range
+    is why no floor is needed, so it is checked rather than trusted."""
     text = SWEDISH_LABELS["mt.kassaflode_version_c_text"]
-    first, last = map(int, re.search(r"Åren\s+(\d{4})–(\d{4})", text).groups())
-    national = ranked.groupby("year")[["policy_rate", "cpi_yoy_pct"]].first()
-    floored = sorted(national.index[(national.policy_rate - national.cpi_yoy_pct) < FLOOR_PP])
-    assert floored == list(range(first, last + 1)), (
-        f"the page says the floor bound {first}–{last}; the data says {floored}"
-    )
+    low, high = re.search(r"mellan (\d,\d) och (\d,\d) %", text).groups()
+    rates = ranked.groupby("year")["mortgage_rate"].first()
+    assert float(low.replace(",", ".")) == round(rates.min(), 1)
+    assert float(high.replace(",", ".")) == round(rates.max(), 1)
 
 
 def test_the_log_transform_claim_holds_every_year(ranked: pd.DataFrame) -> None:
@@ -52,19 +51,25 @@ def test_the_log_transform_claim_holds_every_year(ranked: pd.DataFrame) -> None:
         )
 
 
-def test_the_real_rate_is_the_largest_driver_of_year_on_year_change(ranked: pd.DataFrame) -> None:
-    """The projection text says so; check it against a variance decomposition."""
-    data = ranked.sort_values(["region_code", "year"]).copy()
-    data["rr"] = (data.policy_rate - data.cpi_yoy_pct).clip(lower=FLOOR_PP)
+def test_the_rate_is_the_largest_driver_of_year_on_year_change(ranked: pd.DataFrame) -> None:
+    """The projection text says so, with shares; check them against a variance
+    decomposition of log C from the first full amortisation year on."""
+    from src.indices.kommun_components import cost_rate
+
+    data = ranked[ranked["year"] >= 2017].sort_values(["region_code", "year"]).copy()
+    data["q"] = cost_rate(data)
     by_muni = data.groupby("region_code")
     parts = pd.DataFrame({
-        "income": by_muni.median_income.transform(lambda s: np.log(s).diff()),
-        "price": -by_muni.transaction_price_sek.transform(lambda s: np.log(s).diff()),
-        "real_rate": -by_muni.rr.transform(lambda s: np.log(s).diff()),
+        "income": -by_muni.median_income.transform(lambda s: np.log(s).diff()),
+        "price": by_muni.transaction_price_sek.transform(lambda s: np.log(s).diff()),
+        "rate": by_muni.q.transform(lambda s: np.log(s).diff()),
     }).dropna()
     total = parts.sum(axis=1)
     shares = {k: np.cov(parts[k], total)[0, 1] / total.var() for k in parts}
-    assert max(shares, key=shares.get) == "real_rate", shares
+    assert max(shares, key=shares.get) == "rate", shares
+    text = SWEDISH_LABELS["kd.projektion_mer_text"]
+    assert f"ungefär {round(shares['rate'], 1) * 100:.0f} procent" in text, shares
+    assert f"mot {round(shares['price'], 1) * 100:.0f} för priset" in text, shares
 
 
 def test_projection_parameters_match_the_page() -> None:
@@ -72,8 +77,7 @@ def test_projection_parameters_match_the_page() -> None:
     assert f"{projection.INCOME_GROWTH:.0%}".replace("%", " %") in text
     assert f"{projection.PRICE_GROWTH:.0%}".replace("%", " %") in text
     assert "sex år" in text and projection.HORIZON == 6
-    assert f"{projection.NORMALISED_REAL_RATE:.1f}".replace(".", ",") in text
-    assert f"{projection.REAL_RATE_FLOOR:.1f}".replace(".", ",") in text
+    assert f"{projection.HIGH_MORTGAGE_RATE:.0f} %" in text
 
 
 def test_the_regime_table_matches_the_engine() -> None:

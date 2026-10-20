@@ -34,7 +34,8 @@ RANKED_PATH = DATA_DIR / "affordability_ranked.parquet"
 
 VERSIONS = ["a", "b", "c"]
 # Higher raw value means more affordable for A and C, more risk for B.
-HIGHER_IS_BETTER = {"a": True, "b": False, "c": True}
+#: Since 2026-10-20 A and C are cost shares, so every version runs higher = worse.
+HIGHER_IS_BETTER = {"a": False, "b": False, "c": False}
 
 
 @pytest.fixture(scope="module")

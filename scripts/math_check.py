@@ -62,45 +62,35 @@ print()
 # ── Scenario simulator math check ──────────────────────────────────────
 print("=== SCENARIO SIMULATOR MATH CHECK ===")
 baseline = {
-    "income": 552_000,           # Stockholm county 2024
+    "income": 400_500,           # Stockholms län 2024, county median income
     "transaction_price_sek": 6_748_000,
-    "policy_rate": 3.63,
-    "cpi_yoy_pct": 2.86,
+    "mortgage_rate": 4.30,       # mean on new mortgages, all fixation periods
+    "year": 2024,
 }
+loan_per_income = 0.85 * baseline["transaction_price_sek"] / (2 * baseline["income"])
 
-# Test 1: baseline (zero shocks)
-r0 = simulate("01", 0, 0, 0, baseline, cpi_shock=0.0)
-print(f"Baseline SHAI:        {r0['baseline_v_c']:.2f}")
-print(f"Baseline real rate:   {r0['real_rate_base']:.2f}pp  (3.63 - 2.86 = 0.77 > 0.5 floor)")
+# Test 1: baseline (zero shocks) against the formula written out
+r0 = simulate("01", 0, 0, 0, baseline)
+by_hand = 100 * loan_per_income * (0.0430 * 0.7 + 0.02)
+print(f"Baseline SHAI:        {r0['baseline_v_c']:.2f} % of income (by hand {by_hand:.2f})")
+assert abs(r0["baseline_v_c"] - by_hand) < 1e-9, "Simulator disagrees with the written formula"
 assert abs(r0["delta"]) < 0.001, "Zero shock should give zero delta"
-print("VALIDATION PASSED: zero shock -> zero delta")
+print("VALIDATION PASSED: baseline matches the formula, zero shock -> zero delta")
 print()
 
-# Test 2: Riksbanken 2022 scenario (+4pp rate, +8pp CPI, -15% price)
-r2022 = simulate("01", 4.0, 0, -0.15, baseline, cpi_shock=8.0)
-print("Riksbanken 2022 scenario (+4pp rate, +8pp CPI, -15% price):")
-print(f"  Rate:       {r2022['baseline_rate']:.2f}pp -> {r2022['scenario_rate']:.2f}pp")
-print(f"  CPI:        {r2022['baseline_cpi']:.2f}pp -> {r2022['scenario_cpi']:.2f}pp")
-print(f"  Real rate:  {r2022['real_rate_base']:.2f}pp -> {r2022['real_rate_scen']:.2f}pp  (rate +4, CPI +8 = real rate -4)")
-print(f"  SHAI:       {r2022['baseline_v_c']:.2f} -> {r2022['scenario_v_c']:.2f}  (delta {r2022['delta']:+.2f}, {r2022['delta_pct']:+.1f}%)")
-print(f"  Key insight: +4pp rate offset by +8pp CPI -> real rate actually FALLS -> affordability IMPROVES (despite lower price)")
+# Test 2: +2 pp moves only the interest term, by 2 x 0.7 % of the loan
+r2 = simulate("01", 2.0, 0, 0, baseline)
+expected = 100 * loan_per_income * 0.02 * 0.7
+print(f"+2 pp rate: {r2['baseline_v_c']:.2f} -> {r2['scenario_v_c']:.2f} ({r2['delta_pct']:+.1f} %)")
+assert abs(r2["delta"] - expected) < 1e-9, "Rate shock is not the interest term alone"
+print("VALIDATION PASSED: a rate shock adds 0.7 x shock x loan / income")
 print()
 
-# Test 3: Rate-only shock (old behavior, no CPI)
-r_rate_only = simulate("01", 4.0, 0, -0.15, baseline, cpi_shock=0.0)
-print("Same rate/price shock but CPI unchanged (old behavior):")
-print(f"  Real rate:  {r_rate_only['real_rate_base']:.2f}pp -> {r_rate_only['real_rate_scen']:.2f}pp  (rate +4, CPI unchanged)")
-print(f"  SHAI:       {r_rate_only['baseline_v_c']:.2f} -> {r_rate_only['scenario_v_c']:.2f}  (delta {r_rate_only['delta']:+.2f})")
-print(f"  Key insight: without CPI offset, affordability drops sharply")
-print()
-
-# Test 4: Deflation scenario
-r_deflation = simulate("01", -1.0, 0, -0.10, baseline, cpi_shock=-2.0)
-print("Deflation scenario (-1pp rate, -2pp CPI, -10% price):")
-print(f"  Rate:       {r_deflation['baseline_rate']:.2f}pp -> {r_deflation['scenario_rate']:.2f}pp")
-print(f"  CPI:        {r_deflation['baseline_cpi']:.2f}pp -> {r_deflation['scenario_cpi']:.2f}pp")
-print(f"  Real rate:  {r_deflation['real_rate_base']:.2f}pp -> {r_deflation['real_rate_scen']:.2f}pp  (rate -1, CPI -2 = real rate +1)")
-print(f"  SHAI:       {r_deflation['baseline_v_c']:.2f} -> {r_deflation['scenario_v_c']:.2f}  (delta {r_deflation['delta']:+.2f})")
+# Test 3: the 2021-23 cycle at annual means (+3.0 pp, +9 % income, -5 % price)
+r_cycle = simulate("01", 3.0, 0.09, -0.05, baseline)
+print(f"2021-23 cycle: {r_cycle['baseline_v_c']:.2f} -> {r_cycle['scenario_v_c']:.2f} ({r_cycle['delta_pct']:+.1f} %)")
+assert r_cycle["delta"] > 0, "The rate cycle should raise the cost share"
+print("VALIDATION PASSED: the 2021-23 cycle raises the cost, as households experienced")
 print()
 
 print("ALL MATH CHECKS PASSED")

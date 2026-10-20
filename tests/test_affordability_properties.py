@@ -175,11 +175,12 @@ def test_guarding_the_denominators_changed_no_published_value() -> None:
     """
     from pathlib import Path
 
-    from src.indices.affordability import scorable_rows
+    from src.indices.affordability import FIRST_INDEX_YEAR, scorable_rows
 
     processed = Path(__file__).resolve().parents[1] / "data" / "processed"
     for level in ("municipal", "county", "national"):
         frame = pd.read_parquet(processed / f"panel_{level}.parquet")
+        frame = frame[frame["year"] >= FIRST_INDEX_YEAR]
         unguarded = frame[frame[list(INDEX_INPUTS)].notna().all(axis=1)]
         assert len(scorable_rows(frame)) == len(unguarded), (
             f"the {level} panel now holds a non-positive price or income; "

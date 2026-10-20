@@ -186,7 +186,7 @@ def test_municipality_counts_in_copy_match_the_panel() -> None:
 def test_the_d5_panel_mean_statistic_still_holds() -> None:
     """Methodology prose cites measured extremes as the evidence for D5.
 
-    "panelmedelvärdet går från −0,31 (2015) till +0,78 (2023)" is the argument for
+    "panelmedelvärdet går från −0,27 (2019) till +0,72 (2023)" is the argument for
     keeping Version B's construction pooled — it is what shows B carrying a time
     trend at all. Cited numbers are the weakest kind of prose: correct when
     written, silently wrong after any refresh, and load-bearing for a locked
@@ -235,7 +235,12 @@ NOT_A_VINTAGE = {
     "regulatory regime start": r"\b(?:sedan\s+)?(?:2010|2016|2018|2026)\b",
     "upstream series start year": r"\b(?:19[6-9]\d|198\d|199\d|200\d|2011)\s*[–—-]",
     "projection horizon end": r"\b202[5-9]\s*[–—-]\s*203\d\b",
-    "historical rate-cycle reference": r"\b202[23]\b",
+    # "2019–2021", "2021–23": the episodes the Sida 05 presets replay, pinned to
+    # the panel by tests/test_scenario_interpretation.py.
+    "preset episode": r"\b20(?:19|21)\s*[–—-]\s*(?:20)?2[13]\b",
+    # 2008's rate peak, 2017's first full amortisation year, and the 2022–2023
+    # cycle: statements about history, true however far the data later reaches.
+    "historical rate-cycle reference": r"\b(?:2008|2017|202[23])\b",
     "editorial market reference": r"typisk\s+\d{4}\s+bankmarknad",
     # "Prisindex (1990=100)", "KPI (2020=100)" — an index's base period, a
     # property of the series definition rather than of this panel's vintage.
@@ -246,7 +251,7 @@ NOT_A_VINTAGE = {
     # "Åren 2015–2023 låg realräntan under golvet" — the floored years, re-derived
     # in test_methodology_claims rather than classified away.
     "real-rate floor years, checked there": r"Åren\s+(?:19|20)\d{2}\s*[–—-]",
-    # "−0,31 (2015) till +0,78 (2023)" — measured extremes, re-derived in
+    # "−0,27 (2019) till +0,72 (2023)" — measured extremes, re-derived in
     # test_the_d5_panel_mean_statistic_still_holds rather than classified away.
     "D5 panel-mean extremes, checked above": r"[+−-]\d+,\d+\s*\(\d{4}\)",
     "index period, checked above": rf"\b{first_year()}\b|\b{complete_case_max_year()}\b",
