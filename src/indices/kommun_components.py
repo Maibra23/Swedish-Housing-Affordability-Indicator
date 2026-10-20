@@ -8,11 +8,13 @@ contribution.
 
 Version C is a product, so the change between any two years splits exactly:
 
-    C_end / C_start = (I_end / I_start) · (P_start / P_end) · (r_start / r_end)
+    C_end / C_start = (I_start / I_end) · (P_end / P_start) · (q_end / q_start)
 
-where `r` is the floored real rate. Each factor is one input's contribution, and
-the three multiply to the whole. They are reported as percentages that multiply,
-as `src/indices/decompose.py` does for the national mean.
+where `q` is the yearly cost per krona borrowed — the mortgage rate after the
+interest deduction, plus the amortisation in force (`cost_rate`). Each factor is
+one input's contribution, and the three multiply to the whole. They are reported
+as percentages that multiply, as `src/indices/decompose.py` does for the national
+mean. C is a cost share, so a negative part is one that made housing cheaper.
 """
 
 from __future__ import annotations
@@ -22,11 +24,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-#: Percentage points, matching `src/indices/affordability.py`.
-REAL_RATE_FLOOR = 0.5
+from src.indices.cost_model import INTEREST_DEDUCTION, amortisation_by_year
 
 #: The three inputs, in the order the page draws them.
-COMPONENTS = ("income", "price", "real_rate")
+COMPONENTS = ("income", "price", "cost_rate")
 
 
 @dataclass(frozen=True)
@@ -49,9 +50,10 @@ class ComponentChange:
     driver: str
 
 
-def floored_real_rate(rows: pd.DataFrame) -> pd.Series:
-    """The real rate Version C divides by, in percentage points."""
-    return (rows["policy_rate"] - rows["cpi_yoy_pct"]).clip(lower=REAL_RATE_FLOOR)
+def cost_rate(rows: pd.DataFrame) -> pd.Series:
+    """Yearly cost per krona borrowed, in percent: net interest plus amortisation."""
+    amortisation = amortisation_by_year(rows["year"]).set_axis(rows.index)
+    return rows["mortgage_rate"] * (1.0 - INTEREST_DEDUCTION) + 100.0 * amortisation
 
 
 def attribute_change(kommun: pd.DataFrame) -> ComponentChange | None:
@@ -59,8 +61,7 @@ def attribute_change(kommun: pd.DataFrame) -> ComponentChange | None:
 
     Args:
         kommun: One municipality's rows, with `year`, `version_c`,
-            `median_income`, `transaction_price_sek`, `policy_rate` and
-            `cpi_yoy_pct`.
+            `median_income`, `transaction_price_sek` and `mortgage_rate`.
 
     Returns:
         The split between the first and last scored year, or None when fewer
@@ -70,12 +71,12 @@ def attribute_change(kommun: pd.DataFrame) -> ComponentChange | None:
     if len(scored) < 2:
         return None
     first, last = scored.iloc[0], scored.iloc[-1]
-    rates = floored_real_rate(scored)
+    rates = cost_rate(scored)
 
     factors = {
-        "income": last["median_income"] / first["median_income"],
-        "price": first["transaction_price_sek"] / last["transaction_price_sek"],
-        "real_rate": rates.iloc[0] / rates.iloc[-1],
+        "income": first["median_income"] / last["median_income"],
+        "price": last["transaction_price_sek"] / first["transaction_price_sek"],
+        "cost_rate": rates.iloc[-1] / rates.iloc[0],
     }
     total = last["version_c"] / first["version_c"]
     return ComponentChange(

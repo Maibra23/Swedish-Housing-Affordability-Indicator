@@ -1,12 +1,9 @@
 """The conditional projection, and the identity it rests on.
 
-Version C is a reciprocal of the real interest rate, floored at 0,5 pp. In the
-committed panel that floor binds in 9 of 11 years, during which Version C is
-exactly 200 x (income / price) and the rate contributes nothing. The real rate
-carries most of the variance in year-on-year changes of log C.
-
-That is why nothing here extrapolates it. Income and price are carried forward at
-documented rates; the real rate is a stated scenario. These tests pin the
+Version C is a cash-flow share and is linear in the mortgage rate: the interest
+term scales with it, amortisation does not. The rate is a policy outcome, not a
+trend, so nothing here extrapolates it. Income and price are carried forward at
+documented rates; the mortgage rate is a stated scenario. These tests pin the
 arithmetic and, more importantly, the property that made the withdrawn pipelines
 unusable: no input can produce an absurd output.
 """
@@ -19,40 +16,37 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from src.indices.cost_model import cost_share
 from src.projection import (
+    HIGH_MORTGAGE_RATE,
     HORIZON,
     INCOME_GROWTH,
     PRICE_GROWTH,
-    REAL_RATE_FLOOR,
     SCENARIO_KEYS,
     project_all,
     project_county,
-    scenario_real_rates,
+    scenario_mortgage_rates,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 PANEL = ROOT / "data" / "processed" / "affordability_county.parquet"
 
 
-def test_at_the_floor_version_c_is_two_hundred_times_income_over_price() -> None:
-    """The identity the whole design rests on.
-
-    While the floor binds, the rate drops out of the formula entirely:
-    C = I / (P * 0.005) = 200 * I / P. If this ever fails, either the floor
-    moved or the formula did, and the projection's premise needs revisiting.
-    """
+def test_a_projected_year_is_the_cost_model_on_projected_inputs() -> None:
+    """The identity the design rests on: the projection is Version C applied to
+    carried-forward income and price, with nothing else in between."""
     out = project_county(
         last_income=400_000.0, last_price=8_000_000.0, last_year=2024,
-        real_rate_pp=REAL_RATE_FLOOR, horizon=1,
+        mortgage_rate=4.0, horizon=1,
     )
     row = out.iloc[0]
-    assert row["version_c"] == pytest.approx(200 * row["income"] / row["price"])
+    assert row["version_c"] == pytest.approx(cost_share(row["income"], row["price"], 4.0, 2025))
 
 
 def test_growth_compounds_from_the_last_observed_year() -> None:
     out = project_county(
         last_income=100.0, last_price=1000.0, last_year=2024,
-        real_rate_pp=1.0, horizon=3,
+        mortgage_rate=1.0, horizon=3,
     )
     assert out["target_year"].tolist() == [2025, 2026, 2027]
     assert out["income"].tolist() == pytest.approx(
@@ -63,36 +57,29 @@ def test_growth_compounds_from_the_last_observed_year() -> None:
     )
 
 
-def test_version_c_is_a_reciprocal_of_the_real_rate() -> None:
-    """Doubling the real rate halves affordability. This is the sensitivity that
-    made an extrapolated denominator unusable."""
+def test_version_c_is_linear_in_the_rate() -> None:
+    """Equal rate steps move the cost by equal amounts. This is what makes a
+    stated rate safe to project, where the old reciprocal was not."""
     common = dict(last_income=400_000.0, last_price=8_000_000.0, last_year=2024, horizon=1)
-    low = project_county(real_rate_pp=1.0, **common).iloc[0]["version_c"]
-    high = project_county(real_rate_pp=2.0, **common).iloc[0]["version_c"]
-    assert high == pytest.approx(low / 2)
+    c2, c4, c6 = (
+        project_county(mortgage_rate=r, **common).iloc[0]["version_c"] for r in (2.0, 4.0, 6.0)
+    )
+    assert c6 - c4 == pytest.approx(c4 - c2)
+    assert c2 < c4 < c6
 
 
-def test_a_real_rate_below_the_floor_is_refused() -> None:
-    """The floor is part of the formula, not a display convention. Accepting a
-    lower rate here would silently publish a value the index cannot produce."""
-    with pytest.raises(ValueError, match="floor"):
+def test_a_rate_that_is_not_positive_is_refused() -> None:
+    with pytest.raises(ValueError, match="mortgage_rate"):
         project_county(
             last_income=400_000.0, last_price=8_000_000.0, last_year=2024,
-            real_rate_pp=0.1, horizon=1,
+            mortgage_rate=0.0, horizon=1,
         )
 
 
-def test_scenarios_carry_the_floor_and_the_observed_rate() -> None:
-    rates = scenario_real_rates(0.77)
-    assert set(rates) == set(SCENARIO_KEYS)
-    assert rates["floor"] == REAL_RATE_FLOOR
-    assert rates["current"] == 0.77
-    assert rates["normalised"] == 2.0
-
-
-def test_an_observed_rate_under_the_floor_is_raised_to_it() -> None:
-    """`current` is read from data, and the data can sit below the floor."""
-    assert scenario_real_rates(0.2)["current"] == REAL_RATE_FLOOR
+def test_scenarios_are_the_lowest_the_latest_and_the_stress_rate() -> None:
+    rates = scenario_mortgage_rates(pd.Series([2.5, 1.5, 4.5, 4.3]))
+    assert list(rates) == list(SCENARIO_KEYS)
+    assert rates == {"low": 1.5, "current": 4.3, "high": HIGH_MORTGAGE_RATE}
 
 
 @pytest.fixture(scope="module")
@@ -127,22 +114,22 @@ def test_no_projection_is_absurd(county_panel: pd.DataFrame) -> None:
 
 
 def test_the_current_scenario_barely_moves(county_panel: pd.DataFrame) -> None:
-    """Holding the real rate at today's level should reproduce roughly today's
+    """Holding the rate at today's level should reproduce roughly today's
     value, moved only by the income and price growth assumptions."""
     out = project_all(county_panel)
     last = county_panel[county_panel["year"] == county_panel["year"].max()]
     last = last.set_index("lan_code")["version_c"]
     first = out[(out["scenario"] == "current") & (out["target_year"] == out["target_year"].min())]
     ratio = first["version_c"].to_numpy() / last.loc[first["lan_code"]].to_numpy()
-    assert ratio.min() > 0.9 and ratio.max() < 1.15
+    assert ratio.min() > 0.9 and ratio.max() < 1.1
 
 
-def test_the_floor_scenario_is_the_most_affordable(county_panel: pd.DataFrame) -> None:
-    """Lower real rate, higher Version C. If this inverts, the orientation
-    contract has been broken somewhere."""
+def test_the_low_scenario_is_the_cheapest(county_panel: pd.DataFrame) -> None:
+    """Lower rate, lower cost share. If this inverts, the orientation contract
+    has been broken somewhere."""
     out = project_all(county_panel)
     wide = out.pivot_table(index=["lan_code", "target_year"], columns="scenario", values="version_c")
-    assert (wide["floor"] > wide["normalised"]).all()
+    assert ((wide["low"] < wide["current"]) & (wide["current"] < wide["high"])).all()
 
 
 def test_the_committed_projection_matches_the_committed_panel(

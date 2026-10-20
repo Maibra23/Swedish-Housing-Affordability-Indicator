@@ -38,10 +38,10 @@ import pytest
 
 from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart
 from src.scenario.charts import (
-    CPI_STEPS,
+    PRICE_STEP,
+    PRICE_STEPS,
     RATE_STEPS,
-    floor_boundary_intercept,
-    rate_inflation_surface,
+    rate_price_surface,
 )
 from src.ui.chart_theme import CHART_PALETTE, get_chart_layout
 from src.ui.tokens import COLORS, COUNTY_PALETTE, DIVERGING_SCALE
@@ -82,23 +82,22 @@ ALLOWED_COLOURS = (
 def county_baseline() -> dict:
     """A real county row, so the surface is exercised on real magnitudes.
 
-    A synthetic baseline would work for the layout assertions and would quietly
-    stop exercising the floor, which binds only when `R - pi` is small. It is
-    small in the committed panel, which is the case worth guarding.
+    A synthetic baseline would work for the layout assertions, but real
+    magnitudes are what the colour bounds and the labels have to fit.
     """
     panel = pd.read_parquet(ROOT / "data" / "processed" / "panel_county.parquet")
-    # The panel is ragged at the top: prices and income end before the policy
-    # rate does, so `year.max()` is an imputed row with a missing price. Take the
-    # last year where every input the simulator reads actually exists.
-    complete = panel.dropna(
-        subset=["median_income", "transaction_price_sek", "policy_rate", "cpi_yoy_pct"]
+    # The panel is ragged at the top: prices and income end before the rates
+    # do, so `year.max()` is an imputed row with a missing price. Take the last
+    # year where every input the simulator reads actually exists.
+    complete = panel[~panel["is_imputed_income"].fillna(False).astype(bool)].dropna(
+        subset=["median_income", "transaction_price_sek", "mortgage_rate"]
     )
     row = complete[complete["year"] == complete["year"].max()].iloc[0]
     return {
         "income": float(row["median_income"]),
         "transaction_price_sek": float(row["transaction_price_sek"]),
-        "policy_rate": float(row["policy_rate"]),
-        "cpi_yoy_pct": float(row["cpi_yoy_pct"]),
+        "mortgage_rate": float(row["mortgage_rate"]),
+        "year": int(row["year"]),
     }
 
 
@@ -118,11 +117,11 @@ def _figures(county_baseline: dict) -> dict:
             lending_ceiling=5.5,
             min_down_pct=0.10,
         ),
-        "rate_inflation_surface": rate_inflation_surface(
+        "rate_price_surface": rate_price_surface(
             county_kod="01",
             baseline_panel=county_baseline,
             rate_shock=2.0,
-            cpi_shock=0.0,
+            price_shock=-0.10,
         ),
     }
 
@@ -179,16 +178,16 @@ def test_built_figures_only_contain_token_colours(county_baseline: dict) -> None
         )
 
 
-def test_the_surface_reads_the_diverging_scale_from_the_other_end(
+def test_the_surface_reads_the_diverging_scale_like_the_map(
     county_baseline: dict,
 ) -> None:
-    """The one diverging ramp, reversed, because high is good here and low is
-    good on the map. Reversal is the point: green must mean "better for a
+    """The one diverging ramp, unreversed, because low is good both here (a
+    cost share) and on the map (a z-score). Green must mean "better for a
     household" on both pages.
     """
-    surface = _figures(county_baseline)["rate_inflation_surface"]
+    surface = _figures(county_baseline)["rate_price_surface"]
     scale = [colour for _, colour in surface.data[0].colorscale]
-    assert scale == list(reversed(DIVERGING_SCALE)), (
+    assert scale == list(DIVERGING_SCALE), (
         "the surface is no longer on the project's diverging scale"
     )
     assert surface.data[0].zmid == 0, "a diverging scale needs a meaningful midpoint"
@@ -287,45 +286,27 @@ def test_the_toolbar_setting_is_the_same_everywhere() -> None:
 # Geometry the caption depends on
 # ---------------------------------------------------------------------------
 
-def test_both_surface_axes_move_in_the_same_unit(county_baseline: dict) -> None:
-    """Equal steps plus a locked aspect are what make a line of equal real rate
-    45 degrees on screen. Without both, the caption saying so is aspirational.
-    """
-    rate_gaps = {round(b - a, 6) for a, b in zip(RATE_STEPS, RATE_STEPS[1:])}
-    cpi_gaps = {round(b - a, 6) for a, b in zip(CPI_STEPS, CPI_STEPS[1:])}
-    assert rate_gaps == cpi_gaps, (
-        f"rate steps {rate_gaps} against CPI steps {cpi_gaps}: unequal steps tilt "
-        f"every line of constant real rate"
-    )
+def test_every_slider_position_is_a_grid_point(county_baseline: dict) -> None:
+    """The surface's grid uses the sliders' own steps, so the marked scenario is
+    always a computed cell rather than an interpolation between two."""
+    from src.scenario.controls import shock_options
 
-    surface = _figures(county_baseline)["rate_inflation_surface"]
-    assert surface.layout.yaxis.scaleanchor == "x"
-    assert surface.layout.yaxis.scaleratio == 1
+    assert set(shock_options(-25, 25, PRICE_STEP, int)) == set(PRICE_STEPS)
+    assert set(shock_options(-2.0, 5.0, 0.25)) == set(RATE_STEPS)
 
 
-def test_the_drawn_floor_is_where_the_floor_actually_binds(county_baseline: dict) -> None:
-    """The defect this replaces was a caption that named the wrong corner. Prose
-    can be wrong about a picture; a line derived from the same arithmetic cannot.
-    """
+def test_the_marker_sits_on_the_scenario(county_baseline: dict) -> None:
+    surface = _figures(county_baseline)["rate_price_surface"]
+    marker = surface.data[1]
+    assert list(marker.x) == pytest.approx([-10.0])
+    assert list(marker.y) == pytest.approx([2.0])
+
+
+def test_the_surface_cell_is_the_simulator(county_baseline: dict) -> None:
+    """A colour is the simulator's delta at that cell, not an approximation."""
     from src.scenario.simulator import simulate
 
-    intercept = floor_boundary_intercept(county_baseline)
-    disagreements = 0
-    for rate in RATE_STEPS:
-        for cpi in CPI_STEPS:
-            run = simulate(
-                county_kod="01",
-                rate_shock=rate,
-                income_shock=0.0,
-                price_shock=0.0,
-                baseline_panel=county_baseline,
-                cpi_shock=cpi,
-            )
-            floor_binds = run["real_rate_scen"] <= 0.5 + 1e-9
-            below_line = rate <= cpi + intercept + 1e-9
-            if floor_binds != below_line:
-                disagreements += 1
-    assert disagreements == 0, (
-        f"{disagreements} grid cells where the drawn boundary disagrees with the "
-        f"floor the simulator applies"
-    )
+    surface = _figures(county_baseline)["rate_price_surface"]
+    i, j = RATE_STEPS.index(2.0), PRICE_STEPS.index(-10)
+    run = simulate("01", 2.0, 0.0, -0.10, county_baseline)
+    assert surface.data[0].z[i][j] == pytest.approx(run["delta_pct"])

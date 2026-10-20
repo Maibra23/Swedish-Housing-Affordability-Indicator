@@ -36,6 +36,13 @@ def test_the_driver_is_the_part_furthest_from_no_change(ranked: pd.DataFrame) ->
     assert change.driver == max(sizes, key=sizes.get)
 
 
+def test_rising_income_shows_as_a_cost_reduction(ranked: pd.DataFrame) -> None:
+    """C is a cost share. Every municipality's income rose over the panel, so
+    income's part must be negative for all of them."""
+    for name, rows in ranked.groupby("region_name"):
+        assert attribute_change(rows).parts_pct["income"] < 0, name
+
+
 def test_k_t_is_not_a_component() -> None:
     assert "kt_ratio" not in COMPONENTS and "kt" not in " ".join(COMPONENTS)
 

@@ -34,7 +34,7 @@ def ranked() -> pd.DataFrame:
 
 
 def test_the_floor_years_quoted_for_version_c_are_the_floored_years(ranked: pd.DataFrame) -> None:
-    text = SWEDISH_LABELS["mt.justerar_for_inflation_genom_realrantan"]
+    text = SWEDISH_LABELS["mt.kassaflode_version_c_text"]
     first, last = map(int, re.search(r"Åren\s+(\d{4})–(\d{4})", text).groups())
     national = ranked.groupby("year")[["policy_rate", "cpi_yoy_pct"]].first()
     floored = sorted(national.index[(national.policy_rate - national.cpi_yoy_pct) < FLOOR_PP])
@@ -68,7 +68,7 @@ def test_the_real_rate_is_the_largest_driver_of_year_on_year_change(ranked: pd.D
 
 
 def test_projection_parameters_match_the_page() -> None:
-    text = SWEDISH_LABELS["mt.projektion_tre_scenarier_realranta"]
+    text = SWEDISH_LABELS["mt.projektion_tre_scenarier_bolaneranta"]
     assert f"{projection.INCOME_GROWTH:.0%}".replace("%", " %") in text
     assert f"{projection.PRICE_GROWTH:.0%}".replace("%", " %") in text
     assert "sex år" in text and projection.HORIZON == 6

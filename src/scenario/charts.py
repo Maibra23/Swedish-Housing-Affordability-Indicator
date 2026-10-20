@@ -15,86 +15,68 @@ from src.ui.tokens import COLORS, DIVERGING_SCALE
 
 #: The grid spans exactly the two sliders it explains, so the marked scenario is
 #: always inside the plane rather than pinned to its edge. Rate: -2 to +5 pp.
-#: CPI: -5 to +10 pp.
+#: Price: -25 to +25 %.
 RATE_MIN, RATE_MAX = -2.0, 5.0
-CPI_MIN, CPI_MAX = -5.0, 10.0
+PRICE_MIN, PRICE_MAX = -25, 25
 
-#: One step, in percentage points, on **both** axes. The earlier grid moved 1 pp
-#: per rate cell and 2 pp per CPI cell, which tilted every line of constant
-#: `R - pi` to two cells up for one across while the caption called them
-#: diagonals. Equal steps plus `scaleanchor` below make the caption true.
-GRID_STEP = 0.5
-
-#: The real-rate floor, in percentage points. Mirrors `simulate`, which applies
-#: it independently; see the caution in docs/APP_REFERENCE.md (Part I) section 7 about
-#: the floor living in two files in two different units.
-REAL_RATE_FLOOR = 0.5
+#: Grid steps, in each axis's own unit. They match the slider steps, so every
+#: position a reader can set is a grid point.
+RATE_STEP = 0.25
+PRICE_STEP = 5
 
 
-def _steps(low: float, high: float, step: float = GRID_STEP) -> tuple[float, ...]:
+def _steps(low: float, high: float, step: float) -> tuple[float, ...]:
     """Inclusive range as a tuple, rounded so floats print cleanly on an axis."""
     return tuple(round(low + i * step, 2) for i in range(int(round((high - low) / step)) + 1))
 
 
-RATE_STEPS = _steps(RATE_MIN, RATE_MAX)
-CPI_STEPS = _steps(CPI_MIN, CPI_MAX)
+RATE_STEPS = _steps(RATE_MIN, RATE_MAX, RATE_STEP)
+PRICE_STEPS = _steps(PRICE_MIN, PRICE_MAX, PRICE_STEP)
 
 
 def _surface_colorscale() -> list[list]:
-    """`DIVERGING_SCALE`, reversed, as Plotly colorscale stops.
+    """`DIVERGING_SCALE` as Plotly colorscale stops, read the same way as the map.
 
-    The project owns one diverging ramp and the map spends it on a z-score where
-    low is good. This surface plots a change in affordability where **high** is
-    good, so the same ramp is read from the other end. Reversing keeps green
-    meaning "better for a household" on both pages, which is the property that
-    matters; using Plotly's own `RdYlGn` here put a second, more saturated
-    red-to-green legend two pages from the map's and is why item 17 exists.
+    The project owns one diverging ramp, and the map spends it on a z-score where
+    low is good. This surface plots a change in the cost share, where low is good
+    as well, so the ramp is used unchanged and green means "cheaper for a
+    household" on both pages. (The old surface plotted a change in an
+    affordability ratio, where high was good, and had to reverse the ramp.)
     """
-    stops = list(reversed(DIVERGING_SCALE))
+    stops = list(DIVERGING_SCALE)
     last = len(stops) - 1
     return [[i / last, colour] for i, colour in enumerate(stops)]
 
 
-def rate_inflation_surface(
+def rate_price_surface(
     *,
     county_kod: str,
     baseline_panel: dict,
     income_shock: float = 0.0,
-    price_shock: float = 0.0,
     rate_shock: float | None = None,
-    cpi_shock: float | None = None,
+    price_shock: float | None = None,
 ) -> go.Figure:
-    """Affordability across the rate and inflation plane, against the baseline.
+    """The change in the cost share across the rate and price plane.
 
-    The page's central lesson is that only the real rate, `R - pi`, reaches the
-    formula. A slider shows one point on that plane and invites the conclusion
-    that rate rises destroy affordability, which is true only when inflation is
-    held still. The surface shows the whole plane at once.
+    A slider shows one point and invites a one-dial conclusion. The surface
+    shows how far a price fall offsets a rate rise for this county, which is
+    the trade-off 2022–2023 actually ran: rates up three points, prices down.
 
-    **Why the change and not the level.** Plotting raw Version C spent most of
-    the colour range on a region the grid barely visits: Version C is a
-    reciprocal of the real rate, so past the floor every cell returns one
-    repeated number while the interesting variation crushes into a corner. On the
-    old 8 x 8 grid 36 of 64 cells were identical and 20 of the remaining 28 sat
-    below 4.1. The change from baseline has a meaningful midpoint at zero, ties
-    the surface to the "Förändring" KPI directly above it, and cannot be mistaken
-    for the map's score.
-
-    **Contours rather than cells.** Iso-lines of constant real rate say "these two
-    dials collapse into one" more directly than colour bands, and they remove the
-    quantisation artefact that made the old heatmap's diagonals look like stairs.
+    **Why the change and not the level.** The change from baseline has a
+    meaningful midpoint at zero, ties the surface to the "Förändring" KPI
+    directly above it, and cannot be mistaken for the map's score.
 
     Args:
         county_kod: County the page has selected.
         baseline_panel: The same dict handed to :func:`simulate`.
         income_shock: Income change, held across the grid.
-        price_shock: Price change, held across the grid.
         rate_shock: Current rate slider, marked on the surface when given.
-        cpi_shock: Current CPI slider, marked on the surface when given.
+        price_shock: Current price slider (relative, -0.10 is -10 %), marked
+            on the surface when given.
 
     Returns:
-        A contour figure: change from baseline, with the floor boundary drawn and
-        the current scenario marked.
+        A contour figure of the change from baseline, with the current scenario
+        marked.
     """
     runs = [
         [
@@ -102,32 +84,29 @@ def rate_inflation_surface(
                 county_kod=county_kod,
                 rate_shock=r,
                 income_shock=income_shock,
-                price_shock=price_shock,
+                price_shock=p / 100.0,
                 baseline_panel=baseline_panel,
-                cpi_shock=c,
             )
-            for c in CPI_STEPS
+            for p in PRICE_STEPS
         ]
         for r in RATE_STEPS
     ]
     z = [[run["delta_pct"] for run in row] for row in runs]
-    # Level and real rate travel with each cell so the hover can state what the
+    # Level and rate travel with each cell so the hover can state what the
     # colour is a change *from*, which a percentage on its own cannot.
-    customdata = [
-        [[run["scenario_v_c"], run["real_rate_scen"]] for run in row] for row in runs
-    ]
+    customdata = [[[run["scenario_v_c"], run["scenario_rate"]] for run in row] for row in runs]
 
     fig = go.Figure(go.Contour(
         z=z,
-        x=list(CPI_STEPS),
+        x=list(PRICE_STEPS),
         y=list(RATE_STEPS),
         customdata=customdata,
         colorscale=_surface_colorscale(),
         # Fixed bounds rather than per-county autoscaling: a colour then means
         # the same change in every län, which is what makes two counties
         # comparable at a glance. Values outside the range clamp in colour only.
-        zmin=-100.0,
-        zmax=100.0,
+        zmin=-60.0,
+        zmax=60.0,
         zmid=0.0,
         contours=dict(
             coloring="heatmap",
@@ -144,15 +123,11 @@ def rate_inflation_surface(
         hovertemplate=L("sc.yta_hover"),
     ))
 
-    _add_floor_boundary(fig, baseline_panel)
-
     # Where the user currently is. Without it the surface is an abstraction
-    # sitting beside a result the reader cannot locate on it. The axes are
-    # numeric now, so the marker sits on the exact scenario rather than snapping
-    # to the nearest cell centre.
-    if rate_shock is not None and cpi_shock is not None:
+    # sitting beside a result the reader cannot locate on it.
+    if rate_shock is not None and price_shock is not None:
         fig.add_trace(go.Scatter(
-            x=[cpi_shock],
+            x=[price_shock * 100.0],
             y=[rate_shock],
             mode="markers",
             marker=dict(
@@ -170,71 +145,11 @@ def rate_inflation_surface(
     # Measured rather than guessed: a fixed left margin clipped the axis title.
     layout["yaxis"]["automargin"] = True
     layout["xaxis"]["automargin"] = True
-    layout["xaxis"]["dtick"] = 1
+    layout["xaxis"]["dtick"] = 5
     layout["yaxis"]["dtick"] = 1
-    # One percentage point is the same distance on both axes, so a line of equal
-    # real rate is drawn at 45 degrees and the caption describing it is true of
-    # the picture rather than of the arithmetic behind it.
-    layout["yaxis"]["scaleanchor"] = "x"
-    layout["yaxis"]["scaleratio"] = 1
-    # The plane ends where the sliders end. Without a range, the 1:1 scale made
-    # Plotly widen the x axis to fill the figure, to about -21..26, and the data
-    # (-5..10) filled a third of the plot. "domain" shrinks the plot instead.
-    layout["xaxis"]["range"] = [CPI_MIN, CPI_MAX]
+    layout["xaxis"]["ticksuffix"] = " %"
+    layout["xaxis"]["range"] = [PRICE_MIN, PRICE_MAX]
     layout["yaxis"]["range"] = [RATE_MIN, RATE_MAX]
-    layout["xaxis"]["constrain"] = "domain"
-    layout["yaxis"]["constrain"] = "domain"
     layout["margin"] = dict(r=10, t=20, b=40)
     fig.update_layout(**layout)
     return fig
-
-
-def floor_boundary_intercept(baseline_panel: dict) -> float:
-    """Rate shock at which the floor starts to bind when the CPI shock is zero.
-
-    The scenario real rate is `(R - pi) + rate_shock - cpi_shock`, so the floor
-    binds along the line `rate_shock = cpi_shock + (floor - (R - pi))`. That is a
-    45 degree line whose intercept is returned here, separately from the figure,
-    so the geometry can be asserted without building a chart.
-    """
-    baseline_real = baseline_panel["policy_rate"] - baseline_panel["cpi_yoy_pct"]
-    return REAL_RATE_FLOOR - baseline_real
-
-
-def _add_floor_boundary(fig: go.Figure, baseline_panel: dict) -> None:
-    """Draw the `R - pi = 0.5` line, which limitation M4 previously only claimed.
-
-    Below and to the right of it the index stops responding: further easing
-    cannot lower a real rate that is already at its floor. Drawing it turns a
-    caption assertion about which corner is flat into something the reader can
-    see, and it was that assertion that was wrong on screen (item 13).
-    """
-    intercept = floor_boundary_intercept(baseline_panel)
-    xs = [CPI_MIN, CPI_MAX]
-    ys = [x + intercept for x in xs]
-
-    fig.add_trace(go.Scatter(
-        x=xs,
-        y=ys,
-        mode="lines",
-        line=dict(color=COLORS["text_secondary"], width=1.5, dash="dash"),
-        hovertemplate=L("sc.yta_golv_hover"),
-        showlegend=False,
-    ))
-
-    # Anchored at the midpoint of the visible part of the line rather than at an
-    # end, where it would sit outside the plot for most baselines.
-    lo = max(CPI_MIN, RATE_MIN - intercept)
-    hi = min(CPI_MAX, RATE_MAX - intercept)
-    if lo < hi:
-        # Three quarters along rather than the midpoint: with a baseline near
-        # the floor the midpoint sits on the scenario marker at the origin.
-        label_x = lo + 0.75 * (hi - lo)
-        fig.add_annotation(
-            x=label_x,
-            y=label_x + intercept,
-            text=L("sc.yta_golv_linje"),
-            showarrow=False,
-            yshift=-14,
-            font=dict(size=11, color=COLORS["text_secondary"]),
-        )

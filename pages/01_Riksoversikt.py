@@ -22,7 +22,7 @@ import plotly.graph_objects as go
 
 from src.provenance import n_kommuner
 from src.ui.data import load as load_artifact
-from src.ui.floor_panel import render_floor_history
+from src.ui.cost_panel import render_cost_history
 from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar
 from src.ui.components import (
@@ -122,10 +122,10 @@ render_kpi_row([
     kpi_card(
         label="Genomsnittligt SHAI",
         value=format_dec(mean_vc),
-        unit=L("rv.poang"),
+        unit=L("rv.procent_av_inkomsten"),
         delta=format_pct(delta_vc_pct, signed=True) if HAS_PREV else "",
-        # Version C is an affordability ratio: higher is better, so a fall is bad.
-        **delta_meta(delta_vc, higher_is_better=True),
+        # Version C is a cost share: higher is worse, so a rise is bad.
+        **delta_meta(delta_vc, higher_is_better=False),
         variant="default",
         tooltip=L("rv.genomsnittlig_version_c_poang_rakvot_inkomst", v0=N_KOMMUNER),
     ),
@@ -163,10 +163,9 @@ render_kpi_row([
 
 explanation(L("rv.forklaring_kpi", v0=N_KOMMUNER, v1=selected_year))
 
-# The evidence for the qualification that explanation now carries. Collapsed:
-# a reader who trusts the mean index never has to open it, and a reader who
-# wants to compare 2023 with 2024 finds out why that comparison needs care.
-render_floor_history(ranked, highlight_year=selected_year)
+# What moved the mean index: the cost per krona borrowed or prices against
+# incomes. Collapsed: a reader who only wants the level never has to open it.
+render_cost_history(ranked, highlight_year=selected_year)
 
 vintage_badge()
 

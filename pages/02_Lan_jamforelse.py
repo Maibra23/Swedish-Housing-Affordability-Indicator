@@ -1,6 +1,6 @@
 """Sida 02 — Länsjämförelse.
 
-En flik per formel som kan rangordna annorlunda: Realversion (C) och
+En flik per formel som kan rangordna annorlunda: Kassaflödesversion (C) och
 Makroversion (B), var och en med trendlinje och rankingtabell. Bankversion (A)
 rangordnar identiskt med C och förklaras i jämförelseavsnittet i stället för att
 få en egen flik.
@@ -44,12 +44,12 @@ from src.ui.data_table import Column, render_table
 from src.lan.charts import county_colours, county_legend_html, county_trend_chart
 from src.lan.ranking import county_ranking_html
 from src.indices.agreement import (
-    inflation_adjustment,
+    cost_adjustment,
     measure_agreement,
     where_b_and_c_disagree,
 )
-from src.ui.interpret import explain_inflation_adjustment
-from src.ui.floor_panel import render_floor_history
+from src.ui.interpret import explain_cost_adjustment
+from src.ui.cost_panel import render_cost_history
 
 inject_css()
 selections = render_sidebar()
@@ -100,8 +100,9 @@ page_title(
 
 # ── Formula config ───────────────────────────────────────────────────
 # Two tabs, not three. Bankversion (A) used to sit here as a peer, which implied
-# it corroborated C. It cannot: within a year the rate and inflation are national
-# constants, so A and C differ by a single constant factor and rank *identically*
+# it corroborated C. It cannot: within a year the mortgage rate and the
+# amortisation rule are national constants, so A and C differ by a single
+# constant factor and rank *identically*
 # — rank correlation 1,0000 on this page's own county figures in every year. A
 # third tab showing the same ordering with different numbers is not evidence, it
 # is the appearance of evidence. Version B is the only formula that can rank
@@ -110,11 +111,12 @@ page_title(
 # A is not dropped from the site, but it is no longer presented as a third
 # formula. It had a row in the Robusthet class table, identical to C's by
 # construction, which is the same misreading in a smaller font. What it has
-# instead is the one thing it alone states: the size of the inflation
-# adjustment, derived from the selected year in the comparison expander below.
+# instead is the one thing it alone states: how far the household's cash flow
+# sits from the bank's gross interest, derived from the selected year in the
+# comparison expander below.
 FORMULA_INFO = {
-    "Realversion": {
-        "formula": r"\text{Affordability}_C(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}",
+    "Kassaflödesversion": {
+        "formula": r"C(i,t) = 100 \cdot \frac{0{,}85 \cdot P_{\text{SEK}}(i,t) \cdot \big(r(t) \cdot (1 - 0{,}30) + a(t)\big)}{2 \cdot I(i,t)}",
         "desc": (
             L("lj.den_rekommenderade_versionen_justerar_for")
         ),
@@ -126,7 +128,7 @@ FORMULA_INFO = {
         ),
     },
     "Makroversion": {
-        "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(R) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi)",
+        "formula": r"\text{Risk}_B(i,t) = 0{,}35 \cdot z\!\left(\frac{P_{\text{SEK}}}{I}\right) + 0{,}25 \cdot z(r) + 0{,}20 \cdot z(U) + 0{,}20 \cdot z(\pi_{\text{KPIF}})",
         "desc": (
             L("lj.en_sammansatt_riskindikator_som_viktar_fyra")
         ),
@@ -141,7 +143,7 @@ FORMULA_INFO = {
 
 #: Version A's formula, kept for the comparison expander. It is not a tab; see
 #: the note on FORMULA_INFO above.
-VERSION_A_FORMULA = r"\text{Affordability}_A(i,t) = \frac{I(i,t)}{P_{\text{SEK}}(i,t) \times \max(R(t),\; 0{,}001)}"
+VERSION_A_FORMULA = r"A(i,t) = 100 \cdot \frac{0{,}85 \cdot P_{\text{SEK}}(i,t) \cdot r(t)}{2 \cdot I(i,t)}"
 
 # ── County colours and selection ─────────────────────────────────────
 # Every county gets its own colour, keyed by code so it survives a filter change
@@ -233,9 +235,9 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
     st.markdown(
         render_table(
             pd.DataFrame([
-                {"v": L("lj.version_a_kort"), "m": L("lj.vad_a_mater"), "r": L("lj.riktning_hogre_battre")},
+                {"v": L("lj.version_a_kort"), "m": L("lj.vad_a_mater"), "r": L("lj.riktning_hogre_dyrare")},
                 {"v": L("lj.version_b_kort"), "m": L("lj.vad_b_mater"), "r": L("lj.riktning_hogre_samre")},
-                {"v": L("lj.version_c_kort"), "m": L("lj.vad_c_mater"), "r": L("lj.riktning_hogre_battre")},
+                {"v": L("lj.version_c_kort"), "m": L("lj.vad_c_mater"), "r": L("lj.riktning_hogre_dyrare")},
             ]),
             [
                 Column(L("lj.version"), lambda row: str(row["v"]), kind="name"),
@@ -249,11 +251,10 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
     st.latex(VERSION_A_FORMULA)
     st.caption(L("lj.den_enklaste_versionen_mater_hushallets"))
 
-    # What A is for, as one figure rather than as a column. Derived from the
-    # selected year: the factor is 4,71 in 2024 and 0,20 in every year from 2015
-    # to 2021, where it is two rate floors divided and means nothing about
-    # inflation. `explain_inflation_adjustment` picks the sentence that is true.
-    st.markdown(explain_inflation_adjustment(inflation_adjustment(municipal, selected_year)))
+    # What A is for, as one figure rather than as a column: how far the
+    # household's cash flow sits from the bank's gross interest in the selected
+    # year. `explain_cost_adjustment` states the parts that produce it.
+    st.markdown(explain_cost_adjustment(cost_adjustment(municipal, selected_year)))
     st.caption(L("lj.topp_5_och_botten_5_lan_per_flik"))
 
     year_data = county_versions[county_versions["year"] == selected_year].copy()
@@ -269,24 +270,23 @@ with st.expander(L("lj.varfor_skiljer_sig_versionerna_at")):
                     unsafe_allow_html=True,
                 )
                 vcol = info["col"]
-                ascending = vcol != "version_b"
-
-                worst = year_data.nsmallest(5, vcol) if ascending else year_data.nlargest(5, vcol)
+                # Every version reads higher-is-worse, so the worst are the largest.
+                worst = year_data.nlargest(5, vcol)
                 st.markdown(L("lj.samst_overkomlighet"))
                 for _, r in worst.iterrows():
                     st.markdown(f"- {r['region_name']}: **{format_dec(r[vcol], 2)}**")
 
-                best = year_data.nlargest(5, vcol) if ascending else year_data.nsmallest(5, vcol)
+                best = year_data.nsmallest(5, vcol)
                 st.markdown(L("lj.bast_overkomlighet"))
                 for _, r in best.iterrows():
                     st.markdown(f"- {r['region_name']}: **{format_dec(r[vcol], 2)}**")
 
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 
-# The comparison expander states the factor for one year. This is the other ten,
-# and the reason the trend chart above cannot be read straight across years.
+# The comparison expander states the factor for one year. This is every year,
+# with the split of the mean index into financing and prices.
 # Streamlit does not nest expanders, so it sits beside that one rather than in it.
-render_floor_history(municipal, highlight_year=selected_year)
+render_cost_history(municipal, highlight_year=selected_year)
 
 st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
 

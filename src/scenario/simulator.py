@@ -2,14 +2,24 @@
 
 Pure function, no I/O. Used by the Scenariosimulator Streamlit page.
 
-Formula aligned with src/indices/affordability.py compute_version_c:
-    V_C = Income / (TransactionPrice * max(R - pi, 0.5) / 100)
-All rates in percentage points throughout.
+Formula aligned with src/indices/affordability.py compute_version_c, through the
+same `cost_model.cost_share`:
+    V_C = 100 · 0,85 · P · (r · 0,7 / 100 + amortisation) / (2 · I)
+
+The rate shock moves `r`, the mean rate on **new** mortgages across every
+fixation period, not the policy rate. That is a deliberate limit. A policy-rate
+change reaches a floating loan within about three months but a fixed loan only
+when it is refixed, so how much of a policy move reaches households in a year
+depends on the fixation mix. In 2021 to 2023 the policy rate rose 3,5 pp on
+annual means and the new-mortgage rate 3,0 pp. The slider states the outcome the
+household faces instead of guessing the pass-through.
 """
 
 from __future__ import annotations
 
 import math
+
+from src.indices.cost_model import cost_share
 
 
 def _validate(**values: float) -> None:
@@ -24,12 +34,19 @@ def _validate(**values: float) -> None:
     for name, value in values.items():
         if not math.isfinite(value):
             raise ValueError(f"{name} must be a finite number, got {value!r}")
-    for name in ("income", "price"):
+    for name in ("income", "price", "mortgage_rate"):
         if values[name] <= 0:
             raise ValueError(f"{name} must be positive, got {values[name]!r}")
     for name in ("income_shock", "price_shock"):
         if values[name] <= -1:
             raise ValueError(f"{name} must be above -1 (-100 %), got {values[name]!r}")
+
+
+#: The lowest scenario rate the simulator will price, in percent. Sweden's
+#: lowest annual mean on new mortgages was 1,5 % (2021); a shock below this
+#: would describe lending that has never existed, so it is held here and the
+#: page says so.
+MIN_SCENARIO_RATE = 0.5
 
 
 def simulate(
@@ -38,52 +55,39 @@ def simulate(
     income_shock: float,
     price_shock: float,
     baseline_panel: dict,
-    cpi_shock: float = 0.0,
 ) -> dict:
     """Compute Version C under a scenario shock.
 
     Args:
         county_kod: 2-digit county code.
-        rate_shock: Absolute change in policy rate (percentage points).
+        rate_shock: Absolute change in the mean new-mortgage rate, percentage points.
         income_shock: Relative change in income (e.g. 0.05 = +5%).
         price_shock: Relative change in price (e.g. -0.10 = -10%).
-        baseline_panel: dict with keys:
-            income (SEK), transaction_price_sek (SEK),
-            policy_rate (percentage points), cpi_yoy_pct (percentage points).
-        cpi_shock: Absolute change in CPI inflation (percentage points, default 0).
-            When non-zero, the real rate is affected by both rate and inflation changes,
-            enabling realistic scenarios like the 2022 cycle where rate +4pp & CPI +8pp
-            left the real rate nearly unchanged.
+        baseline_panel: dict with keys income (SEK), transaction_price_sek
+            (SEK), mortgage_rate (percent) and year.
 
     Returns:
-        dict with baseline_v_c, scenario_v_c, delta, delta_pct, etc.
+        dict with baseline_v_c, scenario_v_c, delta, delta_pct and the inputs
+        on both sides. Version C is a cost share, so a positive delta is worse.
     """
     income = baseline_panel["income"]
     price = baseline_panel["transaction_price_sek"]
-    rate = baseline_panel["policy_rate"]       # percentage points
-    cpi = baseline_panel["cpi_yoy_pct"]        # percentage points
+    rate = baseline_panel["mortgage_rate"]
+    year = int(baseline_panel["year"])
     _validate(
-        income=income, price=price, policy_rate=rate, cpi_yoy_pct=cpi,
-        rate_shock=rate_shock, income_shock=income_shock,
-        price_shock=price_shock, cpi_shock=cpi_shock,
+        income=income, price=price, mortgage_rate=rate,
+        rate_shock=rate_shock, income_shock=income_shock, price_shock=price_shock,
     )
 
-    # Baseline Version C — matches affordability.py compute_version_c
-    real_rate_base = max(rate - cpi, 0.5)              # pp, floored at 0.5
-    real_rate_base_dec = real_rate_base / 100.0         # decimal
-    baseline_v_c = income / (price * real_rate_base_dec)
+    baseline_v_c = cost_share(income, price, rate, year)
 
-    # Scenario — CPI shock shifts inflation, affecting real rate
     s_income = income * (1 + income_shock)
     s_price = price * (1 + price_shock)
-    s_rate = rate + rate_shock                         # pp
-    s_cpi = cpi + cpi_shock                            # pp — CPI is now shockable
-    real_rate_scen = max(s_rate - s_cpi, 0.5)          # pp, floored at 0.5
-    real_rate_scen_dec = real_rate_scen / 100.0         # decimal
-    scenario_v_c = s_income / (s_price * real_rate_scen_dec)
+    s_rate = max(rate + rate_shock, MIN_SCENARIO_RATE)
+    scenario_v_c = cost_share(s_income, s_price, s_rate, year)
 
     delta = scenario_v_c - baseline_v_c
-    delta_pct = (delta / baseline_v_c * 100) if baseline_v_c != 0 else 0.0
+    delta_pct = delta / baseline_v_c * 100
 
     return {
         "baseline_v_c": baseline_v_c,
@@ -96,9 +100,7 @@ def simulate(
         "scenario_price": s_price,
         "baseline_rate": rate,
         "scenario_rate": s_rate,
-        "baseline_cpi": cpi,
-        "scenario_cpi": s_cpi,
-        "real_rate_base": real_rate_base,
-        "real_rate_scen": real_rate_scen,
-        "scope_note": "Simulatorn beräknar endast Version C (realversion)",
+        "rate_held_at_minimum": rate + rate_shock < MIN_SCENARIO_RATE,
+        "year": year,
+        "scope_note": "Simulatorn beräknar endast Version C (kassaflödesversion)",
     }

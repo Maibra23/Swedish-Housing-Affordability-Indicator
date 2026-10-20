@@ -30,7 +30,7 @@ import pytest
 
 from src.kontantinsats.charts import affordability_gap_chart, comparison_barchart
 from src.lan.charts import county_colours, county_trend_chart
-from src.scenario.charts import rate_inflation_surface
+from src.scenario.charts import rate_price_surface
 from src.ui.chart_theme import CHART_FONT, MONO_FONT, get_chart_layout
 from src.ui.labels import L
 
@@ -121,13 +121,13 @@ def test_bar_names_sit_above_the_bars_not_on_the_axis() -> None:
 
 def _builders() -> dict:
     county = pd.read_parquet(PROCESSED / "panel_county.parquet")
-    complete = county.dropna(
-        subset=["median_income", "transaction_price_sek", "policy_rate", "cpi_yoy_pct"]
+    complete = county[~county["is_imputed_income"].fillna(False).astype(bool)].dropna(
+        subset=["median_income", "transaction_price_sek", "mortgage_rate"]
     )
     row = complete[complete["year"] == complete["year"].max()].iloc[0]
     baseline = {k: float(row[c]) for k, c in (
         ("income", "median_income"), ("transaction_price_sek", "transaction_price_sek"),
-        ("policy_rate", "policy_rate"), ("cpi_yoy_pct", "cpi_yoy_pct"),
+        ("mortgage_rate", "mortgage_rate"), ("year", "year"),
     )}
     versions = pd.read_parquet(PROCESSED / "affordability_county.parquet")
     codes = sorted(versions["lan_code"].unique())
@@ -143,8 +143,8 @@ def _builders() -> dict:
             yaxis_title=L("ki.gap_axel_pris"), value_fmt="sek",
             best_key="bolanetak", worst_key="amort_2",
         ),
-        "rate and inflation surface": rate_inflation_surface(
-            county_kod="01", baseline_panel=baseline, rate_shock=2.0, cpi_shock=0.0
+        "rate and price surface": rate_price_surface(
+            county_kod="01", baseline_panel=baseline, rate_shock=2.0, price_shock=-0.10
         ),
         "county trends, every county selected": county_trend_chart(
             county_versions=versions, value_column="version_c", selected=codes,

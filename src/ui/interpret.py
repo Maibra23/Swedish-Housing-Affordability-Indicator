@@ -23,12 +23,8 @@ from dataclasses import dataclass
 
 import streamlit as st
 
-from src.indices.agreement import (
-    NOMINAL_RATE_FLOOR_PP,
-    REAL_RATE_FLOOR_PP,
-    InflationAdjustment,
-)
-from src.scenario.presets import is_riksbanken_2022
+from src.indices.agreement import CostAdjustment
+from src.scenario.presets import is_rate_cycle_preset
 from src.ui.labels import L
 
 # Typical Swedish bank practice, not a legal limit. Lending above roughly this
@@ -48,14 +44,6 @@ HOUSING_COST_SHARE_GUIDELINE = 30.0
 SAVE_YEARS_COMFORTABLE = 5.0
 SAVE_YEARS_STRAINED = 10.0
 
-#: How close to the floor, in percentage points, a baseline real rate must sit
-#: before Sida 05 warns that the result is fragile. Within 0,5 pp, a 0,1 pp CPI
-#: revision moves Version C by at least 10 %.
-NEAR_FLOOR_MARGIN_PP = 0.5
-
-#: The size of revision the warning quotes: one decimal of an annual-mean CPI,
-#: the precision SCB publishes it at.
-CPI_REVISION_PP = 0.1
 
 
 @dataclass(frozen=True)
@@ -180,104 +168,62 @@ def interpret_scenario(
     rate_shock: float,
     income_shock_pct: float,
     price_shock_pct: float,
-    cpi_shock: float,
 ) -> list[Finding]:
     """Explain one scenario result, and why it moved the way it did.
 
     Args:
         result: `simulate` output.
-        rate_shock: Policy rate change in percentage points.
+        rate_shock: Mortgage rate change in percentage points.
         income_shock_pct: Income change in percent.
         price_shock_pct: Price change in percent.
-        cpi_shock: CPI change in percentage points.
 
     Returns:
         Findings ordered most serious first.
     """
-    findings: list[Finding] = []
-    fragility = _baseline_fragility(result)
-    untouched = not any((rate_shock, income_shock_pct, price_shock_pct, cpi_shock))
-    if untouched:
-        return [Finding("note", L("sc.tolk_inget_scenario")), *fragility]
+    if not any((rate_shock, income_shock_pct, price_shock_pct)):
+        return [Finding("note", L("sc.tolk_inget_scenario"))]
 
+    findings: list[Finding] = []
     delta_pct = result["delta_pct"]
-    real_base = result["real_rate_base"]
-    real_scen = result["real_rate_scen"]
 
     # 1. The headline, naming the direction rather than leaving the reader to
-    #    infer it from two numbers. A bare "changed by 72 %" reads as a rise.
+    #    infer it from two numbers. Version C is a cost share: up is worse.
     shift = dict(
         v0=_sv(abs(delta_pct), 1),
         v1=_sv(result["baseline_v_c"]),
         v2=_sv(result["scenario_v_c"]),
     )
     if delta_pct > 0:
-        findings.append(Finding("good", L("sc.tolk_riktning_upp", **shift)))
+        findings.append(Finding("warning", L("sc.tolk_riktning_upp", **shift)))
     elif delta_pct < 0:
-        findings.append(Finding("warning", L("sc.tolk_riktning_ner", **shift)))
+        findings.append(Finding("good", L("sc.tolk_riktning_ner", **shift)))
     else:
         findings.append(Finding("note", L("sc.tolk_riktning_oforandrad", **shift)))
-    findings.extend(fragility)
 
-    # 2. What actually drove it. The real rate is the term most people do not
-    #    track, so name it explicitly whenever it moved.
-    if abs(real_scen - real_base) > 0.01:
+    # 2. A rate the simulator would not price below.
+    if result.get("rate_held_at_minimum"):
         findings.append(Finding("note", L(
-            "sc.tolk_realranta", v0=_sv(real_base, 2), v1=_sv(real_scen, 2),
+            "sc.tolk_ranta_vid_golv", v0=_sv(result["scenario_rate"], 1),
         )))
-    if real_scen <= REAL_RATE_FLOOR_PP and (real_base - real_scen) > 0.01:
-        findings.append(Finding("note", L("sc.tolk_golv_binder")))
 
-    # 2b. The floor held the real rate still, so the rate and CPI sliders did
-    #     nothing. Without this the page reported "oförändrad" and left the
-    #     reader to guess why, on every floored baseline (2015–2023).
-    absorbed = (
-        bool(rate_shock or cpi_shock)
-        and real_base <= REAL_RATE_FLOOR_PP
-        and real_scen <= REAL_RATE_FLOOR_PP
-    )
-    if absorbed:
-        raw_scen = result["scenario_rate"] - result["scenario_cpi"]
-        findings.append(Finding("note", L("sc.tolk_golv_absorberar", v0=_signed(raw_scen, 2))))
+    # 3. Where the preset's numbers come from.
+    if is_rate_cycle_preset(rate_shock, income_shock_pct, price_shock_pct):
+        findings.append(Finding("note", L("sc.tolk_preset_cykel")))
 
-    # 2c. The preset that looks like a bug. APP_REFERENCE Part I section 5 item 2.
-    if is_riksbanken_2022(rate_shock, income_shock_pct, price_shock_pct, cpi_shock) and delta_pct > 0:
-        findings.append(Finding("note", L("sc.tolk_preset_2022")))
+    # 4. The limit of the rate slider: it sets the rate households face, not the
+    #    policy rate, because how much of a policy move reaches them in a year
+    #    depends on how many loans are fixed.
+    if rate_shock != 0:
+        findings.append(Finding("note", L(
+            "sc.tolk_bindningstid",
+            v0=_sv(result["baseline_rate"], 2),
+            v1=_sv(result["scenario_rate"], 2),
+        )))
 
-    # 3. The specific misreading this page invites: moving the rate alone treats
-    #    the entire nominal change as a change in the real rate. Not when the
-    #    floor absorbed it, where none of the change counted at all.
-    if rate_shock != 0 and cpi_shock == 0 and not absorbed:
-        findings.append(Finding("warning", L("sc.tolk_ranta_utan_inflation", v0=_sv(rate_shock, 2))))
-
-    # 4. Scale. This number is not the one the map shows.
+    # 5. Scale. This number is not the one the map shows.
     findings.append(Finding("note", L("sc.tolk_skala")))
 
     return findings
-
-
-def _baseline_fragility(result: dict) -> list[Finding]:
-    """Warn when the baseline real rate sits just above the floor.
-
-    Version C goes as 1 / (R − π), so the closer the real rate is to the floor,
-    the more a small error in its inputs moves the result. In 2024 the real rate
-    is 0,77 pp and a 0,1 pp revision to annual CPI moves the baseline by about
-    13 %, more than many scenarios do. On a floored baseline the floor absorbs
-    such errors, and further from it they fade, so only this band is flagged.
-
-    Args:
-        result: `simulate` output.
-
-    Returns:
-        One warning, or an empty list.
-    """
-    raw_base = result["baseline_rate"] - result["baseline_cpi"]
-    if not REAL_RATE_FLOOR_PP < raw_base <= REAL_RATE_FLOOR_PP + NEAR_FLOOR_MARGIN_PP:
-        return []
-    swing_pct = CPI_REVISION_PP / raw_base * 100
-    return [Finding("warning", L(
-        "sc.tolk_nara_golvet", v0=_sv(raw_base, 2), v1=_sv(swing_pct, 0),
-    ))]
 
 
 # ── Rendering ─────────────────────────────────────────────────────────
@@ -285,25 +231,16 @@ def _baseline_fragility(result: dict) -> list[Finding]:
 # ── Sida 02 ───────────────────────────────────────────────────────────
 
 
-def explain_inflation_adjustment(adjustment: InflationAdjustment) -> str:
-    """Say what the gap between Versions A and C is worth in one year.
+def explain_cost_adjustment(adjustment: CostAdjustment) -> str:
+    """Say what separates Versions A and C in one year.
 
-    Version A earns its place on the site by being the inflation adjustment made
-    visible: C divided by A is what correcting for inflation costs or pays in
-    that year. That reading holds only while both formulas are dividing by a
-    rate rather than by a floor, and on this panel the floors bind in nine of
-    eleven years. Where they do, the same quotient means something else — the
-    nominal rate over a constant in 2022–2023, one constant over another in
-    2015–2021, where it is 0,1/0,5 for seven years running.
-
-    A fixed sentence quoting 2024's 4,71x would therefore be wrong in nine
-    years out of eleven, which is the defect that removing A's Robusthet row
-    was meant to fix, moved one paragraph down the page. So the figure is
-    derived from the selected year and the sentence states which of the four
-    situations that year is in.
+    A is gross interest; C deducts 30 % of it and adds the amortisation in
+    force. The quotient is national, so one sentence describes every
+    municipality, and it means the same thing in every year — which the old
+    "inflation adjustment" did not, because its floors bound in nine of eleven.
 
     Args:
-        adjustment: `inflation_adjustment` for the year on display.
+        adjustment: `cost_adjustment` for the year on display.
 
     Returns:
         A finished Swedish markdown paragraph.
@@ -321,29 +258,13 @@ def explain_inflation_adjustment(adjustment: InflationAdjustment) -> str:
             v1=year,
             v2=f"{adjustment.spread:.0e}",
         )
-    if adjustment.is_an_inflation_adjustment:
-        return L("lj.inflationsjusteringen_ar_vard_v0", v0=factor, v1=year)
-    if adjustment.nominal_floor_binds and adjustment.real_floor_binds:
-        return L(
-            "lj.bada_formlerna_raknar_med_sina_golv",
-            v0=factor,
-            v1=year,
-            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
-            v3=_sv(REAL_RATE_FLOOR_PP, 1),
-        )
-    if adjustment.nominal_floor_binds:
-        return L(
-            "lj.bankversionen_raknar_med_sitt_golv",
-            v0=factor,
-            v1=year,
-            v2=_sv(NOMINAL_RATE_FLOOR_PP, 1),
-        )
     return L(
-        "lj.skillnaden_mellan_a_och_c_ar_inte_inflationsjusteringen",
+        "lj.kostnadsjusteringen_ar_v0",
         v0=factor,
         v1=year,
-        v2=_signed(adjustment.real_rate, 2),
-        v3=_sv(REAL_RATE_FLOOR_PP, 1),
+        v2=_sv(adjustment.mortgage_rate, 2),
+        v3=_sv(adjustment.net_interest_pct, 2),
+        v4=_sv(adjustment.amortisation_pct, 2),
     )
 
 

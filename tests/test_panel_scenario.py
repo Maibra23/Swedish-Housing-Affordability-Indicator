@@ -42,13 +42,11 @@ ARTIFACT = ROOT / "data" / "processed" / "affordability_ranked.parquet"
 SHOCKS = {
     "rate up": {"rate_shock": 4.0},
     "rate down": {"rate_shock": -2.0},
-    "rate and inflation together": {"rate_shock": 4.0, "cpi_shock": 8.0},
-    "inflation only": {"cpi_shock": 10.0},
+    "rate down to the minimum": {"rate_shock": -5.0},
     "income down": {"income_shock": -0.10},
     "price down": {"price_shock": -0.25},
     "everything at once": {
         "rate_shock": 5.0,
-        "cpi_shock": -5.0,
         "income_shock": -0.10,
         "price_shock": 0.25,
     },
@@ -72,7 +70,7 @@ def test_a_uniform_shock_moves_no_rank_when_renormalised(
     """The premise behind holding the boundaries fixed.
 
     Every slider applies either a national rate in percentage points or a
-    relative change to income or price. All four multiply each municipality's
+    relative change to income or price. All three multiply each municipality's
     Version C by one constant, which a within-year z-score subtracts away. If
     this ever fails, a shock has become municipality-specific and
     `panel_scenario` needs redesigning rather than patching.
@@ -93,31 +91,33 @@ def test_no_shock_leaves_the_panel_exactly_where_it_started(
     assert outcome.median_c_before == pytest.approx(outcome.median_c_after)
 
 
-def test_a_rate_rise_alone_pushes_the_country_into_hog(
+def test_a_rate_rise_pushes_the_country_into_hog(
     ranked: pd.DataFrame, year: int
 ) -> None:
-    """Holding inflation still makes the whole nominal move a real one."""
     outcome = shock_panel(ranked, year, rate_shock=4.0)
-    assert outcome.real_rate_after > outcome.real_rate_before
+    assert outcome.rate_after == pytest.approx(outcome.rate_before + 4.0)
+    assert outcome.median_c_after > outcome.median_c_before
     assert outcome.net_into_hog > 0
     assert outcome.crossed_out_of_hog == 0
 
 
-def test_the_same_rate_rise_with_inflation_improves_the_country(
+def test_a_rate_cut_takes_municipalities_out_of_hog(
     ranked: pd.DataFrame, year: int
 ) -> None:
-    """The page's whole lesson, now at national scale.
+    outcome = shock_panel(ranked, year, rate_shock=-2.0)
+    assert outcome.median_c_after < outcome.median_c_before
+    assert outcome.net_into_hog < 0
+    assert outcome.crossed_into_hog == 0
 
-    Identical nominal rate rise, opposite national outcome, because the second
-    scenario moves inflation with it. A reader who only ever moves the rate
-    slider sees the first and concludes rate rises destroy affordability.
-    """
-    rate_only = shock_panel(ranked, year, rate_shock=4.0)
-    with_inflation = shock_panel(ranked, year, rate_shock=4.0, cpi_shock=8.0)
 
-    assert rate_only.net_into_hog > 0
-    assert with_inflation.net_into_hog < 0
-    assert with_inflation.real_rate_after < rate_only.real_rate_after
+def test_income_against_the_rate_is_a_question_of_size(ranked: pd.DataFrame, year: int) -> None:
+    """In 2024 the household pays 4,3 % × 0,7 + 2 % = 5,0 % of the loan a year.
+    +0,5 pp adds 7 % to that, which 10 % more income outweighs; +1 pp adds 14 %,
+    which it does not."""
+    small = shock_panel(ranked, year, rate_shock=0.5, income_shock=0.10)
+    large = shock_panel(ranked, year, rate_shock=1.0, income_shock=0.10)
+    assert small.median_c_after < small.median_c_before
+    assert large.median_c_after > large.median_c_before
 
 
 @pytest.mark.parametrize("name,shock", SHOCKS.items())

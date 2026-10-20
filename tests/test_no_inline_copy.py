@@ -143,7 +143,7 @@ def test_no_label_is_orphaned() -> None:
 #
 # Only the values actually passed through `str.format` need to be valid format
 # strings. Applying that rule to every label would be wrong, not merely strict:
-# `sc.version_c_realversion_beraknas_som_text` is a LaTeX formula whose braces
+# `sc.version_c_kassaflode_beraknas_som_text` is a LaTeX formula whose braces
 # are unparseable as a format string and perfectly correct as copy, because
 # nothing ever formats it.
 

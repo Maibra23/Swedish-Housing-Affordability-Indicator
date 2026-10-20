@@ -43,10 +43,11 @@ def county_ranking_html(
     )
     if rows.empty:
         return ""
-    # Version A and C read higher-is-better and sort descending; B is a risk
-    # score and sorts ascending. Sorting all three the same way once put the
-    # worst county at #1 under a caption saying the opposite.
-    rows = rows.sort_values(value_column, ascending=(value_column == "version_b"))
+    # All three versions read higher-is-worse since A and C became cost shares,
+    # so all sort ascending and #1 is the cheapest county. Sorting against the
+    # orientation once put the worst county at #1 under a caption saying the
+    # opposite; `tests/test_ui_affordances.py` guards it.
+    rows = rows.sort_values(value_column, ascending=True)
     rows = rows.assign(rank=range(1, len(rows) + 1))
     return render_table(
         rows,

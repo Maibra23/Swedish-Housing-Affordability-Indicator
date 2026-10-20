@@ -11,15 +11,14 @@ the whole design of this module.
 
 **Why a re-ranked panel cannot move.** Version C is
 
-    C = I / (P · max(R − π, 0.5))
+    C = k · (P / I) · q,   q = r · (1 − deduction) + amortisation
 
-The sliders apply the rate and CPI shocks in percentage points nationally, and
-the income and price shocks as *relative* changes. Every one of those multiplies
-each municipality's C by the **same constant**. Risk classes come from a z-score
-taken within year on `ln(C)`, and in logs a constant factor is an additive shift
-that the z-score subtracts away exactly. Measured on the committed panel, the
-largest z change under a +4 pp rate shock, a +10 % income shock or a -25 % price
-shock is 9·10⁻¹⁶: floating-point noise, not an effect.
+with `k` a constant and `q` the same national cost per krona borrowed for every
+municipality. The rate shock moves `r` nationally, and the income and price
+shocks are *relative* changes. Every one of those multiplies each municipality's
+C by the **same constant**. Risk classes come from a z-score taken within year on
+`ln(C)`, and in logs a constant factor is an additive shift that the z-score
+subtracts away exactly.
 
 This is the same property that makes Version A and Version C rank identically
 (see `src/indices/agreement.py`). It is worth stating plainly because it is
@@ -47,6 +46,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from src.indices.cost_model import cost_share
+from src.scenario.simulator import MIN_SCENARIO_RATE
+
 #: Same cuts as `src/indices/normalize.py`. Stated again rather than imported
 #: because they are used here against a *fixed* reference rather than a
 #: within-year one, and a future change to one should be a deliberate decision
@@ -54,8 +56,8 @@ import pandas as pd
 CLASS_BOUNDS = [-float("inf"), -0.67, 0.67, float("inf")]
 CLASS_LABELS = ["lag", "medel", "hog"]
 
-#: Percentage points, matching `simulate` and `src/indices/affordability.py`.
-REAL_RATE_FLOOR = 0.5
+#: The inputs a shock needs on every row.
+_INPUTS = ["median_income", "transaction_price_sek", "mortgage_rate", "year"]
 
 
 @dataclass(frozen=True)
@@ -71,8 +73,8 @@ class PanelShockOutcome:
         crossed_out_of_hog: Municipalities leaving it.
         median_c_before: Median Version C before the shock.
         median_c_after: Median Version C after it.
-        real_rate_before: Baseline real rate, percentage points.
-        real_rate_after: Scenario real rate, percentage points.
+        rate_before: Baseline mortgage rate, percent.
+        rate_after: Scenario mortgage rate, percent.
     """
 
     year: int
@@ -83,8 +85,8 @@ class PanelShockOutcome:
     crossed_out_of_hog: int
     median_c_before: float
     median_c_after: float
-    real_rate_before: float
-    real_rate_after: float
+    rate_before: float
+    rate_after: float
 
     @property
     def net_into_hog(self) -> int:
@@ -96,12 +98,32 @@ def _classify(z: pd.Series) -> pd.Series:
     return pd.cut(z, bins=CLASS_BOUNDS, labels=CLASS_LABELS).astype("object")
 
 
+def _shocked_costs(
+    rows: pd.DataFrame, rate_shock: float, income_shock: float, price_shock: float
+) -> tuple[pd.Series, pd.Series, float, float]:
+    """Version C before and after one shock, and the rate on each side."""
+    rate = float(rows["mortgage_rate"].iloc[0])
+    rate_after = max(rate + rate_shock, MIN_SCENARIO_RATE)
+    year = int(rows["year"].iloc[0])
+    income = rows["median_income"].astype(float)
+    price = rows["transaction_price_sek"].astype(float)
+    before = cost_share(income, price, rate, year)
+    after = cost_share(income * (1 + income_shock), price * (1 + price_shock), rate_after, year)
+    return before, after, rate, rate_after
+
+
+def _year_rows(ranked: pd.DataFrame, year: int) -> pd.DataFrame:
+    rows = ranked[ranked["year"] == year].dropna(subset=_INPUTS)
+    if rows.empty:
+        raise ValueError(f"no scorable municipalities in {year}")
+    return rows
+
+
 def shock_panel(
     ranked: pd.DataFrame,
     year: int,
     *,
     rate_shock: float = 0.0,
-    cpi_shock: float = 0.0,
     income_shock: float = 0.0,
     price_shock: float = 0.0,
 ) -> PanelShockOutcome:
@@ -109,10 +131,9 @@ def shock_panel(
 
     Args:
         ranked: The scored artifact, needing `year`, `median_income`,
-            `transaction_price_sek`, `policy_rate` and `cpi_yoy_pct`.
+            `transaction_price_sek` and `mortgage_rate`.
         year: Year to shock.
-        rate_shock: Policy rate change, percentage points.
-        cpi_shock: Inflation change, percentage points.
+        rate_shock: Mortgage rate change, percentage points.
         income_shock: Income change, relative (0.05 is +5 %).
         price_shock: Price change, relative.
 
@@ -124,22 +145,9 @@ def shock_panel(
     Raises:
         ValueError: If the year holds no scorable rows.
     """
-    rows = ranked[ranked["year"] == year].dropna(
-        subset=["median_income", "transaction_price_sek", "policy_rate", "cpi_yoy_pct"]
-    )
-    if rows.empty:
-        raise ValueError(f"no scorable municipalities in {year}")
-
-    rate = float(rows["policy_rate"].iloc[0])
-    cpi = float(rows["cpi_yoy_pct"].iloc[0])
-    real_before = max(rate - cpi, REAL_RATE_FLOOR)
-    real_after = max((rate + rate_shock) - (cpi + cpi_shock), REAL_RATE_FLOOR)
-
-    income = rows["median_income"].astype(float)
-    price = rows["transaction_price_sek"].astype(float)
-    c_before = income / (price * real_before / 100.0)
-    c_after = (income * (1 + income_shock)) / (
-        price * (1 + price_shock) * real_after / 100.0
+    rows = _year_rows(ranked, year)
+    c_before, c_after, rate_before, rate_after = _shocked_costs(
+        rows, rate_shock, income_shock, price_shock
     )
 
     # The fixed reference: the baseline year's own distribution. Recomputing it
@@ -149,10 +157,9 @@ def shock_panel(
     if not std:
         raise ValueError(f"every municipality has the same Version C in {year}")
 
-    # Negated to match the orientation contract in normalize.py: higher z is
-    # worse, and Version C runs the other way.
-    z_before = -(logs - mean) / std
-    z_after = -(np.log(c_after) - mean) / std
+    # Higher z is worse, matching normalize.py; C is a cost share, so no sign flip.
+    z_before = (logs - mean) / std
+    z_after = (np.log(c_after) - mean) / std
 
     risk_before = _classify(z_before)
     risk_after = _classify(z_after)
@@ -166,8 +173,8 @@ def shock_panel(
         crossed_out_of_hog=int(((risk_before == "hog") & (risk_after != "hog")).sum()),
         median_c_before=float(c_before.median()),
         median_c_after=float(c_after.median()),
-        real_rate_before=real_before,
-        real_rate_after=real_after,
+        rate_before=rate_before,
+        rate_after=rate_after,
     )
 
 
@@ -176,7 +183,6 @@ def renormalised_rank_changes(
     year: int,
     *,
     rate_shock: float = 0.0,
-    cpi_shock: float = 0.0,
     income_shock: float = 0.0,
     price_shock: float = 0.0,
 ) -> int:
@@ -190,29 +196,16 @@ def renormalised_rank_changes(
     Args:
         ranked: The scored artifact.
         year: Year to shock.
-        rate_shock: Policy rate change, percentage points.
-        cpi_shock: Inflation change, percentage points.
+        rate_shock: Mortgage rate change, percentage points.
         income_shock: Income change, relative.
         price_shock: Price change, relative.
 
     Returns:
         The number of municipalities whose rank would change.
     """
-    rows = ranked[ranked["year"] == year].dropna(
-        subset=["median_income", "transaction_price_sek", "policy_rate", "cpi_yoy_pct"]
+    c_before, c_after, _, _ = _shocked_costs(
+        _year_rows(ranked, year), rate_shock, income_shock, price_shock
     )
-    rate = float(rows["policy_rate"].iloc[0])
-    cpi = float(rows["cpi_yoy_pct"].iloc[0])
-    real_before = max(rate - cpi, REAL_RATE_FLOOR)
-    real_after = max((rate + rate_shock) - (cpi + cpi_shock), REAL_RATE_FLOOR)
-
-    income = rows["median_income"].astype(float)
-    price = rows["transaction_price_sek"].astype(float)
-    c_before = income / (price * real_before / 100.0)
-    c_after = (income * (1 + income_shock)) / (
-        price * (1 + price_shock) * real_after / 100.0
-    )
-
-    rank_before = (-np.log(c_before)).rank(method="min")
-    rank_after = (-np.log(c_after)).rank(method="min")
+    rank_before = np.log(c_before).rank(method="min")
+    rank_after = np.log(c_after).rank(method="min")
     return int((rank_before != rank_after).sum())

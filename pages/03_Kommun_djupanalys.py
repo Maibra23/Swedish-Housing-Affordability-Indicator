@@ -39,8 +39,8 @@ from src.ui.components import (
     vintage_badge,
 )
 from src.ui.chart_theme import get_chart_layout, CHART_PALETTE
-from src.indices.kommun_components import attribute_change, floored_real_rate
-from src.projection import INCOME_GROWTH, PRICE_GROWTH, REAL_RATE_FLOOR
+from src.indices.kommun_components import attribute_change, cost_rate
+from src.projection import HIGH_MORTGAGE_RATE, INCOME_GROWTH, PRICE_GROWTH
 
 inject_css()
 selections = render_sidebar()
@@ -107,13 +107,12 @@ if len(latest) > 0:
         kpi_card(
             label="SHAI (Version C)",
             value=format_dec(lat["version_c"]),
-            unit=L("kd.poang"),
+            unit=L("kd.procent_av_inkomsten"),
             delta=format_pct(vc_delta_pct, signed=True) if len(prev) > 0 else "",
-            # Was deliberately inverted to force a red colour, which made the
-            # arrow point the opposite way to the number it labelled.
-            **delta_meta(vc_delta, higher_is_better=True),
+            # A cost share: a rise is bad, and the arrow follows the number.
+            **delta_meta(vc_delta, higher_is_better=False),
             variant="accent",
-            tooltip=L("kd.realversion_inkomst_pris_max_r_0_5_hogre"),
+            tooltip=L("kd.kassaflodesversion_tooltip"),
         ),
         kpi_card(
             label="Medianinkomst",
@@ -129,10 +128,10 @@ if len(latest) > 0:
             tooltip=L("kd.kopeskillingskoefficient_kopeskilling"),
         ),
         kpi_card(
-            label=L("kd.styrranta"),
-            value=format_pct(lat["policy_rate"], 2),
+            label=L("kd.bolaneranta"),
+            value=format_pct(lat["mortgage_rate"], 2),
             variant="default",
-            tooltip=L("kd.riksbankens_styrranta_arsgenomsnitt"),
+            tooltip=L("kd.bolaneranta_tooltip"),
         ),
     ])
 
@@ -148,11 +147,10 @@ def _build_projection_chart(
     """Observed history for the municipality and its county, then three
     conditional projections.
 
-    Nothing here is fitted. The three lines differ only in their assumed real
-    rate, so the spread between them is a statement about monetary policy rather
-    than about this municipality. That is deliberate: the real rate carries 99 %
-    of the variance in Version C's year-on-year changes, and it is a policy
-    instrument, so it belongs to the reader rather than to a model.
+    Nothing here is fitted. The three lines differ only in their assumed
+    mortgage rate, so the spread between them is a statement about rates rather
+    than about this municipality. That is deliberate: the rate is an outcome of
+    policy and bank pricing, so it belongs to the reader rather than to a model.
 
     The municipality's own line is the page's subject. The county's is drawn too
     because the projection extends the county, and because a projection stitched
@@ -175,12 +173,12 @@ def _build_projection_chart(
         hovertemplate=L("kd.lanet_hover"),
     ))
 
-    # Most affordable to least, so the legend reads in the same order as the
-    # lines sit on the chart.
+    # Cheapest first. The low-rate line sits lowest on the chart now that
+    # Version C is a cost share, so the legend reads bottom-up from the lines.
     scenario_colours = {
-        "floor": COLORS["low_risk"],
+        "low": COLORS["low_risk"],
         "current": COLORS["secondary"],
-        "normalised": COLORS["high_risk"],
+        "high": COLORS["high_risk"],
     }
     anchor_year = int(county_hist["year"].max())
     anchor_value = float(
@@ -203,7 +201,7 @@ def _build_projection_chart(
     layout = get_chart_layout(
         height=420,
         xaxis_title=L("kd.ar"),
-        yaxis_title="SHAI (Version C)",
+        yaxis_title=L("kd.projektion_y_axel"),
     )
     layout["xaxis"]["dtick"] = 1
     # Vertical, and deliberately not the project's horizontal default.
@@ -234,14 +232,13 @@ def _build_projection_chart(
 # ── Conditional projection ───────────────────────────────────────────
 _anchor_year = int(_county_hist["year"].iloc[-1])
 _county_name = str(_county_hist["region_name"].iloc[-1])
-_observed_real = max(
-    float(_county_hist["policy_rate"].iloc[-1]) - float(_county_hist["cpi_yoy_pct"].iloc[-1]),
-    REAL_RATE_FLOOR,
+_rates = (
+    projection.drop_duplicates("scenario").set_index("scenario")["mortgage_rate"].to_dict()
 )
 # Plotly clips the legend to a width it derives from its own text measurement,
 # and that measurement is taken before the `Source Sans 3` webfont loads. The
 # real glyphs then render about 18 % wider than the box allowed, so the longest
-# entry loses its tail: "Dagens nivå, 0,77 pp" rendered as "Dagens nivå, 0,77".
+# entry loses its tail: "Dagens nivå, 0,77 pp" once rendered as "Dagens nivå, 0,77".
 # No legend option fixes it (`itemwidth` governs only the swatch, `entrywidth`
 # does not resize the clip), and the clip is sized from the longest label, so
 # shortening the labels moves the problem rather than solving it. Padding the
@@ -251,11 +248,11 @@ _observed_real = max(
 _LEGEND_PAD = "\u00a0" * 20
 
 _scenario_labels = {
-    "floor": L("kd.scenario_golvet") + _LEGEND_PAD,
+    "low": L("kd.scenario_lag", v0=format_dec(_rates["low"], 2)) + _LEGEND_PAD,
     # Labelled with the year its rate comes from. "Dagens nivå" called the 2024
     # rate today's while the panel already held 2025 rates.
-    "current": L("kd.scenario_dagens", v0=format_dec(_observed_real, 2), v1=_anchor_year) + _LEGEND_PAD,
-    "normalised": L("kd.scenario_normaliserad") + _LEGEND_PAD,
+    "current": L("kd.scenario_dagens", v0=format_dec(_rates["current"], 2), v1=_anchor_year) + _LEGEND_PAD,
+    "high": L("kd.scenario_hog", v0=format_dec(HIGH_MORTGAGE_RATE, 1)) + _LEGEND_PAD,
 }
 
 with st.container(border=True):
@@ -294,13 +291,13 @@ with st.container(border=True):
 
     col1, col2, col3 = st.columns(3)
 
-    # The three inputs Version C actually divides, not K/T or the nominal rate.
+    # The three inputs Version C is built from, not K/T or the policy rate.
     # The split below is exact; see src/indices/kommun_components.py.
-    component_data = kommun_data.assign(real_rate=floored_real_rate(kommun_data))
+    component_data = kommun_data.assign(cost_rate=cost_rate(kommun_data))
     component_configs = [
         ("income", L("kd.komp_inkomst"), "median_income", "SEK", col1, CHART_PALETTE[6]),
         ("price", L("kd.komp_pris"), "transaction_price_sek", "SEK", col2, CHART_PALETTE[0]),
-        ("real_rate", L("kd.komp_realranta"), "real_rate", "pp", col3, CHART_PALETTE[5]),
+        ("cost_rate", L("kd.komp_kostnadsranta"), "cost_rate", "%", col3, CHART_PALETTE[5]),
     ]
     change = attribute_change(kommun_data)
     driver = change.driver if change else ""
@@ -343,7 +340,7 @@ with st.container(border=True):
             "kd.komp_uppdelning",
             v0=selected_kommun, v1=change.from_year, v2=change.to_year,
             v3=f"{change.total_pct:+.0f}".replace("-", "\u2212"),
-            v4=pct["income"], v5=pct["price"], v6=pct["real_rate"],
+            v4=pct["income"], v5=pct["price"], v6=pct["cost_rate"],
             v7=names[driver].lower(),
         ))
 

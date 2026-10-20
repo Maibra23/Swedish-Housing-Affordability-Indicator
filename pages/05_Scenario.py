@@ -1,6 +1,6 @@
 """Sida 05 — Scenariosimulator.
 
-Stresstesta bostadsöverkomlighet (Version C) med ränta-, inkomst- och prisförändringar.
+Stresstesta boendekostnaden (Version C) med ränte-, inkomst- och prisförändringar.
 """
 
 import streamlit as st
@@ -29,9 +29,9 @@ from src.ui.components import (
 )
 from src.ui.chart_theme import MONO_FONT, get_chart_layout
 from src.ui.interpret import interpret_scenario, render_findings
-from src.scenario.charts import rate_inflation_surface
+from src.scenario.charts import rate_price_surface
 from src.scenario.controls import render_shock_sliders
-from src.scenario.presets import RIKSBANKEN_2022
+from src.scenario.presets import LOW_RATE_BOOM_2019_21, RATE_CYCLE_2021_23, RESET, WAGE_BOOM
 from src.scenario.simulator import simulate
 from src.scenario.sections import render_national_outcome, render_purpose
 
@@ -100,53 +100,26 @@ selected_county_code = county_options[selected_county_name]
 st.markdown(L("sc.forinstallda_scenarier"))
 preset_col1, preset_col2, preset_col3, preset_col4 = st.columns(4)
 
-_presets = {
-    "riksbanken_2022": RIKSBANKEN_2022,
-    "deflation_risk":  {"rate": -1.0, "income": 0, "price": -10, "cpi": -2},
-    L("sc.loneboom"):        {"rate": 1.0, "income": 5, "price": 10, "cpi": 3},
-    "reset":           {"rate": 0.0, "income": 0, "price": 0, "cpi": 0},
-}
+_PRESET_BUTTONS = (
+    (L("sc.rantecykeln_2021_23"), "sc_preset_cycle", L("sc.rantecykeln_hjalp"), RATE_CYCLE_2021_23),
+    (L("sc.lagrantelyftet"), "sc_preset_boom", L("sc.lagrantelyftet_hjalp"), LOW_RATE_BOOM_2019_21),
+    (L("sc.loneboom_2"), "sc_preset_wage", L("sc.1pp_ranta_5_lon_10_pris"), WAGE_BOOM),
+    (L("sc.aterstall"), "sc_preset_reset", L("sc.nollstall_alla_scenariojusteringar_till"), RESET),
+)
 
-with preset_col1:
-    if st.button("Riksbanken 2022", width="stretch", key="sc_preset_2022",
-                 help=L("sc.4pp_ranta_8pp_kpi_15_pris")):
-        p = _presets["riksbanken_2022"]
-        st.session_state["sc_rate_slider"] = float(p["rate"])
-        st.session_state["sc_income_slider"] = int(p["income"])
-        st.session_state["sc_price_slider"] = int(p["price"])
-        st.session_state["sc_cpi_slider"] = float(p["cpi"])
-        st.rerun()
-with preset_col2:
-    if st.button("Deflationsrisk", width="stretch", key="sc_preset_deflation",
-                 help=L("sc.1pp_ranta_2pp_kpi_10_pris")):
-        p = _presets["deflation_risk"]
-        st.session_state["sc_rate_slider"] = float(p["rate"])
-        st.session_state["sc_income_slider"] = int(p["income"])
-        st.session_state["sc_price_slider"] = int(p["price"])
-        st.session_state["sc_cpi_slider"] = float(p["cpi"])
-        st.rerun()
-with preset_col3:
-    if st.button(L("sc.loneboom_2"), width="stretch", key="sc_preset_wage",
-                 help=L("sc.1pp_ranta_5_lon_10_pris")):
-        p = _presets[L("sc.loneboom")]
-        st.session_state["sc_rate_slider"] = float(p["rate"])
-        st.session_state["sc_income_slider"] = int(p["income"])
-        st.session_state["sc_price_slider"] = int(p["price"])
-        st.session_state["sc_cpi_slider"] = float(p["cpi"])
-        st.rerun()
-with preset_col4:
-    if st.button(L("sc.aterstall"), width="stretch", key="sc_preset_reset",
-                 help=L("sc.nollstall_alla_scenariojusteringar_till")):
-        p = _presets["reset"]
-        st.session_state["sc_rate_slider"] = float(p["rate"])
-        st.session_state["sc_income_slider"] = int(p["income"])
-        st.session_state["sc_price_slider"] = int(p["price"])
-        st.session_state["sc_cpi_slider"] = float(p["cpi"])
-        st.rerun()
+for column, (label, key, help_text, preset) in zip(
+    (preset_col1, preset_col2, preset_col3, preset_col4), _PRESET_BUTTONS
+):
+    with column:
+        if st.button(label, width="stretch", key=key, help=help_text):
+            st.session_state["sc_rate_slider"] = float(preset["rate"])
+            st.session_state["sc_income_slider"] = int(preset["income"])
+            st.session_state["sc_price_slider"] = int(preset["price"])
+            st.rerun()
 
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-rate_shock, income_shock_pct, price_shock_pct, cpi_shock = render_shock_sliders()
+rate_shock, income_shock_pct, price_shock_pct = render_shock_sliders()
 
 # ── Run simulation ───────────────────────────────────────────────────
 county_row = county_year[county_year["lan_code"] == selected_county_code]
@@ -160,8 +133,8 @@ county_row = county_row.iloc[0]
 baseline_panel = {
     "income": county_row["median_income"],
     "transaction_price_sek": county_row["transaction_price_sek"],
-    "policy_rate": county_row["policy_rate"],       # percentage points
-    "cpi_yoy_pct": county_row["cpi_yoy_pct"],       # percentage points
+    "mortgage_rate": county_row["mortgage_rate"],   # percent, all fixation periods
+    "year": int(county_row["year"]),
 }
 
 try:
@@ -171,7 +144,6 @@ try:
         income_shock=income_shock_pct / 100.0,
         price_shock=price_shock_pct / 100.0,
         baseline_panel=baseline_panel,
-        cpi_shock=cpi_shock,                         # pp — new in Phase 3
     )
 except Exception as e:
     st.error(L("sc.berakningsfel_se_metodologisidan_for"))
@@ -181,16 +153,13 @@ except Exception as e:
 # ── Results ──────────────────────────────────────────────────────────
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-# Determine change direction (for SHAI, higher = better, so positive delta is good)
+# Version C is a cost share: a positive delta is a higher cost, which is bad.
 if result["delta"] > 0:
-    change_variant = "success"
-    change_direction = "down"  # green arrow down = improving
-elif result["delta"] < 0:
     change_variant = "danger"
-    change_direction = "up"  # red arrow up = worsening
+elif result["delta"] < 0:
+    change_variant = "success"
 else:
     change_variant = "default"
-    change_direction = "flat"
 
 render_kpi_row([
     kpi_card(
@@ -210,9 +179,9 @@ render_kpi_row([
     kpi_card(
         label=L("sc.forandring"),
         value=format_dec(result["delta"], signed=True),
-        unit=L("sc.poang"),
+        unit=L("sc.procentenheter"),
         delta=format_pct(result["delta_pct"], signed=True),
-        **delta_meta(result["delta"], higher_is_better=True),
+        **delta_meta(result["delta"], higher_is_better=False),
         variant=change_variant,
         tooltip=L("sc.skillnad_mellan_scenario_och_basfall"),
     ),
@@ -227,29 +196,27 @@ render_findings(
         rate_shock=rate_shock,
         income_shock_pct=income_shock_pct,
         price_shock_pct=price_shock_pct,
-        cpi_shock=cpi_shock,
     ),
     title=L("sc.tolk_rubrik"),
 )
 
 st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-# The sliders show one point on the rate/inflation plane. The surface shows the
-# plane, where equal values of R - pi form diagonal bands, which is the lesson
-# the page exists to teach and cannot deliver one slider at a time.
+# The sliders show one point on the rate/price plane. The surface shows the
+# plane, where a contour is a price fall that exactly offsets a rate rise, which
+# is the trade-off 2022–2023 ran and cannot be read one slider at a time.
 with st.container(border=True):
     st.markdown(
         card_header(L("sc.yta_rubrik"), L("sc.yta_underrubrik"), L("sc.yta_tagg")),
         unsafe_allow_html=True,
     )
     st.plotly_chart(
-        rate_inflation_surface(
+        rate_price_surface(
             county_kod=selected_county_code,
             baseline_panel=baseline_panel,
             income_shock=income_shock_pct / 100.0,
-            price_shock=price_shock_pct / 100.0,
             rate_shock=rate_shock,
-            cpi_shock=cpi_shock,
+            price_shock=price_shock_pct / 100.0,
         ),
         width="stretch",
         config={"displayModeBar": "hover"},
@@ -264,7 +231,6 @@ render_national_outcome(
     ranked,
     selected_year,
     rate_shock=rate_shock,
-    cpi_shock=cpi_shock,
     income_shock=income_shock_pct / 100.0,
     price_shock=price_shock_pct / 100.0,
     n_kommuner=panel_kommuner,
@@ -298,7 +264,7 @@ with col_chart:
             ],
             textposition="outside",
             textfont=dict(family=MONO_FONT, size=14, color=COLORS["text_primary"]),
-            hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f}<extra></extra>",
+            hovertemplate="<b>%{x}</b><br>SHAI: %{y:,.1f} % av inkomsten<extra></extra>",
             width=0.5,
         ))
 
@@ -317,25 +283,19 @@ with col_table:
             "Variabel": [
                 "Medianinkomst (SEK)",
                 "Transaktionspris (SEK)",
-                L("sc.styrranta"),
-                "KPI-inflation (%)",
-                L("sc.realranta"),
-                "SHAI (Version C)",
+                L("sc.bolaneranta"),
+                "SHAI (Version C, % av inkomsten)",
             ],
             "Basfall": [
                 format_sek(result["baseline_income"]),
                 format_sek(result["baseline_price"]),
                 format_pct(result["baseline_rate"], 2),
-                format_pct(result["baseline_cpi"], 2),
-                format_pct(result["real_rate_base"], 2),
                 format_dec(result["baseline_v_c"]),
             ],
             "Scenario": [
                 format_sek(result["scenario_income"]),
                 format_sek(result["scenario_price"]),
                 format_pct(result["scenario_rate"], 2),
-                format_pct(result["scenario_cpi"], 2),
-                format_pct(result["real_rate_scen"], 2),
                 format_dec(result["scenario_v_c"]),
             ],
         }
@@ -346,7 +306,7 @@ with col_table:
 
 # ── Explanation ──────────────────────────────────────────────────────
 with st.expander(L("sc.forklaring")):
-    st.markdown(L("sc.version_c_realversion_beraknas_som_text"))
+    st.markdown(L("sc.version_c_kassaflode_beraknas_som_text"))
 
 vintage_badge()
 footer_note()

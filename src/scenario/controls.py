@@ -1,4 +1,4 @@
-"""The four shock sliders on the Scenariosimulator page.
+"""The three shock sliders on the Scenariosimulator page.
 
 Select sliders rather than ``st.slider``: ``st.slider`` prints its value with a
 printf format ("0.00"), so the one place a reader sets a number showed dot
@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 import streamlit as st
 
-from src.scenario.charts import CPI_MAX, CPI_MIN, RATE_MAX, RATE_MIN
+from src.scenario.charts import PRICE_MAX, PRICE_MIN, PRICE_STEP, RATE_MAX, RATE_MIN
 from src.ui.formatting import format_dec
 from src.ui.labels import L
 
@@ -29,9 +29,15 @@ def _signed(decimals: int) -> Callable[[float], str]:
     return lambda v: format_dec(v, decimals, signed=v != 0)
 
 
-def render_shock_sliders() -> tuple[float, int, int, float]:
-    """Draw the sliders and return (rate pp, income %, price %, CPI pp)."""
-    col_rate, col_income, col_price, col_cpi = st.columns(4)
+def render_shock_sliders() -> tuple[float, int, int]:
+    """Draw the sliders and return (mortgage rate pp, income %, price %).
+
+    There is no inflation slider. Version C is a cash-flow share in kronor of
+    the same year, so inflation does not enter it; it reaches the result only
+    through what it does to income, prices and the rate, which the three
+    sliders already set.
+    """
+    col_rate, col_income, col_price = st.columns(3)
     with col_rate:
         rate = st.select_slider(
             L("sc.rantechock_pp"),
@@ -39,7 +45,7 @@ def render_shock_sliders() -> tuple[float, int, int, float]:
             value=float(st.session_state.get("sc_rate_slider", 0.0)),
             format_func=_signed(2),
             key="sc_rate_slider",
-            help=L("sc.4_pp_riksbankens_hojningscykel_20222023"),
+            help=L("sc.rantechock_hjalp"),
         )
     with col_income:
         income = st.select_slider(
@@ -52,20 +58,11 @@ def render_shock_sliders() -> tuple[float, int, int, float]:
         )
     with col_price:
         price = st.select_slider(
-            "Prischock (%)",
-            options=shock_options(-25, 25, 5, int),
+            L("sc.prischock_pct"),
+            options=shock_options(PRICE_MIN, PRICE_MAX, PRICE_STEP, int),
             value=int(st.session_state.get("sc_price_slider", 0)),
             format_func=_signed(0),
             key="sc_price_slider",
             help=L("sc.prischock_hjalp"),
         )
-    with col_cpi:
-        cpi = st.select_slider(
-            "KPI-chock (pp)",
-            options=shock_options(CPI_MIN, CPI_MAX, 0.5),
-            value=float(st.session_state.get("sc_cpi_slider", 0.0)),
-            format_func=_signed(1),
-            key="sc_cpi_slider",
-            help=L("sc.8_pp_svensk_inflationstopp_2022_paverkar"),
-        )
-    return rate, income, price, cpi
+    return rate, income, price

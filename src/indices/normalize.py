@@ -8,10 +8,13 @@ disagreed on orientation, which put the least affordable municipalities in the
 
 Orientation contract
 --------------------
-Versions A and C are *affordability* measures: a higher raw value means more
-affordable.  Version B is a *risk* measure: a higher raw value means more risk.
-To make the three comparable, A and C are sign-inverted before classification, so
-that afterwards, for all three versions:
+All three versions now run the same way. A and C are *cost shares* — the yearly
+cost of a typical loan as a percentage of household income — and B is a *risk*
+measure, so a higher raw value means worse for every one of them. Nothing is
+sign-inverted. (Until 2026-10-20 A and C were affordability ratios, higher =
+better, and were inverted here; the z-scores, ranks and classes came out
+identical after the change, because within a year the old and new values are
+reciprocals up to a national constant.) For all three versions:
 
     higher z  =  worse affordability  =  higher risk
     rank 1    =  best affordability   =  lowest risk
@@ -42,7 +45,7 @@ below is still taken *within year* — the pooling lives inside B's construction
 one level down.
 
 **Transform (D6, decision O4) — log for A and C.** Versions A and C are *ratios*
-of positive quantities — ``income / (price × rate)`` — and are therefore
+of positive quantities — ``price × rate / income`` — and are therefore
 log-normal, not normal. They were z-scored raw, which put the ±0.67σ cut on a
 variable whose normality is rejected at p < 6e-15 in every year, and produced a
 ≈19 / 51 / 30 class split nobody chose. Taking logs first makes the variable
@@ -72,7 +75,8 @@ logger = logging.getLogger(__name__)
 VERSIONS = ("a", "b", "c")
 
 # Versions whose raw value runs opposite to risk and therefore need inverting.
-_HIGHER_IS_BETTER = ("a", "c")
+# Empty since A and C became cost shares; kept so the contract stays explicit.
+_HIGHER_IS_BETTER: tuple[str, ...] = ()
 
 #: Versions that are ratios, and so are log-normal rather than normal. These are
 #: log-transformed before z-scoring (D6). Version B is a weighted sum of
@@ -96,9 +100,9 @@ def _log_for_scoring(values: pd.Series, version: str) -> pd.Series:
         The natural log of the values.
 
     Raises:
-        ValueError: If any value is non-positive. A and C are quotients of
-            positive quantities with a floored denominator, so this cannot happen
-            with the shipped formulas — it would mean the formula changed, and
+        ValueError: If any value is non-positive. A and C are products and
+            quotients of positive quantities, so this cannot happen with the
+            shipped formulas — it would mean the formula changed, and
             silently falling back to a raw z-score would hide that behind a
             slightly different class split.
     """

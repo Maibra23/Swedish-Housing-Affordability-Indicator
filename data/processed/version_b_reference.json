@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "note": "Frozen z-score reference for Version B. Scoring against stored moments is what stops a refresh re-basing every historical value; see R1 in docs/APP_REFERENCE.md (Part II) and src/indices/b_reference.py. Do not regenerate this file as part of an ordinary refresh.",
   "levels": {
     "county": {
@@ -13,17 +13,17 @@
           "mean": 8.5526086877809,
           "std": 3.0117245047131673
         },
-        "policy_rate": {
-          "mean": 0.575552823971717,
-          "std": 1.4550121184407874
+        "mortgage_rate": {
+          "mean": 2.339144696969697,
+          "std": 1.033192493518453
         },
         "unemployment_rate": {
           "mean": 2.98937174891775,
           "std": 0.6403235677755476
         },
-        "cpi_yoy_pct": {
-          "mean": 2.6242424242424245,
-          "std": 2.917210357757861
+        "kpif_yoy_pct": {
+          "mean": 2.4598484848484854,
+          "std": 2.199366562000249
         }
       }
     },
@@ -38,17 +38,17 @@
           "mean": 7.5854908720464875,
           "std": 4.836336101785277
         },
-        "policy_rate": {
-          "mean": 0.5755528239717171,
-          "std": 1.4520869434211285
+        "mortgage_rate": {
+          "mean": 2.339144696969697,
+          "std": 1.0311153500814774
         },
         "unemployment_rate": {
           "mean": 2.8836020664576805,
           "std": 0.9632842065820298
         },
-        "cpi_yoy_pct": {
-          "mean": 2.624242424242424,
-          "std": 2.91134556064899
+        "kpif_yoy_pct": {
+          "mean": 2.459848484848485,
+          "std": 2.1949449272628487
         }
       }
     },
@@ -63,17 +63,17 @@
           "mean": 10.431415855538063,
           "std": 0.8250162633615806
         },
-        "policy_rate": {
-          "mean": 0.5755528239717171,
-          "std": 1.5227229071417645
+        "mortgage_rate": {
+          "mean": 2.3391446969696967,
+          "std": 1.081273384206176
         },
         "unemployment_rate": {
           "mean": 3.143092090909091,
           "std": 0.4212149450457461
         },
-        "cpi_yoy_pct": {
-          "mean": 2.6242424242424245,
-          "std": 3.0529663501836266
+        "kpif_yoy_pct": {
+          "mean": 2.4598484848484854,
+          "std": 2.301716805457451
         }
       }
     }

@@ -73,10 +73,14 @@ REFERENCE_PATH: Path = _PROJECT_ROOT / "data" / "processed" / "version_b_referen
 #: derived rather than a panel column; the rest are read directly.
 COMPONENTS: tuple[str, ...] = (
     "pi_ratio",
-    "policy_rate",
+    "mortgage_rate",
     "unemployment_rate",
-    "cpi_yoy_pct",
+    "kpif_yoy_pct",
 )
+
+#: Bumped on a deliberate re-base. Version 2 (2026-10-20) replaced the policy
+#: rate with the mortgage rate and KPI with KPIF; see R1 in APP_REFERENCE Part II.
+REFERENCE_VERSION = 2
 
 #: Panel levels scored separately. Their distributions differ, so a county
 #: reference applied to municipalities would be the same defect in a new place.
@@ -204,7 +208,7 @@ def save(references: dict[str, LevelReference], path: Path | None = None) -> Pat
     """
     target = Path(path) if path is not None else REFERENCE_PATH
     payload = {
-        "version": 1,
+        "version": REFERENCE_VERSION,
         "note": (
             "Frozen z-score reference for Version B. Scoring against stored "
             "moments is what stops a refresh re-basing every historical value; "

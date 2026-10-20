@@ -28,7 +28,7 @@ from src.ui.css import inject_css, COLORS
 from src.ui.sidebar import render_sidebar, APP_VERSION
 from src.ui.components import card_header, footer_note, page_title, vintage_badge
 from src.ui.data import load as load_artifact
-from src.ui.floor_panel import render_floor_history
+from src.ui.cost_panel import render_cost_history
 
 inject_css()
 selections = render_sidebar()
@@ -116,15 +116,15 @@ with st.container(border=True):
 
     st.markdown(L("mt.version_c_rubrik"))
     st.latex(r"C(i,t) = \frac{I(i,t)}{P(i,t) \times \max(R(t) - \pi(t),\; 0{,}005)}")
-    st.markdown(L("mt.justerar_for_inflation_genom_realrantan"))
+    st.markdown(L("mt.kassaflode_version_c_text"))
 
     # F17, with the data rather than a description of it. A documentation page
     # must not die for a missing artifact, so the panel is skipped with a reason
     # rather than allowed to raise through the rest of the methodology.
     try:
-        render_floor_history(load_artifact("affordability_ranked.parquet"))
+        render_cost_history(load_artifact("affordability_ranked.parquet"))
     except Exception as exc:  # noqa: BLE001 — reported, not swallowed
-        st.caption(L("mt.rantegolvspanelen_kunde_inte_laddas", v0=str(exc)))
+        st.caption(L("mt.kostnadspanelen_kunde_inte_laddas", v0=str(exc)))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 4 — Från värde till riskklass (always visible)
@@ -142,7 +142,7 @@ with st.container(border=True):
 # SECTION 5 — Projektion (expander)
 # ══════════════════════════════════════════════════════════════════════
 with st.expander(L("mt.expander_4_projektion_villkorad")):
-    st.markdown(L("mt.projektion_tre_scenarier_realranta", v0=N_YEARS, v1=PERIOD))
+    st.markdown(L("mt.projektion_tre_scenarier_bolaneranta", v0=N_YEARS, v1=PERIOD))
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION 6 — Kontantinsats (expander)

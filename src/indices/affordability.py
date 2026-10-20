@@ -6,9 +6,13 @@ Not price_index (growth measure) and not kt_ratio (markup measure).
 See METHODOLOGY.md section 3 for the rationale. The series is SCB BO0501C2,
 an arithmetic mean of purchase prices, not a median.
 
-Version A: Income / (Price * Rate)           -- bank-style ratio
-Version B: weighted z-score composite        -- macro pressure index
-Version C: Income / (Price * max(R-pi, 0.5)) -- real affordability
+Version A: gross interest / household income      -- bank's view, percent
+Version B: weighted z-score composite              -- macro pressure index
+Version C: (net interest + amortisation) / income  -- household cash flow, percent
+
+A and C are cost shares from `src.indices.cost_model`: the yearly cost of an 85 %
+loan on the mean small house, at the year's mean rate on new mortgages, over two
+median incomes. Higher is worse for all three versions.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ import logging
 import pandas as pd
 
 from src.indices.b_reference import LevelReference, pi_ratio
+from src.indices.cost_model import cost_share, interest_share
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +30,7 @@ logger = logging.getLogger(__name__)
 def complete_case(panel: pd.DataFrame) -> pd.DataFrame:
     """Return only the rows whose index inputs are observed rather than imputed.
 
-    Income ends a year before prices, unemployment and the policy rate, so
+    Income ends a year before prices, unemployment and the rates, so
     `build_panel` forward-fills it to keep the panel rectangular and flags every
     filled row with `is_imputed_income`. Those rows are never displayed — the
     sidebar stops at `complete_case_max_year()`.
@@ -61,28 +66,29 @@ def _zscore(series: pd.Series) -> pd.Series:
     return (series - mean) / std
 
 
-def compute_version_a(panel: pd.DataFrame) -> pd.Series:
-    """Version A: Bank-style affordability ratio.
+def _guarded(panel: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    """Income and price with non-positive values blanked.
 
-    Affordability_A = Income / (TransactionPrice * Rate)
-
-    Higher value = more affordable.
-    Requires: median_income, transaction_price_sek, policy_rate.
+    R12: yield NaN rather than inf on an impossible value. `scorable_rows`
+    already drops these before scoring; this guards the direct call, which the
+    property tests make and which a future caller might. An infinite value would
+    propagate through the within-year z-score and NaN out every other
+    municipality in the year.
     """
-    income = panel["median_income"]
-    # R12: yield NaN rather than inf on an impossible price. `scorable_rows`
-    # already drops these before scoring; this guards the direct call, which the
-    # property tests make and which a future caller might.
-    price = panel["transaction_price_sek"].where(lambda p: p > 0)
-    rate = panel["policy_rate"]
+    income = panel["median_income"].where(lambda v: v > 0)
+    price = panel["transaction_price_sek"].where(lambda v: v > 0)
+    return income, price
 
-    # Rate is in percentage points, convert to decimal for the ratio
-    rate_decimal = rate / 100.0
 
-    # Avoid division by zero where rate is 0 or negative
-    rate_safe = rate_decimal.clip(lower=0.001)
+def compute_version_a(panel: pd.DataFrame) -> pd.Series:
+    """Version A: gross yearly interest as a percentage of household income.
 
-    return income / (price * rate_safe)
+    The bank's view of the same loan C prices: interest only, before the tax
+    deduction and without amortisation. Higher = worse.
+    Requires: median_income, transaction_price_sek, mortgage_rate.
+    """
+    income, price = _guarded(panel)
+    return interest_share(income, price, panel["mortgage_rate"])
 
 
 def compute_version_b(
@@ -92,9 +98,12 @@ def compute_version_b(
 
     Risk_B = 0.35*z(P/I) + 0.25*z(R) + 0.20*z(U) + 0.20*z(pi)
 
+    R is the mean rate on new mortgages and pi is KPIF inflation. KPI would put
+    the rate in twice, because KPI prices mortgage interest.
+
     Higher value = worse affordability (more risk).
-    Requires: median_income, transaction_price_sek, policy_rate,
-              unemployment_rate, cpi_yoy_pct.
+    Requires: median_income, transaction_price_sek, mortgage_rate,
+              unemployment_rate, kpif_yoy_pct.
 
     The four z-scores are pooled across the panel rather than taken within year,
     which is what lets B's level carry a time trend (decision D5). Pooling them
@@ -114,45 +123,37 @@ def compute_version_b(
     """
     if reference is None:
         z_pi_ratio = _zscore(pi_ratio(panel))
-        z_rate = _zscore(panel["policy_rate"])
+        z_rate = _zscore(panel["mortgage_rate"])
         z_unemp = _zscore(panel["unemployment_rate"])
-        z_cpi = _zscore(panel["cpi_yoy_pct"])
+        z_cpi = _zscore(panel["kpif_yoy_pct"])
     else:
         z_pi_ratio = reference.zscore(pi_ratio(panel), "pi_ratio")
-        z_rate = reference.zscore(panel["policy_rate"], "policy_rate")
+        z_rate = reference.zscore(panel["mortgage_rate"], "mortgage_rate")
         z_unemp = reference.zscore(panel["unemployment_rate"], "unemployment_rate")
-        z_cpi = reference.zscore(panel["cpi_yoy_pct"], "cpi_yoy_pct")
+        z_cpi = reference.zscore(panel["kpif_yoy_pct"], "kpif_yoy_pct")
 
     return 0.35 * z_pi_ratio + 0.25 * z_rate + 0.20 * z_unemp + 0.20 * z_cpi
 
 
 def compute_version_c(panel: pd.DataFrame) -> pd.Series:
-    """Version C: Real affordability (primary, recommended).
+    """Version C: household cash flow (primary, recommended).
 
-    Affordability_C = Income / (TransactionPrice * max(R - pi, 0.005))
-
-    Higher value = more affordable.
-    The max() floor prevents division explosion when real rates are near zero.
-    Requires: median_income, transaction_price_sek, policy_rate, cpi_yoy_pct.
+    Net interest after the 30 % deduction plus the amortisation in force that
+    year, as a percentage of two median incomes. Higher = worse.
+    Requires: median_income, transaction_price_sek, mortgage_rate, year.
     """
-    income = panel["median_income"]
-    # R12: see compute_version_a. An infinite value here would propagate through
-    # the within-year z-score and NaN out every other municipality in the year.
-    price = panel["transaction_price_sek"].where(lambda p: p > 0)
-    rate = panel["policy_rate"]       # percentage points
-    inflation = panel["cpi_yoy_pct"]  # percentage points
-
-    # Real rate in percentage points, floored at 0.5 pp
-    real_rate = (rate - inflation).clip(lower=0.5)
-
-    # Convert to decimal for the ratio
-    real_rate_decimal = real_rate / 100.0
-
-    return income / (price * real_rate_decimal)
+    income, price = _guarded(panel)
+    return cost_share(income, price, panel["mortgage_rate"], panel["year"])
 
 
-INDEX_INPUTS = ("median_income", "transaction_price_sek", "policy_rate",
-                "unemployment_rate", "cpi_yoy_pct")
+INDEX_INPUTS = ("median_income", "transaction_price_sek", "mortgage_rate",
+                "unemployment_rate", "kpif_yoy_pct")
+
+#: The index's first year. The policy rate used to set it, because the Swea
+#: series in use starts in 2014. It is no longer an input, so the window is
+#: stated instead: the same eleven years the published figures and the Version
+#: B reference describe. Starting earlier is a separate, deliberate decision.
+FIRST_INDEX_YEAR = 2014
 
 
 def scorable_rows(panel: pd.DataFrame) -> pd.DataFrame:
@@ -173,6 +174,10 @@ def scorable_rows(panel: pd.DataFrame) -> pd.DataFrame:
         A copy holding only the rows with no nulls in the index inputs.
     """
     mask = panel[list(INDEX_INPUTS)].notna().all(axis=1)
+    mask &= panel["year"] >= FIRST_INDEX_YEAR
+    # A cost share multiplies by the rate, so a non-positive one is refused
+    # rather than floored. None occurs: SCB's series never fell below 1,4 %.
+    mask &= panel["mortgage_rate"] > 0
 
     # R12: a non-positive price or income is not a missing value, so `notna`
     # lets it through, and it is not a small value either — it is a division by
@@ -248,10 +253,10 @@ if __name__ == "__main__":
         version_c=("version_c", "median"),
     )
 
-    best_a = county.nlargest(5, "version_a")
-    print("\nTop 5 BEST affordability under Version A (higher = better):")
+    best_a = county.nsmallest(5, "version_a")
+    print("\nTop 5 BEST affordability under Version A (lower = better):")
     print(best_a[["version_a"]])
 
-    worst_c = county.nsmallest(5, "version_c")
-    print("\nTop 5 WORST affordability under Version C (lower = worse):")
+    worst_c = county.nlargest(5, "version_c")
+    print("\nTop 5 WORST affordability under Version C (higher = worse):")
     print(worst_c[["version_c"]])

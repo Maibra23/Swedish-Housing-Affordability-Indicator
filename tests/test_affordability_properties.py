@@ -37,6 +37,8 @@ def panel(**overrides) -> pd.DataFrame:
         "kt_ratio": [3.0, 1.4, 3.1, 1.45],
         "policy_rate": [3.5, 3.5, 2.0, 2.0],
         "cpi_yoy_pct": [8.0, 8.0, 2.0, 2.0],
+        "mortgage_rate": [4.5, 4.5, 4.3, 4.3],
+        "kpif_yoy_pct": [6.0, 6.0, 1.9, 1.9],
         "unemployment_rate": [5.0, 7.0, 5.2, 7.1],
         "is_imputed_income": [False, False, False, False],
     }
@@ -44,46 +46,55 @@ def panel(**overrides) -> pd.DataFrame:
     return pd.DataFrame(base)
 
 
-# ── Orientation ──────────────────────────────────────────────────────
+# ── Orientation: both are cost shares, so higher is worse ─────────────
 
 
-def test_version_c_rises_with_income() -> None:
-    """More income at the same price must mean better affordability."""
+def test_version_c_falls_with_income() -> None:
+    """More income at the same price must mean a smaller share of it spent."""
     poor = compute_version_c(panel())
     rich = compute_version_c(panel(median_income=[800.0, 600.0, 820.0, 610.0]))
-    assert (rich > poor).all(), "Version C fell when income rose"
+    assert (rich < poor).all(), "Version C rose when income rose"
 
 
-def test_version_c_falls_with_price() -> None:
+def test_version_c_rises_with_price() -> None:
     cheap = compute_version_c(panel())
     dear = compute_version_c(
         panel(transaction_price_sek=[12_000_000.0, 1_800_000.0, 12_400_000.0, 1_840_000.0])
     )
-    assert (dear < cheap).all(), "Version C rose when prices rose"
+    assert (dear > cheap).all(), "Version C fell when prices rose"
+
+
+def test_version_c_rises_with_the_mortgage_rate() -> None:
+    low = compute_version_c(panel())
+    high = compute_version_c(panel(mortgage_rate=[6.5, 6.5, 6.3, 6.3]))
+    assert (high > low).all()
 
 
 def test_version_a_and_c_agree_on_direction() -> None:
-    """Both are affordability ratios; they must move the same way on income."""
+    """Both are cost shares; they must move the same way on income."""
     a_poor, c_poor = compute_version_a(panel()), compute_version_c(panel())
     rich = panel(median_income=[800.0, 600.0, 820.0, 610.0])
-    assert (compute_version_a(rich) > a_poor).all()
-    assert (compute_version_c(rich) > c_poor).all()
+    assert (compute_version_a(rich) < a_poor).all()
+    assert (compute_version_c(rich) < c_poor).all()
 
 
-# ── The real-rate floor ──────────────────────────────────────────────
+def test_the_policy_rate_and_kpi_no_longer_reach_a_or_c() -> None:
+    """The point of the change. Moving either must leave A and C exactly where
+    they were; only the mortgage rate is an interest input now."""
+    moved = panel(policy_rate=[-0.5] * 4, cpi_yoy_pct=[10.0] * 4)
+    for compute in (compute_version_a, compute_version_c):
+        assert np.allclose(compute(moved), compute(panel()))
 
 
-def test_negative_real_rate_is_floored_not_propagated() -> None:
-    """2020-2021 had negative real rates. Without a floor, C flips sign.
+def test_version_c_is_the_cost_model() -> None:
+    """The formula is `cost_model.cost_share`, and nothing else."""
+    from src.indices.cost_model import cost_share
 
-    Documented as limitation M4. A negative denominator would make a more
-    expensive municipality score *better*, which is the orientation contract
-    inverted — the Finding N failure mode arriving through arithmetic.
-    """
-    negative = panel(policy_rate=[0.0, 0.0, 0.0, 0.0], cpi_yoy_pct=[10.0, 10.0, 10.0, 10.0])
-    values = compute_version_c(negative)
-    assert (values > 0).all(), "Version C went non-positive under a negative real rate"
-    assert np.isfinite(values).all()
+    frame = panel()
+    expected = cost_share(
+        frame["median_income"], frame["transaction_price_sek"], frame["mortgage_rate"], frame["year"]
+    )
+    assert np.allclose(compute_version_c(frame), expected)
 
 
 def test_zero_price_does_not_return_infinity() -> None:
@@ -100,9 +111,9 @@ def test_zero_price_does_not_return_infinity() -> None:
     `test_guarding_the_denominators_changed_no_published_value`.
     """
     values = compute_version_c(
-        panel(transaction_price_sek=[0.0, 900_000.0, 0.0, 920_000.0])
+        panel(median_income=[0.0, 300.0, 0.0, 305.0])
     )
-    assert not np.isinf(values).any(), "a zero price produced infinity"
+    assert not np.isinf(values).any(), "a zero income produced infinity"
 
 
 # ── Version B pools; that is the point of R1 ──────────────────────────
@@ -120,7 +131,7 @@ def test_version_b_depends_on_panel_composition() -> None:
     wide = panel()
     extra = wide.iloc[[0]].copy()
     extra["region_code"] = "9999"
-    extra["policy_rate"] = 25.0
+    extra["mortgage_rate"] = 25.0
     combined = compute_all(pd.concat([wide, extra], ignore_index=True))
 
     shared = combined.iloc[: len(small)]["version_b"].to_numpy()

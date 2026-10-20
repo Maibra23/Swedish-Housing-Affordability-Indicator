@@ -1,38 +1,38 @@
-"""Split a year-on-year move in the index into the rate and the rest.
+"""Split a year-on-year move in the index into the cost rate and the rest.
 
-Qualifying a claim is not the same as answering the question behind it. Sida 01
-used to tell a reader to judge Sweden's direction from the mean index; that was
-withdrawn because the rate floor moves the level without affordability moving.
-Withdrawing it left the question unanswered, and it is a reasonable question.
+The rate and the amortisation rule are national, so the national mean of
+Version C factors exactly. Writing it for year `t` over the `N` scored
+municipalities, with `k = 100 · 0,85 / 2`:
 
-It is answerable exactly, because the rate is national. Writing the national
-mean of Version C for year `t` over the `N` scored municipalities:
+    mean C_t = (1/N) · Σ  k · (P_it / I_it) · q_t / 100
+             = (k · q_t / 100) · (1/N) · Σ  P_it / I_it
+             = (k · q_t / 100) · m_t
 
-    mean C_t = (1/N) · Σ  I_it / (P_it · r_t/100)
-             = (100 / r_t) · (1/N) · Σ  I_it / P_it
-             = (100 / r_t) · m_t
+`q_t` is the yearly cost per krona borrowed — the mortgage rate after the
+interest deduction plus the amortisation in force — the same number for every
+municipality in the year, so it leaves the sum entirely. What remains, `m_t`, is
+the mean ratio of price to income: **the index with the rate and the rules taken
+out**, in years of median income.
 
-`r_t` is the floored real rate, the same number for every municipality in the
-year, so it leaves the sum entirely. What remains, `m_t`, is the mean ratio of
-income to price — **the index with the interest rate taken out**. On the shipped
-artifact the identity holds to 2·10⁻¹⁶ relative error in every year, for Version
-A as well with its own floored rate.
+Two things follow, and both are what the pages need:
 
-Two things follow, and both are what the pages needed:
-
-**A series that does compare across years.** `m_t` carries no rate and therefore
-no floor. It runs 22,9 % to 17,7 % over this panel: a median income bought 22,9
-% of a house in 2014 and 17,7 % in 2024, a fall of 22 % with no artefact in it.
+**A series that compares across years on prices alone.** `m_t` carries no rate
+and no amortisation rule. It is the answer to "did houses get dearer relative to
+what people earn", with the financing taken out.
 
 **An exact attribution for any pair of years.** The ratio of the levels is the
-product of the two parts, so 2023 to 2024's −36,5 % splits into −35,1 % from the
-rate denominator and −2,2 % from income against price. They multiply rather than
-add, which the copy says.
+product of the two parts, so a year's change splits into a part from `q` and a
+part from price against income. They multiply rather than add, which the copy
+says.
 
 **What this does not claim.** `m_t` is free of the formula's rate term, not of
 the rate's effect on the economy: house prices respond to interest rates, so a
-rate cycle reaches `m_t` through `P`. It removes a mechanical artefact of the
-floor, not monetary policy. See F17 and METHODOLOGY section 3.
+rate cycle reaches `m_t` through `P`.
+
+Until 2026-10-20 this split separated a *floored real rate* from income against
+price, because the old Version C's level moved by a third in one year when its
+floor released. The cost share has no floor, so the split is now an ordinary
+attribution rather than an artefact detector.
 """
 
 from __future__ import annotations
@@ -51,16 +51,18 @@ class LevelChange:
     """What moved the national mean index between two years, and by how much.
 
     The three percentages are multiplicative: `1 + total` equals
-    `(1 + rate) · (1 + income_to_price)` up to float noise. Presenting them as
+    `(1 + rate) · (1 + price_to_income)` up to float noise. Presenting them as
     additive would overstate whichever part is smaller.
 
     Args:
         from_year: The earlier year.
         to_year: The later year.
         total_pct: Change in the mean index, in percent.
-        rate_pct: The part contributed by the rate each formula divided by.
-        income_to_price_pct: The part contributed by income against price —
-            the half of the move that is about affordability rather than policy.
+        rate_pct: The part contributed by the cost per krona borrowed — the
+            mortgage rate after the deduction, plus amortisation.
+        price_to_income_pct: The part contributed by price against income —
+            the half of the move that is about the housing market rather than
+            its financing.
         residual: How far the product of the parts misses the whole, relative.
     """
 
@@ -68,7 +70,7 @@ class LevelChange:
     to_year: int
     total_pct: float
     rate_pct: float
-    income_to_price_pct: float
+    price_to_income_pct: float
     residual: float
 
     @property
@@ -83,16 +85,16 @@ class LevelChange:
 
     @property
     def rate_dominates(self) -> bool:
-        """Whether the rate moved the level more than income against price did."""
-        return abs(self.rate_pct) > abs(self.income_to_price_pct)
+        """Whether the cost rate moved the level more than price against income did."""
+        return abs(self.rate_pct) > abs(self.price_to_income_pct)
 
 
 def decompose_change(history: pd.DataFrame, from_year: int, to_year: int) -> LevelChange | None:
     """Attribute the move in the mean index between two years.
 
     Args:
-        history: A frame from :func:`src.indices.agreement.floor_history`,
-            carrying `year`, `rate_used_c`, `income_to_price` and `mean_index`.
+        history: A frame from :func:`src.indices.agreement.cost_history`,
+            carrying `year`, `cost_rate`, `price_to_income` and `mean_index`.
         from_year: The earlier year.
         to_year: The later year.
 
@@ -106,20 +108,19 @@ def decompose_change(history: pd.DataFrame, from_year: int, to_year: int) -> Lev
         return None
 
     start, end = rows.loc[from_year], rows.loc[to_year]
-    if min(float(start["mean_index"]), float(start["income_to_price"]), float(end["rate_used_c"])) <= 0:
+    if min(float(start["mean_index"]), float(start["price_to_income"]), float(start["cost_rate"])) <= 0:
         return None
 
     total = float(end["mean_index"]) / float(start["mean_index"])
-    # The rate enters as 100/r, so a *higher* rate lowers the level: the ratio
-    # is the old rate over the new one, not the other way round.
-    rate = float(start["rate_used_c"]) / float(end["rate_used_c"])
-    income_to_price = float(end["income_to_price"]) / float(start["income_to_price"])
+    # The cost rate multiplies the level, so a higher rate raises it.
+    rate = float(end["cost_rate"]) / float(start["cost_rate"])
+    price_to_income = float(end["price_to_income"]) / float(start["price_to_income"])
 
     return LevelChange(
         from_year=int(from_year),
         to_year=int(to_year),
         total_pct=(total - 1.0) * 100.0,
         rate_pct=(rate - 1.0) * 100.0,
-        income_to_price_pct=(income_to_price - 1.0) * 100.0,
-        residual=abs(rate * income_to_price / total - 1.0),
+        price_to_income_pct=(price_to_income - 1.0) * 100.0,
+        residual=abs(rate * price_to_income / total - 1.0),
     )

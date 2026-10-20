@@ -35,7 +35,6 @@ def render_national_outcome(
     year: int,
     *,
     rate_shock: float,
-    cpi_shock: float,
     income_shock: float,
     price_shock: float,
     n_kommuner: int,
@@ -53,8 +52,7 @@ def render_national_outcome(
     Args:
         ranked: The scored artifact, all municipalities.
         year: Year being shocked.
-        rate_shock: Policy rate change, percentage points.
-        cpi_shock: Inflation change, percentage points.
+        rate_shock: Mortgage rate change, percentage points.
         income_shock: Income change, relative.
         price_shock: Price change, relative.
         n_kommuner: Panel size, read from provenance rather than typed.
@@ -72,7 +70,6 @@ def render_national_outcome(
             ranked,
             year,
             rate_shock=rate_shock,
-            cpi_shock=cpi_shock,
             income_shock=income_shock,
             price_shock=price_shock,
         )
@@ -118,17 +115,16 @@ def render_national_outcome(
 def explain_national_median(outcome: PanelShockOutcome) -> str | None:
     """The median Version C shift, beside class counts that can stop moving.
 
-    The counts saturate: on 2024 a +4 pp rate shock puts every municipality in
-    hög risk, so +5 pp reads the same as +4. On a floored year they freeze
-    instead. The median is continuous and keeps answering how far the country
-    moved.
+    The counts saturate: a large enough shock puts every municipality in one
+    class, after which a larger one reads the same. The median is continuous and
+    keeps answering how far the country moved.
 
     Args:
         outcome: The panel shock result.
 
     Returns:
-        A sentence, or None when the median did not move, so an untouched or
-        fully absorbed scenario adds no line saying "0 %".
+        A sentence, or None when the median did not move, so an untouched
+        scenario adds no line saying "0 %".
     """
     before, after = outcome.median_c_before, outcome.median_c_after
     change_pct = (after / before - 1) * 100
